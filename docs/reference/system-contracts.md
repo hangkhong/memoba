@@ -1,6 +1,6 @@
 # System contracts
 
-This reference owns the runtime limits and domain contracts. The application has not been bootstrapped.
+This reference defines domain behavior. The framework and identity checkpoint is implemented. Provider-dependent storage, retrieval, and analysis remain pending.
 
 ## Runtime
 
@@ -35,21 +35,7 @@ Initial retrieval and tools use the same service. New evidence enters the run re
 
 ## Limits
 
-| Limit | Value |
-|---|---|
-| Total deadline | 90 seconds, including planner, retries, and repair |
-| Reasoning model steps | 6 |
-| Executed tool calls | 12, including retries |
-| Optional planner calls | 1 |
-| Output repair calls | 1 |
-| Plan subqueries | 3 |
-| Unique candidate sections | 40 |
-| Evidence sections in context | 12 |
-| Estimated context tokens | 8,000 |
-| Output tokens per model call | 2,000, subject to model support |
-| Relation expansion | 1 through a concept or direct case link |
-| Concurrent runs per workspace | 2, enforced by a database lease |
-| Transient tool retries | 1 per call if the deadline permits |
+Runtime and input limits are defined in [`executionLimits` and `inputLimits`](../../src/lib/contracts/limits.ts). That file owns the numeric values used by schemas, evidence assembly, and run budgets. Database admission and the live agent must consume the same limits when connected.
 
 The planner is off by default. AbortSignal and call timeouts enforce the total deadline. SDK step limits alone do not stop a hanging call.
 
@@ -57,7 +43,7 @@ The planner is off by default. AbortSignal and call timeouts enforce the total d
 
 Core fields are title, problem, context, constraints, approach, outcome, lessons, source metadata, and concepts. Outcomes are `achieved`, `not_achieved`, or `unknown`.
 
-A title has at most 200 characters. A core text field has at most 4,000 characters. A case has at most 12 concepts. A request has at most eight hard constraints.
+Field and collection caps are defined in [`inputLimits`](../../src/lib/contracts/limits.ts). Source metadata allows at most 12 URL references per case, enforced by [`caseInputSchema`](../../src/modules/cases/schema.ts).
 
 Product/Delivery adds deliverable, change scope, and deployment conditions. CS/Operations adds customer impact, handling conditions, and escalation notes. Template choice does not restrict retrieval by domain.
 

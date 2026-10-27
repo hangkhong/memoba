@@ -1,0 +1,12 @@
+import { defineConfig, devices } from "@playwright/test";
+import { loadEnvFile } from "node:process";
+try { loadEnvFile(".env.local"); } catch { /* Environment can be supplied by CI. */ }
+export default defineConfig({
+  testDir: "./tests/e2e",
+  fullyParallel: false,
+  workers: 1,
+  reporter: "list",
+  use: { baseURL: "http://localhost:3000", trace: "off", screenshot: "only-on-failure" },
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  webServer: { command: "npm run dev", url: "http://localhost:3000", reuseExistingServer: true, timeout: 60000 },
+});

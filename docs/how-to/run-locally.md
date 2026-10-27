@@ -1,45 +1,57 @@
 # Run the local app
 
-Use this guide after Tasks 1–6 in the [local plan](../superpowers/plans/2026-10-27-local-v0.md). This commit contains documents. The app and npm scripts do not exist yet.
+The framework, local Auth, workspace access, and structured request form run without an AI key. Case persistence, retrieval, and brief generation are not connected yet.
 
-## Start native Supabase
+## Start the workspace
 
 1. Use Node.js 24 and run `npm ci`.
-2. Check `npx supabase --version` against the pinned version `2.122.0`.
-3. Check that `supabase/config.toml` enables the experimental stack and omits fixed ports.
-4. Start the project:
+2. Start the pinned native stack from this repository:
 
 ```sh
 npx supabase start --runtime native --output-format json
 ```
 
-5. Read the actual endpoints from the JSON output.
-6. Write local app configuration to ignored `.env.local`. Map only the public URL and publishable key to public Next.js variables.
-7. On a disposable local database, run `npx supabase db reset` to apply migrations and seed. This command deletes existing local data.
-8. Run `npm run db:types`.
-9. Run `npm run db:seed`.
+The CLI prints credentials. Keep its output local. The config enables the experimental stack and assigns Supabase ports dynamically.
 
-Task 2 initializes the config with `SUPABASE_EXPERIMENTAL_STACK=1 npx supabase init`. Do not repeat initialization over an existing config.
+3. Apply pending migrations with `npx supabase migration up --local`.
+4. Run `npm run db:configure`. This reads JSON status and writes only public Supabase values to ignored `.env.local`. It preserves other entries.
+5. Set `DEMO_EMAIL` and a `DEMO_PASSWORD` of at least 12 characters in `.env.local`. See `.env.example` for names.
+6. Run `npm run db:types` and `npm run db:seed`.
+7. Run `npm run doctor`, then `npm run dev`.
+8. Open the localhost URL printed by Next.js. Sign in with the credentials from `.env.local`.
 
-## Configure and verify model access
+`db:seed` only targets the running native stack on loopback. It creates one demo workspace, its member, and `outsider@memoba.local` for denied-access checks. Existing users and passwords are preserved. For a fresh seed, the nonmember uses `DEMO_PASSWORD`. It has no workspace membership. The six-case corpus is pending model verification.
 
-1. Add the AI Gateway credential and model IDs to the server environment.
-2. Match the embedding dimension to the vector migration.
-3. Run `npm run doctor`.
-4. Resolve unavailable services before a live analysis.
+If the native project changes, rerun `db:configure` and restart Next.js. No fixed Supabase port is assumed. Do not run another native Supabase project concurrently.
 
-## Verify the app
+## Verify this checkpoint
 
-1. Run `npm run dev`.
-2. Open the localhost URL printed by Next.js.
-3. Sign in with the seeded demo account.
-4. Save a case and wait for the ready index state.
-5. Submit a request from the local fixture.
-6. Open a citation and check its section, revision, and excerpt.
-7. Run `npm run test:db` and the local E2E test.
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run test:db
+npm run build
+npx playwright install chromium
+npm run test:e2e
+```
 
-## Stop Supabase
+The browser suite checks login, refresh, logout, nonmember access, forged workspace selection, and structured intake. It does not claim to test the case-to-brief flow. Browser credentials come from `.env.local`. Traces are disabled.
 
-Run `npx supabase stop` from this repo. The command preserves local data.
+The generated type file is `src/lib/supabase/database.types.ts`. Regenerate it after every migration. SQL tests use transactions and roll back their fixtures.
 
-The [official native runtime guide](https://supabase.com/docs/guides/local-development/docker-and-native-runtimes) lists platform requirements and experimental limitations.
+## Add model access
+
+1. Set `AI_GATEWAY_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, and `AI_EMBEDDING_DIMENSIONS` in ignored `.env.local`.
+2. Run `npm run ai:probe`.
+3. Check the verified model and dimensions before implementing the vector migration from Task 3 of the [local plan](../superpowers/plans/2026-10-27-local-v0.md).
+
+`ai:probe` uses the installed AI SDK to embed two synthetic Vietnamese and English inputs. It verifies count and dimension, then writes an ignored report under `.superpowers/probes`. Missing configuration exits with code 2. No runtime mock replaces a missing provider. The reasoning/tool capability check remains part of the live analysis integration.
+
+## Stop the services
+
+Stop Next.js with Ctrl+C. Run `npx supabase stop` from this repo to stop the native stack and preserve its data.
+
+`npx supabase db reset --local` deletes local data. Use it only on a disposable database when testing migration replay, then rerun the seed.
+
+The [Supabase native runtime guide](https://supabase.com/docs/guides/local-development/docker-and-native-runtimes) describes platform support and experimental limitations.

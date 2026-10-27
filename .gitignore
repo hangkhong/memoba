@@ -10,3 +10,7 @@ test-results/
 .DS_Store
 supabase/.temp/
 supabase/.branches/
+*.tsbuildinfo
+supabase/.cache/
+supabase/.local/
+supabase/.supabase.lock.lease
