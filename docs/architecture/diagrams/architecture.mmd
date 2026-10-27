@@ -1,0 +1,15 @@
+flowchart TB
+    subgraph APP["Vercel - một ứng dụng Next.js / TypeScript"]
+        UI["Giao diện shadcn/ui<br/>Case form và yêu cầu mới"]
+        AG["Server / AI SDK<br/>Xác thực, agent, giới hạn lượt gọi"]
+        KT["Knowledge tools<br/>Search, đọc case, mở rộng quan hệ"]
+        BR["Brief service<br/>Kiểm tra schema và tham chiếu"]
+        UI --> AG
+        AG --> KT
+        AG --> BR
+    end
+    DB["Supabase<br/>Auth, Postgres, pgvector<br/>Cases, phiên bản, khái niệm, liên kết"]
+    AI["AI Gateway<br/>Model reasoning và embeddings"]
+    KT -->|"SQL / RPC có phạm vi truy cập"| DB
+    AG -->|"Gọi model"| AI
+    BR -->|"Lưu brief và evidence snapshot"| DB
