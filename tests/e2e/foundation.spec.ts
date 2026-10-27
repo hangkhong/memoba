@@ -46,6 +46,7 @@ test("structured intake keeps constraints and reports unavailable analysis hones
   expect(login.status()).toBe(200);
   await page.goto("/workspace/requests/new");
   await expect(page.getByRole("heading", { name: "Give the next decision some context." })).toBeVisible();
+  await expect(page.getByRole("combobox", { name: "Request type" })).toContainText("Product / Delivery");
   await page.getByLabel("What do you want to achieve?", { exact: true }).fill("Release a checkout update");
   await page.getByLabel("Context", { exact: true }).fill("A small team wants a controlled rollout.");
   for (let index = 1; index <= 8; index++) {

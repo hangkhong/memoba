@@ -37,7 +37,11 @@ export function createRunBudget(externalSignal?: AbortSignal) {
         onAbort = () => { try { check(); } catch (error) { reject(error); } };
         controller.signal.addEventListener("abort", onAbort, { once: true });
       });
-      try { return await Promise.race([Promise.resolve().then(() => { check(); return operation(); }), aborted]); }
+      try {
+        const result = await Promise.race([Promise.resolve().then(() => { check(); return operation(); }), aborted]);
+        check();
+        return result;
+      }
       finally { controller.signal.removeEventListener("abort", onAbort); }
     },
     dispose() {

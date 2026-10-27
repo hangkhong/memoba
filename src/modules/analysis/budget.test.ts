@@ -29,3 +29,15 @@ it("propagates cancellation without waiting for a noncooperative provider", asyn
   const rejected = expect(pending).rejects.toMatchObject({ code: "CANCELLED" });
   controller.abort(); await rejected; budget.dispose();
 });
+
+it("rejects a result that arrives after the absolute deadline before the timer callback runs", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date("2026-10-27T00:00:00.000Z"));
+  const budget = createRunBudget();
+  try {
+    await expect(budget.run(async () => {
+      vi.setSystemTime(new Date("2026-10-27T00:01:30.001Z"));
+      return "late result";
+    })).rejects.toMatchObject({ code: "TIMED_OUT" });
+  } finally { budget.dispose(); }
+});
