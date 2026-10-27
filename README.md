@@ -1,14 +1,20 @@
 # The Memory Bank
 
-MVP cho challenge 7 ngày: giúp đội Product/Delivery và CS/Operations tái sử dụng kinh nghiệm từ nhiều case, có bằng chứng và điều kiện áp dụng rõ ràng.
+Memory Bank helps Product/Delivery and CS/Operations teams reuse past work. A structured request produces a Reuse Brief with evidence, applicability limits, and missing information.
 
-Repo hiện chứa thiết kế đã thảo luận và architecture foundation để review trước implementation.
+This repo contains the approved design, agent instructions, architecture documents, and a local implementation plan. The application has not been bootstrapped.
 
-- [Design spec](docs/superpowers/specs/2026-10-27-memory-bank-design.md)
+## Repository documents
+
+- [Agent instructions](AGENTS.md)
+- [Local v0 plan](docs/superpowers/plans/2026-10-27-local-v0.md)
+- [Run the local app](docs/how-to/run-locally.md)
+- [System contracts](docs/reference/system-contracts.md)
 - [Architecture foundation](docs/architecture/FOUNDATION.md)
-- [Architecture review](docs/architecture/REVIEW.md)
-- [Architecture decisions](docs/architecture/adr/0001-framework-first-single-app.md)
+- [Product design](docs/superpowers/specs/2026-10-27-memory-bank-design.md)
 
-Foundation: Next.js App Router, TypeScript, shadcn/ui, React Hook Form, Zod, Vercel AI SDK 7, Supabase Auth/Postgres/pgvector, Vitest và Playwright. Deploy trên Vercel; dùng Node.js 24 LTS.
+## Local release
 
-Ứng dụng, tích hợp dịch vụ và các bài kiểm thử sản phẩm chưa được triển khai. Các sơ đồ được render bằng Pele; prototype UX dùng dữ liệu giả định và được lưu ngoài Git trong `.superpowers/`.
+The stack uses Next.js, TypeScript, shadcn/ui, React Hook Form, Zod, AI SDK 7, and Supabase. Tests use Vitest, pgTAP, and Playwright.
+
+Local Supabase uses pinned CLI `2.122.0` and native runtime. Docker is not required. The experimental stack needs the smoke checks in the plan. The first checkpoint uses six demo cases and two real-model requests.

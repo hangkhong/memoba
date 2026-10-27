@@ -47,4 +47,6 @@ Không còn critical finding trong bản thiết kế đã rà soát. Kết lu�
 
 ## Follow-through
 
-Written review của design spec là bước tiếp theo theo skill brainstorming đã được người dùng yêu cầu. Sau đó viết implementation plan, provision dịch vụ và triển khai theo foundation. Không cần mở lại lựa chọn UX hoặc phỏng vấn lại các yêu cầu đã chốt.
+Design spec đã được duyệt. Plan local v0 đã cập nhật Supabase native theo tài liệu chính thức. Plan cần review trước implementation theo skill writing-plans. Không mở lại các lựa chọn UX đã chốt.
+
+Local runtime dùng CLI `2.122.0` được pin trong repo, experimental stack và endpoint discovery bằng JSON. Chưa chạy native stack hoặc kiểm thử ứng dụng. Smoke checks nằm trong Task 2 của plan.

@@ -4,7 +4,7 @@
 
 **Tác giả:** Codex cùng người dùng
 
-**Trạng thái:** Thiết kế đã được duyệt qua thảo luận; bản spec đang chờ written review.
+**Trạng thái:** Đã duyệt. Plan local v0 đang chờ review sau cập nhật native Supabase.
 
 **Bối cảnh:** Một PM tự build trong 7 ngày; một workspace demo và hai template.
 
@@ -79,7 +79,7 @@ Domain fields cố định:
 - Product/Delivery: deliverable, change scope, deployment conditions.
 - CS/Operations: customer impact, handling conditions, escalation notes.
 
-Sections là đơn vị retrieval/citation; dùng section key ổn định trong mỗi revision. Không bắt buộc tách từng câu thành một graph node. Giới hạn mỗi core text field 4.000 ký tự; title 200 ký tự, tối đa 12 concepts/case và 8 constraints/request.
+Sections là đơn vị retrieval/citation; dùng section key ổn định trong mỗi revision. Không bắt buộc tách từng câu thành một graph node. Các giới hạn field và concept nằm trong [system contracts](../../reference/system-contracts.md).
 
 Concept types: `problem_type`, `system`, `approach`, `constraint`. Liên kết case-concept có relation type tương ứng. Direct case links có ba loại: `related_to`, `contrasts_with`, `supersedes`; người nhập khai báo lý do. Không coi liên kết hoặc shared concept là bằng chứng tự thân cho applicability hay quan hệ nhân quả.
 
@@ -107,13 +107,13 @@ Nếu phần mô tả cần phân tách ngữ nghĩa, optional small-model plann
 - Keyword search theo PostgreSQL full-text kết hợp pgvector và RRF; dùng recipe chính thức Supabase, không triển khai search engine riêng.
 - Với corpus Việt/Anh, bắt đầu bằng cấu hình text-search `simple`, concept labels/aliases chuẩn hóa và multilingual embeddings. Không giả định stemming tiếng Anh phù hợp tiếng Việt; đo retrieval trên ngôn ngữ demo.
 - Initial retrieval và agent tools dùng chung service. Bắt đầu từ tối đa 12 candidate sections, mở rộng một lượt qua shared concept hoặc direct case link; khử trùng và giới hạn toàn lượt 40 candidates.
-- Evidence context tối đa 12 sections và 8.000 tokens ước lượng. Gắn excerpt, section/revision ID, source type và retrieval reason. Tối đa một bản full section cho mỗi ID/revision trong bundle.
+- Evidence context tuân theo [execution limits](../../reference/system-contracts.md#limits). Gắn excerpt, section/revision ID, source type và retrieval reason. Tối đa một bản full section cho mỗi ID/revision trong bundle.
 - Chừa chỗ cho counterexamples nếu truy xuất được; coverage ghi lại nhóm câu hỏi nào có/thiếu evidence, không xuất confidence percentage chưa hiệu chỉnh.
 - Tool trả kết quả mới phải được đăng ký vào evidence registry của run trước khi model có thể trích dẫn.
 
 ### Agent/tool execution
 
-Một AI SDK `ToolLoopAgent` có ba tools `search_knowledge`, `read_case`, `expand_relations`. Reasoning agent tối đa 6 model steps và 12 executed tool calls, kể cả khi nhiều tool calls nằm trong một step. Optional planner tối đa 1 call; output repair tối đa 1 call. Deadline toàn lượt 90 giây gồm mọi stage/retry; context/response limits được truyền vào SDK.
+Một AI SDK `ToolLoopAgent` có ba tools `search_knowledge`, `read_case`, `expand_relations`. [System contracts](../../reference/system-contracts.md#limits) quy định giới hạn model, tools, planner, repair và deadline. Harness thực thi giới hạn trên toàn lượt, kể cả retry; các call cũng nhận timeout và response limits.
 
 Model output là draft theo schema: đề xuất, phần tái sử dụng, adjustments, risks/conflicts, unknowns, next steps và evidence references. Dữ kiện quá khứ phải có sources; phương án kết hợp được đánh dấu inference/proposal. Text trong case được coi là dữ liệu, không phải chỉ dẫn để đổi tools, quyền hoặc quy trình.
 
@@ -187,7 +187,7 @@ Vercel Hobby chỉ dùng nếu phù hợp điều kiện personal/non-commercial
 
 Ngày 1: scaffold framework chính thức, config, auth, migrations và case validation. Ngày 2: revisions, publishing/indexing và case forms. Ngày 3: hybrid search, graph expansion, evidence contracts. Ngày 4: harness, initial context, tools và validation. Ngày 5: brief/source UX và actual activity. Ngày 6: corpus, evaluation và failure paths. Ngày 7: sửa lỗi, deploy, chạy demo và ghi measured results.
 
-Đây là thứ tự ưu tiên; implementation plan chi tiết sẽ được viết sau written review của spec theo workflow brainstorming đã chọn.
+Đây là thứ tự ưu tiên. [Plan local v0](../plans/2026-10-27-local-v0.md) chia implementation thành các bước kiểm chứng, dùng Supabase native trước khi tích hợp hosted deployment.
 
 ## 12. Sources và design decisions
 

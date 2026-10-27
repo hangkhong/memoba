@@ -2,7 +2,7 @@
 
 **Date:** 2026-10-27
 
-**Status:** Accepted in discussion; written specification pending review.
+**Status:** Accepted.
 
 **Deciders:** Người dùng và Codex
 
