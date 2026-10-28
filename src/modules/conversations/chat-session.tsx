@@ -1,16 +1,15 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { parseJsonEventStream, uiMessageChunkSchema } from "ai";
 import { z } from "zod";
-import { eventSchema, type AnalysisEvent } from "@/modules/analysis/events";
+import type { AnalysisEvent } from "@/modules/analysis/events";
+import { readAnalysisStream, type AnalysisOutcome } from "./stream";
 
-type SessionState = { conversationId: string; turnId: string; events: AnalysisEvent[]; busy: boolean; message: string };
+type SessionState = { conversationId: string; turnId: string; runId: string | null; outcome: AnalysisOutcome | null; events: AnalysisEvent[]; busy: boolean; message: string };
 type Session = { state: SessionState | null; start: (conversationId: string, turnId: string, key: string) => Promise<void>; cancel: () => void };
 const ChatContext = createContext<Session | null>(null);
 const errorSchema = z.object({ error: z.string() });
 
-// The workspace shell owns the connection, so route changes cannot unmount it.
 export function ChatSession({ children }: { children: ReactNode }) {
   const router = useRouter();
   const controller = useRef<AbortController | null>(null);
@@ -19,7 +18,7 @@ export function ChatSession({ children }: { children: ReactNode }) {
   async function start(conversationId: string, turnId: string, key: string) {
     if (controller.current) return;
     const abort = new AbortController(); controller.current = abort;
-    setState({ conversationId, turnId, events: [], busy: true, message: "" });
+    setState({ conversationId, turnId, runId: null, outcome: null, events: [], busy: true, message: "" });
     try {
       const response = await fetch(`/api/conversations/${conversationId}/turns/${turnId}/analyses`, { method: "POST", headers: { "Idempotency-Key": key }, signal: abort.signal });
       if (!response.ok) {
@@ -28,22 +27,27 @@ export function ChatSession({ children }: { children: ReactNode }) {
         return;
       }
       if (!response.body) throw new Error("Missing stream");
-      const reader = parseJsonEventStream({ stream: response.body, schema: uiMessageChunkSchema }).getReader();
-      while (true) {
-        const { done, value } = await reader.read(); if (done) break;
-        if (!value.success) continue;
-        if (value.value.type === "data-activity") {
-          const event = eventSchema.parse(value.value.data);
-          setState((current) => current && { ...current, events: [...current.events, event] });
-        }
-        if (value.value.type === "error") throw new Error("Stream failed");
-      }
+      await readAnalysisStream(response.body, (event) => {
+        if (controller.current !== abort) return;
+        setState((current) => {
+          if (!current) return current;
+          switch (event.kind) {
+            case "run": return { ...current, runId: event.runId };
+            case "activity": return { ...current, events: [...current.events, event.event] };
+            case "result": return { ...current, outcome: event.outcome };
+          }
+        });
+      });
     } catch {
-      setState((current) => current && { ...current, message: abort.signal.aborted ? "Analysis stopped. Your question is saved." : "Connection interrupted. Reload to read the saved run; generation does not automatically resume." });
+      const userRequested = abort.signal.aborted;
+      abort.abort();
+      if (controller.current === abort) setState((current) => current && { ...current, message: userRequested ? "Stop requested. Checking the saved analysis state. Your question is saved." : "Connection interrupted. Reload to read the saved run; generation does not automatically resume." });
     } finally {
-      controller.current = null;
-      setState((current) => current && { ...current, busy: false });
-      router.refresh();
+      if (controller.current === abort) {
+        controller.current = null;
+        setState((current) => current && { ...current, busy: false });
+        router.refresh();
+      }
     }
   }
   return <ChatContext.Provider value={{ state, start, cancel: () => controller.current?.abort() }}>{children}</ChatContext.Provider>;
