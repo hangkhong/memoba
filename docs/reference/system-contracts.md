@@ -4,7 +4,7 @@ This reference defines domain behavior. The framework and identity checkpoint is
 
 ## Runtime
 
-The app uses Node.js 24, ESM, TypeScript, npm, and Next.js App Router. AI SDK major 7 provides the agent loop. AI Gateway provides model access.
+The app uses Node.js 24, ESM, TypeScript, npm, and Next.js App Router. AI SDK major 7 provides the agent loop. The Google provider connects directly to the Gemini API.
 
 Local Supabase uses project CLI `2.122.0`, native runtime, experimental stack, and Postgres 17. Endpoints come from JSON output. Native Auth, pgvector, migration, and SQL smoke checks precede repository integration.
 

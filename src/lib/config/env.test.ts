@@ -20,13 +20,14 @@ describe("configuration boundary", () => {
     expect(readAppConfig({ NEXT_PUBLIC_SUPABASE_URL: publicEnv.NEXT_PUBLIC_SUPABASE_URL }).kind).toBe("invalid");
   });
   it("requires explicit models and a positive embedding dimension", () => {
-    expect(readAIConfig({ AI_GATEWAY_API_KEY: "secret" }).kind).toBe("unavailable");
-    const configured = { AI_GATEWAY_API_KEY: "secret", AI_REASONING_MODEL: "provider/reasoning", AI_EMBEDDING_MODEL: "provider/embedding", AI_EMBEDDING_DIMENSIONS: "1536" };
+    expect(readAIConfig({ GOOGLE_GENERATIVE_AI_API_KEY: "secret" }).kind).toBe("unavailable");
+    const configured = { GOOGLE_GENERATIVE_AI_API_KEY: "secret", AI_REASONING_MODEL: "gemini-3.5-flash", AI_EMBEDDING_MODEL: "gemini-embedding-2", AI_EMBEDDING_DIMENSIONS: "1536" };
     expect(readAIConfig(configured).kind).toBe("configured");
     expect(readAIConfig({ ...configured, AI_EMBEDDING_DIMENSIONS: "0" }).kind).toBe("unavailable");
+    expect(readAIConfig({ ...configured, AI_EMBEDDING_MODEL: "google/gemini-embedding-2" }).kind).toBe("unavailable");
   });
   it("reports missing names without returning secrets in failures", () => {
-    const result = readAIConfig({ AI_GATEWAY_API_KEY: "do-not-log-this" });
+    const result = readAIConfig({ GOOGLE_GENERATIVE_AI_API_KEY: "do-not-log-this" });
     expect(JSON.stringify(result)).not.toContain("do-not-log-this");
   });
 });

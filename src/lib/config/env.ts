@@ -6,9 +6,9 @@ const publicSchema = z.object({
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().trim().min(1),
 });
 const aiSchema = z.object({
-  AI_GATEWAY_API_KEY: z.string().trim().min(1),
-  AI_REASONING_MODEL: z.string().trim().regex(/^[^\s/]+\/[^\s]+$/),
-  AI_EMBEDDING_MODEL: z.string().trim().regex(/^[^\s/]+\/[^\s]+$/),
+  GOOGLE_GENERATIVE_AI_API_KEY: z.string().trim().min(1),
+  AI_REASONING_MODEL: z.string().trim().regex(/^[^\s/]+$/),
+  AI_EMBEDDING_MODEL: z.string().trim().regex(/^[^\s/]+$/),
   AI_EMBEDDING_DIMENSIONS: z.coerce.number().int().min(1).max(16000),
 });
 

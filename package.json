@@ -18,6 +18,7 @@
     "ai:probe": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/probe-ai.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^4.0.107",
     "@base-ui/react": "^1.9.0",
     "@hookform/resolvers": "^5.9.2",
     "@supabase/ssr": "^0.12.7",

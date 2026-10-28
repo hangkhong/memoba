@@ -47,7 +47,7 @@ Nguồn ngoài trong MVP là metadata và URL tham chiếu. Hệ thống không 
 
 ## 4. Proposed architecture
 
-Một app Next.js/TypeScript trên Vercel, với Supabase Auth/Postgres/pgvector và AI Gateway. Các module nghiệp vụ trong cùng app; tools gọi đúng các service mà pre-retrieval sử dụng.
+Một app Next.js/TypeScript trên Vercel, với Supabase Auth/Postgres/pgvector và Gemini API trực tiếp. Các module nghiệp vụ trong cùng app; tools gọi đúng các service mà pre-retrieval sử dụng.
 
 Chi tiết framework, repo structure, contracts, security và deployment ở [FOUNDATION.md](../../architecture/FOUNDATION.md). Sơ đồ [harness](../../architecture/diagrams/harness.svg) được render bằng Pele từ [source](../../architecture/diagrams/harness.mmd).
 
@@ -179,7 +179,7 @@ MVP là demo có thể vận hành với dịch vụ thật; không cam kết SL
 
 Framework-first không loại bỏ business logic. Dùng framework cho agent loop, forms, auth, persistence và testing; chỉ viết logic domain cần thiết trong modules rõ trách nhiệm. Dùng Supabase SDK/SQL migrations, không thêm ORM thứ hai; dùng Postgres relationships, không thêm graph database.
 
-Provision Supabase và AI Gateway thật trước implementation tích hợp. Các model IDs và embedding dimension là cấu hình release phải được xác nhận bằng capability probe trước khi seed; migration và embedding config phải khớp, không thay dimension/model mà không reindex. Missing config khiến feature unavailable với lỗi rõ, không trả mock response.
+Provision Supabase và Gemini API thật trước implementation tích hợp. Các model IDs và embedding dimension là cấu hình release phải được xác nhận bằng capability probe trước khi seed; migration và embedding config phải khớp, không thay dimension/model mà không reindex. Missing config khiến feature unavailable với lỗi rõ, không trả mock response.
 
 Vercel Hobby chỉ dùng nếu phù hợp điều kiện personal/non-commercial của challenge. Supabase Free có giới hạn dung lượng và inactivity; chi phí LLM/embedding tách riêng. Không provision paid resource hoặc công bố production-ready chỉ từ kết quả suite demo.
 

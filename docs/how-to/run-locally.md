@@ -42,7 +42,7 @@ The generated type file is `src/lib/supabase/database.types.ts`. Regenerate it a
 
 ## Add model access
 
-1. Set `AI_GATEWAY_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, and `AI_EMBEDDING_DIMENSIONS` in ignored `.env.local`.
+1. Set `GOOGLE_GENERATIVE_AI_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, and `AI_EMBEDDING_DIMENSIONS` in ignored `.env.local`. Use Google model IDs without a provider prefix.
 2. Run `npm run ai:probe`.
 3. Check the verified model and dimensions before implementing the vector migration from Task 3 of the [local plan](../superpowers/plans/2026-10-27-local-v0.md).
 

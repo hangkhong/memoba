@@ -17,3 +17,9 @@ it("rejects wrong dimensions and propagates provider failure without fake vector
   expect(result).toMatchObject({ kind: "error", code: "EMBEDDING_UNAVAILABLE" });
   expect(JSON.stringify(result)).not.toContain("secret provider error");
 });
+
+it("preserves valid vectors when the provider does not report token usage", async () => {
+  const model = new MockEmbeddingModelV4({ doEmbed: async () => ({ embeddings: [[1, 0]], warnings: [] }) });
+  const result = await createEmbeddingAdapter({ model, dimensions: 2 })({ texts: ["Text"], signal: new AbortController().signal });
+  expect(result).toMatchObject({ kind: "success", vectors: [[1, 0]], tokens: null });
+});
