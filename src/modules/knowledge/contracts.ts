@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { purposeSchema } from "@/modules/analysis/schema";
-import { outcomeSchema, sectionKeySchema, sourceSchema } from "@/modules/cases/schema";
+import { purposeSchema } from "../analysis/schema.ts";
+import { outcomeSchema, sectionKeySchema, sourceSchema } from "../cases/schema.ts";
 
 export const evidenceSchema = z.object({
   evidenceId: z.string().min(1),
@@ -12,7 +12,7 @@ export const evidenceSchema = z.object({
   excerpt: z.string().min(1),
   outcome: outcomeSchema,
   authorId: z.uuid(),
-  recordedAt: z.iso.datetime(),
+  recordedAt: z.iso.datetime({ offset: true }),
   sources: z.array(sourceSchema),
   purpose: purposeSchema,
   retrievalReason: z.string().min(1),

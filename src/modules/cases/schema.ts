@@ -1,14 +1,14 @@
 import { z } from "zod";
-import { inputLimits } from "@/lib/contracts/limits";
+import { inputLimits } from "../../lib/contracts/limits.ts";
 
 export const templateSchema = z.enum(["product_delivery", "cs_operations"]);
 export const outcomeSchema = z.enum(["achieved", "not_achieved", "unknown"]);
 export const conceptTypeSchema = z.enum(["problem_type", "system", "approach", "constraint"]);
 export const relationTypeSchema = z.enum(["related_to", "contrasts_with", "supersedes"]);
-export const sourceSchema = z.object({ label: z.string().trim().min(1).max(inputLimits.title), url: z.url({ protocol: /^https?$/ }) }).strict();
-const text = z.string().trim().min(1).max(inputLimits.text);
+export const sourceSchema = z.object({ label: z.string().trim().regex(/\S/, "Enter non-empty text.").max(inputLimits.title), url: z.url().regex(/^https?:\/\//i) }).strict();
+const text = z.string().trim().regex(/\S/, "Enter non-empty text.").max(inputLimits.text);
 const core = {
-  title: z.string().trim().min(1).max(inputLimits.title),
+  title: z.string().trim().regex(/\S/, "Enter non-empty text.").max(inputLimits.title),
   problem: text, context: text, constraints: text, approach: text,
   outcome: outcomeSchema, observedOutcome: text, lessons: text,
   sources: z.array(sourceSchema).max(12),

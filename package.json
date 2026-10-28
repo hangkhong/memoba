@@ -15,7 +15,8 @@
     "db:types": "node --experimental-strip-types scripts/db-types.ts",
     "db:seed": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/seed-demo.ts",
     "db:configure": "node --experimental-strip-types scripts/configure-local.ts",
-    "ai:probe": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/probe-ai.ts"
+    "ai:probe": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/probe-ai.ts",
+    "db:contracts": "node --experimental-strip-types scripts/db-contracts.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.107",
@@ -52,5 +53,9 @@
   "type": "module",
   "engines": {
     "node": ">=24 <25"
+  },
+  "optionalDependencies": {
+    "@rolldown/binding-darwin-arm64": "1.2.15",
+    "@rolldown/binding-linux-x64-gnu": "1.2.15"
   }
 }

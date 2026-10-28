@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { inputLimits } from "@/lib/contracts/limits";
-import { sectionKeySchema } from "@/modules/cases/schema";
+import { inputLimits } from "../../lib/contracts/limits.ts";
+import { sectionKeySchema } from "../cases/schema.ts";
 
 export const referenceSchema = z.object({ evidenceId: z.string().min(1), caseId: z.uuid(), revisionId: z.uuid(), sectionKey: sectionKeySchema }).strict();
 const claimBase = { text: z.string().trim().min(1).max(inputLimits.text), references: z.array(referenceSchema) };

@@ -1,0 +1,17 @@
+import { expect,test } from "@playwright/test";
+import { z } from "zod";
+test("case content survives unavailable indexing, edits create revisions, and archive preserves history",async({page})=>{
+ const env=z.object({DEMO_EMAIL:z.string(),DEMO_PASSWORD:z.string()}).parse(process.env);
+ expect((await page.request.post("/api/auth/login",{headers:{origin:"http://localhost:3100"},data:{email:env.DEMO_EMAIL,password:env.DEMO_PASSWORD}})).status()).toBe(200);
+ await page.goto("/workspace/cases/new");await page.getByLabel("Title",{exact:true}).fill(`Offline foundation ${Date.now()}`);
+ for(const label of ["Problem / objective","Context","Constraints","Approach and reasoning","Observed outcome","Lessons and applicability","Deliverable","Change scope","Deployment conditions"])await page.getByLabel(label,{exact:true}).fill(`Synthetic offline case. ${label}.`);
+ await page.getByRole("button",{name:"Save case",exact:true}).click();await expect(page).toHaveURL(/\/workspace\/cases\/[0-9a-f-]+$/);
+ await expect(page.getByText("active · Index: failed",{exact:true})).toBeVisible();
+ const id=new URL(page.url()).pathname.split("/").pop();const first=z.object({latest_revision_id:z.uuid(),published_revision_id:z.null(),revisions:z.array(z.object({id:z.uuid(),content:z.object({approach:z.string()})}))}).parse(await(await page.request.get(`/api/cases/${id}`)).json());
+ await page.getByRole("link",{name:"Edit case",exact:true}).click();await page.getByLabel("Approach and reasoning",{exact:true}).fill("Second revision with a reviewed pilot.");await page.getByRole("button",{name:"Save case",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/workspace/cases/${id}$`));
+ const second=z.object({latest_revision_id:z.uuid(),revisions:z.array(z.object({id:z.uuid(),content:z.object({approach:z.string()})}))}).parse(await(await page.request.get(`/api/cases/${id}`)).json());expect(second.revisions).toHaveLength(2);expect(second.latest_revision_id).not.toBe(first.latest_revision_id);expect(second.revisions.find((r)=>r.id===first.latest_revision_id)?.content.approach).toBe(first.revisions[0]?.content.approach);
+ await page.getByRole("button",{name:"Retry indexing",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Updated.");
+ await page.getByRole("button",{name:"Archive case",exact:true}).click();await expect(page.getByText("archived · Index: failed",{exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"Edit case",exact:true})).toHaveCount(0);
+ await page.screenshot({path:"test-results/offline-case-history.png",fullPage:true});
+ const cross=await page.request.get(`/api/cases/${crypto.randomUUID()}`);expect(cross.status()).toBe(404);expect(cross.headers()["cache-control"]).toContain("no-store");
+});

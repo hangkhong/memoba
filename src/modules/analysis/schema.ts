@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { templateSchema } from "@/modules/cases/schema";
-import { executionLimits, inputLimits } from "@/lib/contracts/limits";
+import { templateSchema } from "../cases/schema.ts";
+import { executionLimits, inputLimits } from "../../lib/contracts/limits.ts";
 
-const text = z.string().trim().min(1).max(inputLimits.text);
+const text = z.string().trim().regex(/\S/, "Enter non-empty text.").max(inputLimits.text);
 export const purposeSchema = z.enum(["method", "conditions", "exceptions"]);
 export const requestSchema = z.object({
   template: templateSchema,

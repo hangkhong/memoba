@@ -35,14 +35,14 @@ test("member login reaches the workspace and survives refresh without AI", async
 
 test("authenticated nonmember cannot enter the workspace", async ({ request }) => {
   const env = credentials.parse(process.env);
-  const response = await request.post("/api/auth/login", { headers: { origin: "http://localhost:3000" }, data: { email: "outsider@memoba.local", password: env.DEMO_PASSWORD } });
+  const response = await request.post("/api/auth/login", { headers: { origin: "http://localhost:3100" }, data: { email: "outsider@memoba.local", password: env.DEMO_PASSWORD } });
   expect(response.status()).toBe(404);
   expect((await request.get("/api/workspace")).status()).toBe(401);
 });
 
 test("structured intake keeps constraints and reports unavailable analysis honestly", async ({ page }) => {
   const env = credentials.parse(process.env);
-  const login = await page.request.post("/api/auth/login", { headers: { origin: "http://localhost:3000" }, data: { email: env.DEMO_EMAIL, password: env.DEMO_PASSWORD } });
+  const login = await page.request.post("/api/auth/login", { headers: { origin: "http://localhost:3100" }, data: { email: env.DEMO_EMAIL, password: env.DEMO_PASSWORD } });
   expect(login.status()).toBe(200);
   await page.goto("/workspace/requests/new");
   await expect(page.getByRole("heading", { name: "Give the next decision some context." })).toBeVisible();
@@ -54,9 +54,9 @@ test("structured intake keeps constraints and reports unavailable analysis hones
     await page.getByRole("textbox", { name: `Constraint ${index}`, exact: true }).fill(`Requirement ${index}`);
   }
   await expect(page.getByRole("button", { name: "Add constraint", exact: true })).toBeDisabled();
-  await page.getByRole("button", { name: "Check request", exact: true }).click();
+  await page.getByRole("button", { name: "Create Reuse Brief", exact: true }).click();
   await expect(page.getByRole("status")).toContainText("Your request has not been saved or sent to a model.");
-  const forged = await page.request.post("/api/analyses", { headers: { origin: "http://localhost:3000" }, data: { objective: "Request", workspaceId: "forged" } });
+  const forged = await page.request.post("/api/analyses", { headers: { origin: "http://localhost:3100" }, data: { objective: "Request", workspaceId: "forged" } });
   expect(forged.status()).toBe(400);
   await page.screenshot({ path: "test-results/structured-request.png", fullPage: true });
 });

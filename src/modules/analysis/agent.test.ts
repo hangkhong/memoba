@@ -1,0 +1,15 @@
+import { expect,it } from "vitest";
+import { MockLanguageModelV4 } from "ai/test";
+import { reasoningAdapter } from "./agent";
+import { createRunBudget } from "./budget";
+import { requestSchema } from "./schema";
+import { evidenceSchema } from "@/modules/knowledge/contracts";
+import type { AnalysisEvent } from "./events";
+it("uses the AI SDK tool loop and parses the structured brief without a live provider",async()=>{
+ const item=evidenceSchema.parse({evidenceId:"e1",caseId:crypto.randomUUID(),revisionId:crypto.randomUUID(),sectionId:crypto.randomUUID(),sectionKey:"approach",caseTitle:"Pilot",excerpt:"A pilot with review",outcome:"achieved",authorId:crypto.randomUUID(),recordedAt:new Date().toISOString(),sources:[],purpose:"method",retrievalReason:"test fixture"});
+ const discovered=evidenceSchema.parse({...item,evidenceId:"e2",sectionId:crypto.randomUUID(),sectionKey:"lessons",excerpt:"Unique tool-discovered evidence"});
+ const draft={reusableApproach:[{kind:"observed",text:"A pilot was reviewed",references:[{evidenceId:item.evidenceId,caseId:item.caseId,revisionId:item.revisionId,sectionKey:item.sectionKey}]}],adjustments:[],conflicts:[],unknowns:[],nextSteps:[{kind:"proposal",text:"Review applicability",references:[]}]};
+ let calls=0;const model=new MockLanguageModelV4({doGenerate:async(args)=>{ calls++; if(calls===3) expect(JSON.stringify(args.prompt).split(discovered.excerpt)).toHaveLength(2); if(calls===4) expect(JSON.stringify(args.prompt)).toContain(discovered.excerpt); return ({content:calls<=2?[{type:"tool-call",toolCallId:"call1",toolName:"read_case",input:JSON.stringify({caseId:item.caseId,sectionKeys:["approach"]})}]:[{type:"text",text:JSON.stringify(draft)}],finishReason:{unified:calls<=2?"tool-calls":"stop",raw:undefined},usage:{inputTokens:{total:10,noCache:10,cacheRead:undefined,cacheWrite:undefined},outputTokens:{total:20,text:20,reasoning:undefined}},warnings:[]});}});
+ const events:AnalysisEvent[]=[];const knowledge={search:async()=>({kind:"empty" as const,items:[] as []}),read:async()=>({kind:"success" as const,items:[discovered]}),expand:async()=>({kind:"empty" as const,items:[] as []})};const adapter=reasoningAdapter(model,knowledge,async(event)=>{events.push(event);});const budget=createRunBudget();
+ try { const result=await adapter.generate({request:requestSchema.parse({template:"product_delivery",version:1,objective:"Review rollout",context:"Team",hardConstraints:[],conceptIds:[],unknowns:""}),bundle:{items:[item],gaps:[],warnings:[],estimatedTokens:100},budget});expect(result.draft).toEqual(draft);expect(result.usage.totalTokens).toBe(90);expect(calls).toBe(3);expect(events.map((event)=>`${event.tool}:${event.state}`)).toEqual(["read_case:started","read_case:completed","read_case:started","read_case:completed"]); await adapter.repair({request:requestSchema.parse({template:"product_delivery",version:1,objective:"Review rollout",context:"Team",hardConstraints:[],conceptIds:[],unknowns:""}),bundle:{items:[item],gaps:[],warnings:[],estimatedTokens:100},budget,draft:{},code:"INVALID_SCHEMA"}); }finally{budget.dispose();}
+});

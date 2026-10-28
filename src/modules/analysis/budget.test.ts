@@ -41,3 +41,17 @@ it("rejects a result that arrives after the absolute deadline before the timer c
     })).rejects.toMatchObject({ code: "TIMED_OUT" });
   } finally { budget.dispose(); }
 });
+
+it("honors the persisted deadline instead of starting a fresh deadline", async () => {
+  vi.useFakeTimers();
+  const budget = createRunBudget(undefined, Date.now() + 100);
+  const pending = budget.run(() => new Promise(() => {}));
+  const observed = expect(pending).rejects.toMatchObject({ code: "TIMED_OUT" });
+  await vi.advanceTimersByTimeAsync(101);
+  await observed; budget.dispose(); vi.useRealTimers();
+});
+
+it("classifies a provider rejection after the absolute deadline as timed out",async()=>{
+ vi.useFakeTimers();const start=Date.now();const budget=createRunBudget(undefined,start+100);
+ await expect(budget.run(async()=>{vi.setSystemTime(start+101);throw Error("provider aborted");})).rejects.toMatchObject({code:"TIMED_OUT"});budget.dispose();vi.useRealTimers();
+});

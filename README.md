@@ -1,20 +1,15 @@
 # The Memory Bank
 
-A knowledge workspace for a seven-day PM challenge. It captures structured experience and prepares evidence for a Reuse Brief.
+A local knowledge workspace for one PM. Record Product/Delivery and CS/Operations cases, preserve their revisions, and prepare structured requests for an evidence-backed Reuse Brief.
 
-The current checkpoint runs Next.js, Supabase native Auth, and a verified demo workspace. It includes shadcn UI, structured request intake, and tested domain contracts. It does not yet save cases or generate briefs.
+The application includes Supabase Auth and membership, case revision storage and publication, hybrid retrieval, bounded analysis orchestration, saved briefs, and separate user edits. Missing model access leaves saved cases available for indexing retry and prevents analysis admission.
 
-## Run locally
+The Gemini embedding probe and a case save/index/publish flow passed before the provider became rate-limited. A complete live-model brief has not passed verification. Semantic quality and challenge acceptance remain pending. See [evaluation status](docs/reference/evaluation.md).
 
-Use Node.js 24 and npm. Follow [Run the local app](docs/how-to/run-locally.md) to start native Supabase, configure endpoints, seed demo membership, and sign in.
+Use Node.js 24 and npm. Follow [Run locally](docs/how-to/run-locally.md) for the pinned native Supabase stack and the default checks, which do not call a model.
 
-No AI key is needed for this checkpoint. Missing model access is reported explicitly.
-
-## Continue implementation
-
-- [Product scope](docs/superpowers/specs/2026-10-27-memory-bank-design.md)
-- [Architecture](docs/architecture/FOUNDATION.md)
+- [Architecture foundation](docs/architecture/FOUNDATION.md)
 - [System contracts](docs/reference/system-contracts.md)
-- [Implementation plan and progress](docs/superpowers/plans/2026-10-27-local-v0.md)
+- [Implementation plan](docs/superpowers/plans/2026-10-27-local-v0.md)
 
-The next dependency is a successful embedding capability probe. It fixes the model and dimension before the knowledge migration. Then implement revision persistence, hybrid retrieval, bounded analysis, saved briefs, and live evaluation.
+GitHub PRs run installation, lint, typecheck, unit tests, build, native SQL checks, and browser checks without AI credentials. Live model tests require an explicit opt-in.

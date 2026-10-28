@@ -5,13 +5,13 @@ export class BudgetError extends Error {
   constructor(public readonly code: "TIMED_OUT" | "CANCELLED" | "TOOL_LIMIT" | "STEP_LIMIT" | "PLANNER_LIMIT" | "REPAIR_LIMIT") { super(code); }
 }
 
-export function createRunBudget(externalSignal?: AbortSignal) {
+export function createRunBudget(externalSignal?: AbortSignal, deadlineAt?: number) {
   const controller = new AbortController();
-  const deadline = Date.now() + executionLimits.deadlineMs;
+  const deadline = Math.min(Date.now() + executionLimits.deadlineMs, deadlineAt ?? Infinity);
   const counts = { tool: 0, reasoning: 0, planner: 0, repair: 0 };
   const capacities = { tool: executionLimits.toolCalls, reasoning: executionLimits.reasoningSteps, planner: executionLimits.plannerCalls, repair: executionLimits.repairCalls };
   const codes = { tool: "TOOL_LIMIT", reasoning: "STEP_LIMIT", planner: "PLANNER_LIMIT", repair: "REPAIR_LIMIT" } satisfies Record<BudgetKind, ConstructorParameters<typeof BudgetError>[0]>;
-  const timeout = setTimeout(() => controller.abort(new BudgetError("TIMED_OUT")), executionLimits.deadlineMs);
+  const timeout = setTimeout(() => controller.abort(new BudgetError("TIMED_OUT")), Math.max(0, deadline - Date.now()));
   const cancel = () => controller.abort(new BudgetError("CANCELLED"));
   if (externalSignal?.aborted) cancel();
   else externalSignal?.addEventListener("abort", cancel, { once: true });
@@ -42,6 +42,7 @@ export function createRunBudget(externalSignal?: AbortSignal) {
         check();
         return result;
       }
+      catch (error) { check(); throw error; }
       finally { controller.signal.removeEventListener("abort", onAbort); }
     },
     dispose() {
