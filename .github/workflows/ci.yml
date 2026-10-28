@@ -1,4 +1,4 @@
-name: Foundation checks
+name: Memoba CI
 on:
   pull_request:
   push:
@@ -6,7 +6,8 @@ on:
 permissions:
   contents: read
 jobs:
-  foundation:
+  checks:
+    name: Application checks
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:

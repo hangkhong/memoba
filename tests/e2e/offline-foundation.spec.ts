@@ -11,7 +11,10 @@ test("case content survives unavailable indexing, edits create revisions, and ar
  await page.getByRole("link",{name:"Edit case",exact:true}).click();await page.getByLabel("Approach and reasoning",{exact:true}).fill("Second revision with a reviewed pilot.");await page.getByRole("button",{name:"Save case",exact:true}).click();await expect(page).toHaveURL(new RegExp(`/workspace/knowledge/${id}$`));
  const second=z.object({latest_revision_id:z.uuid(),revisions:z.array(z.object({id:z.uuid(),content:z.object({approach:z.string()})}))}).parse(await(await page.request.get(`/api/cases/${id}`)).json());expect(second.revisions).toHaveLength(2);expect(second.latest_revision_id).not.toBe(first.latest_revision_id);expect(second.revisions.find((r)=>r.id===first.latest_revision_id)?.content.approach).toBe(first.revisions[0]?.content.approach);
  await page.getByRole("button",{name:"Retry indexing",exact:true}).click();await expect(page.getByRole("status")).toHaveText("Updated.");
- await page.getByRole("button",{name:"Archive case",exact:true}).click();await expect(page.getByText("archived · Index: failed",{exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"Edit case",exact:true})).toHaveCount(0);
+ const archiveResponse=page.waitForResponse((response)=>response.request().method()==="POST" && response.url().endsWith(`/api/cases/${id}/archive`));
+ await page.getByRole("button",{name:"Archive case",exact:true}).click();expect((await archiveResponse).status()).toBe(200);
+ await expect(page.getByText("archived · Index: failed",{exact:true})).toBeVisible();await expect(page.getByRole("link",{name:"Edit case",exact:true})).toHaveCount(0);
+ expect(z.object({lifecycle:z.literal("archived")}).parse(await(await page.request.get(`/api/cases/${id}`)).json()).lifecycle).toBe("archived");
  await page.screenshot({path:"test-results/offline-case-history.png",fullPage:true});
  const cross=await page.request.get(`/api/cases/${crypto.randomUUID()}`);expect(cross.status()).toBe(404);expect(cross.headers()["cache-control"]).toContain("no-store");
 });

@@ -20,6 +20,8 @@ The native stack assigns its own ports. To inspect its Studio endpoint, run `npx
 
 After sign-in, Chat opens by default. Enter a question and add context in **Request details**. Conversations persist even without model access. Follow-up turns retain the confirmed request state, and reload does not restart analysis.
 
+Press Enter to send a question or Shift+Enter to add a line. During an active analysis, choose **Stop analysis** in the composer. Scroll upward to read earlier turns, then choose **Scroll to latest message** to follow new content again. Expand **Activity** to inspect actual stage and tool events.
+
 Open **Knowledge Hub** in the sidebar and select **Record a case** to enter or paste a case through either fixed template. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
 
 If the native project changes, rerun `db:configure` and restart Next.js. Do not run another native Supabase project concurrently.

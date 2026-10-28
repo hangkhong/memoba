@@ -12,6 +12,8 @@ Supabase provides Auth, Postgres, pgvector, migrations, and generated database t
 
 AI SDK 7 provides model calls, tools, streams, and the agent loop. Memory Bank owns case rules, retrieval policy, evidence contracts, and analysis budgets.
 
+The chat presentation adapts the Eve template's conversation viewport, composer behavior, and compact activity. [Eve chat integration](eve-chat-integration.md) records the source revision and the boundary between reusable UI and Memoba's execution services.
+
 Vitest checks domain rules. pgTAP checks SQL and access. Playwright checks the local case-to-brief flow. Live-model evaluation checks semantic support.
 
 ## Module boundaries
