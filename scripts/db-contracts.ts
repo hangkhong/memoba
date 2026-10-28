@@ -1,0 +1,17 @@
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve, dirname } from "node:path";
+import { z } from "zod";
+import { caseInputSchema } from "../src/modules/cases/schema.ts";
+import { requestSchema } from "../src/modules/analysis/schema.ts";
+import { eventSchema } from "../src/modules/analysis/events.ts";
+import { draftBriefSchema } from "../src/modules/briefs/schema.ts";
+import { evidenceSchema } from "../src/modules/knowledge/contracts.ts";
+import { executionLimits } from "../src/lib/contracts/limits.ts";
+const target=process.argv[2];
+if(!target||dirname(resolve(target))!==resolve("supabase/migrations")||!target.endsWith(".sql"))throw new Error("Pass a migration path created with supabase migration new.");
+const original=readFileSync(target,"utf8");
+if(original.trim()&&!original.startsWith("-- Generated from"))throw new Error("Refusing to overwrite another migration.");
+const contracts=[{table:"case_revisions",column:"content",schema:caseInputSchema},{table:"analysis_runs",column:"request",schema:requestSchema},{table:"analysis_runs",column:"events",schema:z.array(eventSchema)},{table:"briefs",column:"generated",schema:draftBriefSchema},{table:"briefs",column:"evidence",schema:z.array(evidenceSchema).max(executionLimits.candidateSections)}];
+const sql=contracts.map(({table,column,schema})=>`alter table public.${table} add constraint ${table}_${column}_contract check (extensions.jsonb_matches_schema($contract$${JSON.stringify(z.toJSONSchema(schema,{target:"draft-7"}))}$contract$::json,${column}));`).join("\n\n");
+writeFileSync(target,"-- Generated from the owning Zod schemas. Regenerate with npm run db:contracts -- <new-migration.sql>.\ncreate extension if not exists pg_jsonschema with schema extensions;\n\n"+sql+"\n");
+process.stdout.write("Generated SQL input constraints from Zod schemas.\n");

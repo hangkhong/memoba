@@ -1,0 +1,31 @@
+import { expect, test } from "@playwright/test";
+import { z } from "zod";
+import { corpusConceptId } from "../../evals/local-v0/corpus";
+
+test("@live real case evidence becomes a saved brief with citations and separate edits", async ({ page }) => {
+ test.setTimeout(120000);
+ const env=z.object({DEMO_EMAIL:z.string(),DEMO_PASSWORD:z.string()}).parse(process.env);
+ expect((await page.request.post("/api/auth/login",{headers:{origin:"http://localhost:3100"},data:{email:env.DEMO_EMAIL,password:env.DEMO_PASSWORD}})).status()).toBe(200);
+ await page.goto("/workspace/requests/new");
+ await page.getByLabel("What do you want to achieve?",{exact:true}).fill("Release a checkout change safely using a controlled rollout and a tested rollback.");
+ await page.getByLabel("Context",{exact:true}).fill("A small team needs to release a checkout change while preserving payments and the existing sign-in flow. We can use a feature flag and payment error monitoring.");
+ await page.getByLabel("Synthetic demo corpus",{exact:true}).check();
+ await page.getByRole("button",{name:"Add constraint",exact:true}).click();
+ await page.getByRole("textbox",{name:"Constraint 1",exact:true}).fill("No planned downtime. Keep the existing sign-in flow.");
+ const responsePromise=page.waitForResponse((response)=>response.url().endsWith("/api/analyses") && response.request().method()==="POST");
+ await page.getByRole("button",{name:"Create Reuse Brief",exact:true}).click();
+ const response=await responsePromise;expect(response.status()).toBe(200);const runId=z.uuid().parse(response.headers()["x-run-id"]);
+ await expect(page).toHaveURL(new RegExp(`/workspace/analyses/${runId}$`),{timeout:100000});
+ const runResponse=await page.request.get(`/api/analyses/${runId}`);const run=z.object({status:z.string(),error_code:z.string().nullable(),briefId:z.string().nullable()}).parse(await runResponse.json());
+ expect(run.status,JSON.stringify(run)).toBe("complete");
+ await page.getByRole("link",{name:"Open Reuse Brief",exact:true}).click();
+ await expect(page.getByRole("heading",{name:"Reuse Brief",exact:true})).toBeVisible();
+ await expect(page.getByRole("complementary",{name:"Evidence sources"})).toBeVisible();
+ const citation=page.getByRole("link",{name:/^Source:/}).first();await citation.click();
+ const evidence=page.getByRole("complementary",{name:"Evidence sources"}).locator("details").first();await evidence.locator("summary").click();await expect(evidence.locator("blockquote")).toBeVisible();
+ await page.screenshot({path:"test-results/reuse-brief.png",fullPage:true});
+ await page.getByRole("textbox",{name:"Your edited version",exact:true}).fill("User edit: review the rollback owner before releasing.");await page.getByRole("button",{name:"Save edited brief",exact:true}).click();await expect(page.getByRole("status")).toContainText("Saved as your edit");
+ await page.reload();await expect(page.getByRole("textbox",{name:"Your edited version",exact:true})).toHaveValue("User edit: review the rollback owner before releasing.");
+ const key=crypto.randomUUID();const request={template:"product_delivery",version:1,objective:"test",context:"test",hardConstraints:[],conceptIds:[corpusConceptId],unknowns:""};
+ const first=await page.request.post("/api/analyses",{headers:{origin:"http://localhost:3100","Idempotency-Key":key},data:request});expect(first.status()).toBe(200);const duplicate=await page.request.post("/api/analyses",{headers:{origin:"http://localhost:3100","Idempotency-Key":key},data:request});expect(duplicate.status()).toBe(409);
+});

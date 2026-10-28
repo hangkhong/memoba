@@ -1,0 +1,16 @@
+.superpowers/
+node_modules/
+.next/
+.vercel/
+.env*
+!.env.example
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+supabase/.temp/
+supabase/.branches/
+*.tsbuildinfo
+supabase/.cache/
+supabase/.local/
+supabase/.supabase.lock.lease
