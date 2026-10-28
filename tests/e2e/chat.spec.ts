@@ -16,7 +16,17 @@ test("chat persists two turns and explicit constraints without model access", as
     await page.getByRole("textbox", { name: `Constraint ${index}`, exact: true }).fill(`Requirement ${index}`);
   }
   await expect(page.getByRole("button", { name: "Add constraint", exact: true })).toBeDisabled();
+  // Finish the real unavailable-AI response before allowing the first navigation.
+  // Refreshing the old route here must not cancel the conversation navigation.
+  let releaseNavigation: () => void = () => {};
+  const navigationGate = new Promise<void>((resolve) => { releaseNavigation = resolve; });
+  await page.route(/\/workspace\/chat\/[0-9a-f-]+(?:\?|$)/, async (route) => { await navigationGate; await route.continue(); });
+  const savedTurn = page.waitForResponse((response) => response.request().method() === "POST" && response.url().endsWith("/turns"));
+  const analysis = page.waitForResponse((response) => response.request().method() === "POST" && response.url().endsWith("/analyses"));
   await page.getByRole("button", { name: "Send question", exact: true }).click();
+  expect((await savedTurn).status()).toBe(200);
+  expect((await analysis).status()).toBe(503);
+  releaseNavigation();
   await expect(page).toHaveURL(/\/workspace\/chat\/[0-9a-f-]+$/);
   await expect(page.getByRole("status")).toContainText("Your question is saved; no model was called.");
   const id = new URL(page.url()).pathname.split("/").pop();
