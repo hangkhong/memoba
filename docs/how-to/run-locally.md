@@ -4,21 +4,17 @@ Use Node.js 24 and npm. Supabase CLI `2.122.0` is pinned in the project. The nat
 
 ## Start the workspace
 
-1. Run `npm ci`.
-2. Start the native stack:
+For the first setup, run `npm ci` and set `DEMO_EMAIL` and `DEMO_PASSWORD` in `.env.local`. The password must have at least 12 characters. Copy `.env.example` if the file does not exist.
+
+Start the app:
 
 ```sh
-npx supabase start --runtime native --output-format json
+npm run dev
 ```
 
-Keep the JSON output local because it includes credentials. Open its Studio endpoint to inspect tables, Auth, and SQL. Ports are assigned dynamically.
+Open http://localhost:3000 and sign in with the demo credentials. The command starts the native stack, applies migrations, updates local connection settings, and seeds the workspace. It replaces an existing Memoba server on port 3000. If another application owns the port, stop that application first.
 
-3. Run `npx supabase migration up --local`.
-4. Run `npm run db:configure`. This writes public Supabase values to ignored `.env.local` and preserves other entries.
-5. Set `DEMO_EMAIL` and a `DEMO_PASSWORD` of at least 12 characters in `.env.local`.
-6. Run `npm run db:types` and `npm run db:seed`.
-7. Run `npm run doctor`, then `npm run dev`.
-8. Open the URL printed by Next.js and sign in with the credentials from `.env.local`.
+The native stack assigns its own ports. To inspect its Studio endpoint, run `npx supabase status --output-format json`. Keep the output local because it includes credentials.
 
 `db:seed` creates the local workspace, its member, a nonmember test account, and fixed concepts. It preserves existing users and passwords. It does not call a model by default.
 
