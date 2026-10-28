@@ -18,6 +18,10 @@ Vitest checks domain rules. pgTAP checks SQL and access. Playwright checks the l
 
 `src/modules/cases` owns templates and revisions. `src/modules/knowledge` owns search, case reads, relation expansion, and evidence assembly. `src/modules/analysis` owns planning, budgets, the agent, and activity. `src/modules/briefs` owns output validation and saved edits.
 
+`src/modules/conversations` owns ordered user turns and immutable request snapshots. Runs link to turns, and briefs remain attached to runs. The shared workspace shell owns the chat connection, so navigation between Chat and Knowledge Hub does not unmount an active stream. Refresh reads persisted state and does not restart generation.
+
+Chat is the default workspace view. Knowledge Hub reuses the case authoring and publication services. Follow-ups carry user-confirmed structured context and constraints into a new run. Prior assistant answers are not included as evidence or model history in the foundation release. Resolving references to prior proposals is deferred to a feature branch.
+
 Routes and components call application services. Agent tools call the same knowledge services as initial retrieval. Pure rules do not import framework or database clients.
 
 The Pele [component diagram](diagrams/architecture.svg) and [analysis flow](diagrams/harness.svg) have editable `.mmd` sources beside them.

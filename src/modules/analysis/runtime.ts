@@ -9,9 +9,9 @@ import { reasoningAdapter } from "./agent";
 import { runAnalysis } from "./harness";
 import type { AnalysisEvent } from "./events";
 import type { NormalizedRequest } from "./schema";
-export async function prepareAnalysis(context: WorkspaceContext, request: NormalizedRequest, requestKey: string) {
+export async function prepareAnalysis(context: WorkspaceContext, request: NormalizedRequest, requestKey: string, turnId?: string) {
   const models = configuredModels(); const client = await createServerSupabase();
-  const store = analysisRepository(client, context); const admitted = await store.admit(request, requestKey);
+  const store = analysisRepository(client, context); const admitted = await store.admit(request, requestKey, turnId);
   if (admitted.kind !== "admitted") return admitted;
   return { ...admitted, async execute(onEvent: (event: AnalysisEvent) => void, externalSignal: AbortSignal) {
     const signal = AbortSignal.any([externalSignal, AbortSignal.timeout(Math.max(0, new Date(admitted.deadlineAt).getTime() - Date.now()))]);
