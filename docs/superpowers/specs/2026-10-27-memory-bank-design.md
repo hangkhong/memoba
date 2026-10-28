@@ -35,6 +35,7 @@ Người dùng phải xác định được phần có thể tái sử dụng, �
 - Hai template cố định trong code: Product/Delivery và CS/Operations; cùng core schema, có domain fields riêng.
 - Nhập, sửa, đọc, lưu trữ case; tìm kiếm, lọc và xem liên kết.
 - Nhập yêu cầu mới theo mẫu: objective, context, hard constraints, concepts và unknowns.
+- Chat là điểm vào chính, có sidebar và conversation nhiều lượt; Knowledge Hub quản lý case qua hai template.
 - Hybrid retrieval, mở rộng quan hệ và một reasoning agent với tools có contract.
 - Activity từ sự kiện thực tế; Reuse Brief có trích dẫn section/revision, chỉnh sửa văn bản và lưu.
 - Validation, quyền truy cập, provenance, xử lý lỗi và bộ đánh giá demo.
@@ -125,11 +126,12 @@ Nếu invalid: sửa tối đa một lần trong ngân sách còn lại, sau đ�
 
 ## 7. UX
 
-1. Case library: search/filter, outcome và index status; mở case thấy nguồn, revisions, concepts và links.
-2. Case form: core fields, domain fields, outcome chưa biết được khai báo rõ; chọn concepts từ danh mục cố định.
-3. Request form: objective/context/constraints/unknowns; cho thấy giới hạn dữ liệu đã nhập.
-4. Activity: intake, planning, retrieval, context, reasoning, validation và completion/failure. Sự kiện từ backend; không dựng narrative suy nghĩ giả.
-5. Brief: reusable approach, adjustments, exceptions/conflicts, unknowns, next steps. Citation mở source panel trên desktop và chuyển tới evidence trên mobile.
+1. Sidebar: New chat, conversations, Knowledge Hub và tài khoản. Mobile dùng drawer; Chat là trang mặc định.
+2. Chat composer: câu hỏi cùng Request details chứa context, template, constraints, concepts và unknowns. Structured intake được giữ ngay trong chat.
+3. Conversation: lưu các lượt và request snapshots. Follow-up dùng context người dùng xác nhận; mỗi attempt có run và brief riêng. Diễn giải tham chiếu tới đề xuất trước để feature branch sau.
+4. Knowledge Hub: search/filter, outcome và index status; nhập/dán case theo hai template, xem nguồn, revisions, concepts và links. Saved chưa đồng nghĩa với published ready.
+5. Activity: intake, planning, retrieval, context, reasoning, validation và completion/failure. Sự kiện từ backend; không dựng narrative suy nghĩ giả.
+6. Brief xuất hiện trong assistant turn, với reusable approach, adjustments, conflicts, unknowns, next steps và citations theo lượt. Bản edited lưu riêng.
 
 Visual prototype chỉ minh họa UX bằng dữ liệu giả định. App implementation dùng shadcn/ui và React Hook Form; không sao chép HTML prototype thành component framework tự chế.
 

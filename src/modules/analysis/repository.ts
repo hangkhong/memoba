@@ -8,12 +8,15 @@ import { eventSchema, terminalSchema, type AnalysisEvent, type Terminal } from "
 import type { ModelUsage } from "./harness";
 import type { DraftBrief } from "@/modules/briefs/schema";
 import type { EvidenceItem } from "@/modules/knowledge/contracts";
-const admissionSchema = z.discriminatedUnion("kind", [z.object({ kind: z.literal("admitted"), runId: z.uuid(), deadlineAt: z.iso.datetime({ offset: true }) }), z.object({ kind: z.literal("duplicate"), runId: z.uuid() }), z.object({ kind: z.literal("quota") })]);
+const admissionSchema = z.discriminatedUnion("kind", [z.object({ kind: z.literal("admitted"), runId: z.uuid(), deadlineAt: z.iso.datetime({ offset: true }) }), z.object({ kind: z.literal("duplicate"), runId: z.uuid() }), z.object({ kind: z.literal("quota") }), z.object({ kind: z.literal("conflict") })]);
 export const runSchema = z.object({ id: z.uuid(), request: requestSchema, status: z.enum(["running", ...terminalSchema.options]), events: z.array(eventSchema), created_at: z.iso.datetime({ offset: true }), deadline_at: z.iso.datetime({ offset: true }), finished_at: z.iso.datetime({ offset: true }).nullable(), error_code: z.string().nullable(), usage: z.object({ inputTokens: z.number().nullable(), outputTokens: z.number().nullable(), totalTokens: z.number().nullable() }).nullable() });
 export function analysisRepository(client: SupabaseClient<Database>, context: WorkspaceContext) {
   return {
-    async admit(request: NormalizedRequest, requestKey: string) {
-      const result = await client.rpc("admit_analysis", { w: context.workspaceId, input: request, request_key: requestKey, max_concurrent: executionLimits.concurrentRuns, deadline_ms: executionLimits.deadlineMs }).abortSignal(AbortSignal.timeout(10000));
+    async admit(request: NormalizedRequest, requestKey: string, turnId?: string) {
+      const limits = { request_key: requestKey, max_concurrent: executionLimits.concurrentRuns, deadline_ms: executionLimits.deadlineMs };
+      const call = turnId ? client.rpc("admit_conversation_analysis", { turn: turnId, ...limits }) : client.rpc("admit_analysis", { w: context.workspaceId, input: request, ...limits });
+      const result = await call.abortSignal(AbortSignal.timeout(10000));
+      if (result.error?.code === "23505") return admissionSchema.parse({ kind: "conflict" });
       if (result.error) throw new Error("RUN_ADMISSION_FAILED");
       return admissionSchema.parse(result.data);
     },

@@ -25,14 +25,14 @@ export type Database = {
           Tables: {
             "analysis_runs": {
                   Row: {
-                    "author_id": string,"created_at": string,"deadline_at": string,"error_code": string | null,"events": NonNullable<Json>,"finished_at": string | null,"id": string,"knowledge_version": number,"request": NonNullable<Json>,"request_key": string,"status": string,"usage": Json | null,"workspace_id": string
+                    "author_id": string,"conversation_turn_id": string | null,"created_at": string,"deadline_at": string,"error_code": string | null,"events": NonNullable<Json>,"finished_at": string | null,"id": string,"knowledge_version": number,"request": NonNullable<Json>,"request_key": string,"status": string,"usage": Json | null,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "author_id": string,"created_at"?: string,"deadline_at": string,"error_code"?: string | null,"events"?: NonNullable<Json>,"finished_at"?: string | null,"id"?: string,"knowledge_version": number,"request": NonNullable<Json>,"request_key": string,"status"?: string,"usage"?: Json | null,"workspace_id": string
+                    "author_id": string,"conversation_turn_id"?: string | null,"created_at"?: string,"deadline_at": string,"error_code"?: string | null,"events"?: NonNullable<Json>,"finished_at"?: string | null,"id"?: string,"knowledge_version": number,"request": NonNullable<Json>,"request_key": string,"status"?: string,"usage"?: Json | null,"workspace_id": string
                   }
                   Update: {
-                    "author_id"?: string,"created_at"?: string,"deadline_at"?: string,"error_code"?: string | null,"events"?: NonNullable<Json>,"finished_at"?: string | null,"id"?: string,"knowledge_version"?: number,"request"?: NonNullable<Json>,"request_key"?: string,"status"?: string,"usage"?: Json | null,"workspace_id"?: string
+                    "author_id"?: string,"conversation_turn_id"?: string | null,"created_at"?: string,"deadline_at"?: string,"error_code"?: string | null,"events"?: NonNullable<Json>,"finished_at"?: string | null,"id"?: string,"knowledge_version"?: number,"request"?: NonNullable<Json>,"request_key"?: string,"status"?: string,"usage"?: Json | null,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -41,6 +41,12 @@ export type Database = {
 isOneToOne: false
       referencedRelation: "workspaces"
       referencedColumns: ["id"]
+    },{
+      foreignKeyName: "run_conversation_turn"
+      columns: ["conversation_turn_id","workspace_id"]
+isOneToOne: false
+      referencedRelation: "conversation_turns"
+      referencedColumns: ["id","workspace_id"]
     }
                   ]
                 },"briefs": {
@@ -187,6 +193,52 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"conversation_turns": {
+                  Row: {
+                    "conversation_id": string,"created_at": string,"id": string,"message": string,"parent_turn_id": string | null,"position": number,"request": NonNullable<Json>,"request_key": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "conversation_id": string,"created_at"?: string,"id"?: string,"message": string,"parent_turn_id"?: string | null,"position": number,"request": NonNullable<Json>,"request_key": string,"workspace_id": string
+                  }
+                  Update: {
+                    "conversation_id"?: string,"created_at"?: string,"id"?: string,"message"?: string,"parent_turn_id"?: string | null,"position"?: number,"request"?: NonNullable<Json>,"request_key"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversation_turns_conversation_id_workspace_id_fkey"
+      columns: ["conversation_id","workspace_id"]
+isOneToOne: false
+      referencedRelation: "conversations"
+      referencedColumns: ["id","workspace_id"]
+    },{
+      foreignKeyName: "conversation_turns_parent_turn_id_conversation_id_fkey"
+      columns: ["parent_turn_id","conversation_id"]
+isOneToOne: false
+      referencedRelation: "conversation_turns"
+      referencedColumns: ["id","conversation_id"]
+    }
+                  ]
+                },"conversations": {
+                  Row: {
+                    "author_id": string,"created_at": string,"id": string,"title": string,"updated_at": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id": string,"created_at"?: string,"id": string,"title"?: string,"updated_at"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "author_id"?: string,"created_at"?: string,"id"?: string,"title"?: string,"updated_at"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "conversations_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"revision_concepts": {
                   Row: {
                     "concept_id": string,"revision_id": string,"workspace_id": string
@@ -256,11 +308,17 @@ isOneToOne: false
             "admit_analysis":
 { Args: { "deadline_ms": number,"input": Json,"max_concurrent": number,"request_key": string,"w": string }; Returns: Json
                            },
+"admit_conversation_analysis":
+{ Args: { "deadline_ms": number,"max_concurrent": number,"request_key": string,"turn": string }; Returns: Json
+                           },
 "append_analysis_event":
 { Args: { "event": Json,"run": string }; Returns: undefined
                            },
 "archive_case":
 { Args: { "c": string }; Returns: undefined
+                           },
+"create_conversation":
+{ Args: { "conversation": string,"w": string }; Returns: string
                            },
 "edit_brief":
 { Args: { "brief": string,"save_value": boolean,"text_value": string }; Returns: undefined
@@ -291,6 +349,9 @@ isOneToOne: false
                            },
 "save_case_revision":
 { Args: { "input": Json,"target_case"?: string,"w": string }; Returns: Json
+                           },
+"save_conversation_turn":
+{ Args: { "body": string,"conversation": string,"input": Json,"key": string,"parent"?: string }; Returns: string
                            },
 "search_knowledge":
 { Args: { "concept_ids": (string)[],"max_results": number,"model": string,"purpose": string,"query_embedding": string,"query_text": string,"w": string }; Returns: Json[]

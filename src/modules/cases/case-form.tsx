@@ -27,7 +27,7 @@ export function CaseForm({ initial, caseId, concepts }: { initial?: CaseInput; c
       const response = await fetch(caseId ? `/api/cases/${caseId}` : "/api/cases", { method: caseId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
       const raw: unknown = await response.json();
       if (!response.ok) { const parsed = z.object({ error: z.string() }).safeParse(raw); setError(parsed.success ? parsed.data.error : "Could not save case."); return; }
-      const saved = savedCaseSchema.parse(raw); router.push(`/workspace/cases/${saved.caseId}`); router.refresh();
+      const saved = savedCaseSchema.parse(raw); router.push(`/workspace/knowledge/${saved.caseId}`); router.refresh();
     } catch { setError("Cannot confirm save. Check the case library before trying again."); }
   }
   return <form onSubmit={form.handleSubmit(submit)} className="space-y-6">

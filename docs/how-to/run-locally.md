@@ -18,7 +18,9 @@ The native stack assigns its own ports. To inspect its Studio endpoint, run `npx
 
 `db:seed` creates the local workspace, its member, a nonmember test account, and fixed concepts. It preserves existing users and passwords. It does not call a model by default.
 
-Save cases through **Record a case**. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
+After sign-in, Chat opens by default. Enter a question and add context in **Request details**. Conversations persist even without model access. Follow-up turns retain the confirmed request state, and reload does not restart analysis.
+
+Open **Knowledge Hub** in the sidebar and select **Record a case** to enter or paste a case through either fixed template. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
 
 If the native project changes, rerun `db:configure` and restart Next.js. Do not run another native Supabase project concurrently.
 
@@ -35,7 +37,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser suite uses its own Next.js server on port 3100 with model credentials disabled. It covers Auth, structured intake, unavailable analysis, case save, immutable revisions, indexing retry, and archive. Unit tests use the official AI SDK test providers. No runtime mock supplies evidence or model output.
+The browser suite uses its own Next.js server on port 3100 with model credentials disabled. It covers Auth, structured chat, saved follow-ups, unavailable analysis, reload, mobile navigation, case save, immutable revisions, indexing retry, and archive. Unit tests use the official AI SDK test providers. No runtime mock supplies evidence or model output.
 
 The CI workflow runs the same foundation checks against a fresh native database. Production build checks can run without AI or Supabase environment values. Regenerate `src/lib/supabase/database.types.ts` after migrations. If a case or request schema changes, create a new migration with `npx supabase migration new input_contracts`, then generate its checks with `npm run db:contracts -- <new-migration.sql>` before applying it.
 

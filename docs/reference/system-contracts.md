@@ -57,11 +57,23 @@ Archived cases and unpublished revisions do not enter new retrieval. Saved brief
 
 ## Persistence
 
-The entities are `workspaces`, `workspace_members`, `cases`, `case_revisions`, `case_sections`, `concepts`, `revision_concepts`, `case_links`, `analysis_runs`, and `briefs`.
+The entities are `workspaces`, `workspace_members`, `cases`, `case_revisions`, `case_sections`, `concepts`, `revision_concepts`, `case_links`, `conversations`, `conversation_turns`, `analysis_runs`, and `briefs`.
 
 Membership is set up before the demo. Public sign-up does not enroll a member. Runtime queries use user scope and RLS. Save, publish, archive, and admission operations use transactional RPCs.
 
 The vector migration, stored vectors, and query embedding model have matching model IDs and dimensions. A model change requires reindexing.
+
+## Conversation foundation
+
+Workspace members can read conversations. Only the conversation author can append turns or admit attempts. Turns contain user text and immutable normalized request snapshots. Their schemas are owned by [`conversations/schema.ts`](../../src/modules/conversations/schema.ts) and the existing request schema. SQL JSON checks are generated from those schemas.
+
+The first question becomes the objective. A follow-up appends user text to the explicitly confirmed request context. Context overflow is rejected without truncation. Objective, template, and constraint changes remain explicit user edits. Prior generated or edited answers are not passed into the next model call. Proposal reference resolution and broader conversational reasoning are deferred.
+
+A turn is saved before AI availability and run admission. Missing model access creates no run and leaves the question available. Turn creation and attempt admission have separate idempotency keys. The database checks the latest parent, prevents simultaneous runs in one conversation, and preserves the workspace quota. A failed, cancelled, or timed-out attempt can be retried as a new run on the latest turn. Complete and gap-report turns require a new follow-up.
+
+Runs reference a turn in the same workspace. Each attempt retains its own deadline, evidence registry, and brief. Existing independent runs keep a null turn reference. Brief evidence remains behind the existing access checks; chat does not store another copy of excerpts.
+
+The shared workspace layout owns the analysis stream across client navigation. Activity and validated briefs render in the conversation. Refresh reads saved runs and reconciles expired deadlines without admitting another run. Cancellation and full-page disconnect retain the existing request-driven behavior; durable resume is not implemented.
 
 ## States and errors
 
@@ -75,6 +87,11 @@ Validation checks schema, the evidence registry, source revisions, and access. S
 
 | Endpoint | Result |
 |---|---|
+| `GET /api/conversations` | Recent conversations in the verified workspace |
+| `POST /api/conversations` | Idempotent conversation creation |
+| `GET /api/conversations/:id` | Authorized turns, attempts, and permitted briefs |
+| `POST /api/conversations/:id/turns` | Saved immutable turn, before model access |
+| `POST /api/conversations/:id/turns/:turnId/analyses` | Attempt through the shared analysis service and UI stream |
 | `POST /api/cases` | Saved IDs and index state |
 | `PATCH /api/cases/:id` | New revision |
 | `POST /api/cases/:id/revisions/:revisionId/reindex` | Idempotent index state |
