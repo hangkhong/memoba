@@ -3,5 +3,5 @@ import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
-  test: { environment: "node", include: ["src/**/*.test.ts", "evals/**/*.test.ts"], clearMocks: true },
+  test: { environment: "node", include: ["src/**/*.test.ts", "evals/**/*.test.ts"], clearMocks: true, env: { GOOGLE_GENERATIVE_AI_API_KEY: "", OPENAI_API_KEY: "" } },
 });

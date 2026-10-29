@@ -45,14 +45,17 @@ The CI workflow runs the same foundation checks against a fresh native database.
 
 ## Verify model integration when quota is available
 
-1. Set `GOOGLE_GENERATIVE_AI_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, and `AI_EMBEDDING_DIMENSIONS` in ignored `.env.local`. Model IDs use no provider prefix.
-2. Run `npm run ai:probe`. The current vector migration requires `gemini-embedding-2` and 1536 dimensions. A model or dimension change requires a migration and reindexing.
-3. Run `npm run db:seed -- --cases` to index six labelled synthetic cases. Use `--challenge` instead for the authored 24-case corpus. Both commands call the real embedding model and preserve ready seed revisions.
-4. Run `RUN_LIVE_MODEL_TESTS=1 npm run test:e2e -- --grep @live` to opt into case indexing and full analysis checks.
+1. Add `OPENAI_API_KEY` to ignored `.env.local`. Set `AI_REASONING_MODEL=openai:gpt-6-luna`, `AI_EMBEDDING_MODEL=openai:text-embedding-3-small`, and `AI_EMBEDDING_DIMENSIONS=1536`. OpenAI-only configuration does not require a Google key. Model references use `provider:model`. Legacy unprefixed IDs select Google.
+2. Run `npm run ai:probe` once to check the embedding dimension and provider access.
+3. If existing cases use another profile, stop Next.js and run `npx supabase migration up --local`, `npm run db:types`, and `npm run ai:migrate-embeddings` before starting the app. This indexes same-content replacement revisions and verifies every active case has a ready published revision under the selected profile. It preserves old revisions and citations. A second run reuses ready revisions without another embedding call. Resolve any reported pending-edit or stale-source conflict before normal use. An active case with no published revision uses its latest saved content as the migration source.
+4. If a synthetic corpus is needed, run `npm run db:seed -- --cases`. Use `--challenge` only for the authored 24-case evaluation corpus. Both flags call the real embedding provider. Seed keeps existing case IDs, reuses matching ready revisions, and preserves archived history.
+5. Start the app and send one structured request. Inspect the brief, citations, and saved result after refresh. For the automated opt-in journey, run `RUN_LIVE_MODEL_TESTS=1 npm run test:e2e -- tests/e2e/local-flow.spec.ts` after stopping other Next.js servers. Run `npm run ai:probe -- --tool` only when the analysis did not exercise tool calling and a capability check is needed.
+
+To keep Google available, use `google:<model-id>` and `GOOGLE_GENERATIVE_AI_API_KEY`. The supported Google embedding profile remains `google:gemini-embedding-2` at 1536 dimensions. Changing the embedding provider requires the migration above. Do not change only the env model and search old vectors with the new model.
 
 The probe embeds two synthetic Vietnamese and English inputs and writes an ignored report under `.superpowers/probes`. Missing configuration exits with code 2. Missing token usage is stored as unknown.
 
-The live checks need working provider quota. They have not established a successful live brief. Use [Evaluation status](../reference/evaluation.md) for the remaining acceptance work.
+The live checks need working provider quota and model access for the configured account. A runtime smoke check does not establish semantic quality. Use [Evaluation status](../reference/evaluation.md) for the remaining acceptance work.
 
 ## Stop the services
 

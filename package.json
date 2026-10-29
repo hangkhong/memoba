@@ -16,10 +16,12 @@
     "db:seed": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/seed-demo.ts",
     "db:configure": "node --experimental-strip-types scripts/configure-local.ts",
     "ai:probe": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/probe-ai.ts",
+    "ai:migrate-embeddings": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/migrate-embeddings.ts",
     "db:contracts": "node --experimental-strip-types scripts/db-contracts.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.107",
+    "@ai-sdk/openai": "^4.0.104",
     "@base-ui/react": "^1.9.0",
     "@hookform/resolvers": "^5.9.2",
     "@supabase/ssr": "^0.12.7",

@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { readAIConfig } from "../src/lib/config/env.ts";
-import { createEmbeddingAdapter } from "../src/lib/ai/embeddings.ts";
+import { configuredModels } from "../src/lib/ai/models.ts";
+import { workspaceContextSchema } from "../src/lib/auth/schema.ts";
+import { caseRepository } from "../src/modules/cases/repository.ts";
 import { createCaseService } from "../src/modules/cases/service.ts";
 import { savedCaseSchema } from "../src/modules/cases/contracts.ts";
 import { localCases, challengeCases, corpusConceptId, rolloutConceptId, reconciliationConceptId } from "../evals/local-v0/corpus.ts";
@@ -47,22 +48,33 @@ async function seed() {
   if (!process.argv.includes("--cases") && !process.argv.includes("--challenge")) { process.stdout.write("Seeded local accounts and fixed concepts. Pass --cases or --challenge explicitly to index a corpus with the real model.\n"); return; }
   const ai = readAIConfig(process.env);
   if (ai.kind !== "configured") { process.stdout.write("Seeded workspace and accounts. AI is unavailable; case seeding requires real embeddings.\n"); return; }
-  const google = createGoogleGenerativeAI({ apiKey: ai.value.GOOGLE_GENERATIVE_AI_API_KEY });
-  const embed = createEmbeddingAdapter({ model: google.embedding(ai.value.AI_EMBEDDING_MODEL), dimensions: ai.value.AI_EMBEDDING_DIMENSIONS });
+  const models = configuredModels();
+  const context = { workspaceId: workspaceContextSchema.shape.workspaceId.parse(workspaceId) };
   const fixtures = process.argv.includes("--challenge") ? challengeCases : localCases;
   const manifest: { slug: string; caseId: string; revisionId: string; archived: boolean }[] = [];
   for (const fixture of fixtures) {
-    const listed = await client.from("case_revisions").select("id,case_id,index_state").eq("workspace_id", workspaceId).contains("content", { title: fixture.input.title }).order("created_at", { ascending: false }).limit(1);
+    const listed = await client.from("case_revisions").select("id,case_id,index_state,embedding_model,embedding_dimensions").eq("workspace_id", workspaceId).contains("content", { title: fixture.input.title }).order("created_at", { ascending: false }).limit(1);
     if (listed.error) throw new Error("Cannot inspect seed revisions.");
-    const existing = z.array(z.object({ id: z.uuid(), case_id: z.uuid(), index_state: z.enum(["pending", "ready", "failed"]) })).parse(listed.data)[0];
-    const store = {
-      async save() { const result = await client.rpc("save_case_revision", { w: workspaceId, input: fixture.input }); if (result.error) throw new Error("Cannot seed case."); return savedCaseSchema.parse(result.data); },
-      async revision(id: string) { const result = await client.from("case_revisions").select("id,case_id,index_state").eq("id",id).single(); if (result.error) throw new Error("Cannot read seed revision."); const row=z.object({ id:z.uuid(),case_id:z.uuid(),index_state:z.enum(["pending","ready","failed"]) }).parse(result.data); return { caseId:row.case_id,revisionId:row.id,indexState:row.index_state,input:fixture.input }; },
-      async index(id: string, sections: { key: string; text: string; embedding: number[] }[]) { const result=await client.rpc("publish_case_revision", {r:id,sections,model:ai.value.AI_EMBEDDING_MODEL,dimensions:ai.value.AI_EMBEDDING_DIMENSIONS});if(result.error)throw new Error("Cannot publish seed revision.");return savedCaseSchema.parse(result.data); },
-      async fail(id: string) { const result=await client.rpc("fail_case_index",{r:id});if(result.error)throw new Error("Cannot record index failure."); },
-    };
-    const service = createCaseService(store, embed);
-    const saved = existing?.index_state === "ready" ? { caseId: existing.case_id,revisionId: existing.id,indexState: existing.index_state } : existing ? await service.reindex(existing.id) : await service.save(fixture.input);
+    const existing = z.array(z.object({ id: z.uuid(), case_id: z.uuid(), index_state: z.enum(["pending", "ready", "failed"]), embedding_model: z.string(), embedding_dimensions: z.number() })).parse(listed.data)[0];
+    const service = createCaseService(caseRepository(client, context, models, existing?.case_id), models.embed);
+    let saved;
+    if (existing) {
+      const record = await client.from("cases").select("lifecycle,published_revision_id,latest_revision_id").eq("id", existing.case_id).eq("workspace_id", workspaceId).single();
+      if (record.error) throw new Error("Cannot inspect seed case.");
+      if (record.data.lifecycle === "archived") {
+        if (!fixture.archived) throw new Error("An active seed fixture was archived. Preserve it and use a separate demo corpus.");
+        manifest.push({ slug: fixture.slug, caseId: existing.case_id, revisionId: existing.id, archived: true });
+        continue;
+      }
+      if (existing.embedding_model === models.embeddingModel && existing.embedding_dimensions === models.dimensions) saved = await service.reindex(existing.id);
+      else {
+        const source = record.data.published_revision_id ?? record.data.latest_revision_id;
+        if (!source) throw new Error("Seed case has no source revision.");
+        const prepared = await client.rpc("prepare_case_embedding_revision", { w: workspaceId, target_case: existing.case_id, source_revision: source, model: models.embeddingModel, dimensions: models.dimensions });
+        if (prepared.error) throw new Error("Cannot prepare seed embedding migration. Resolve pending edits first.");
+        saved = await service.reindex(savedCaseSchema.parse(prepared.data).revisionId);
+      }
+    } else saved = await service.save(fixture.input);
     if (saved.indexState !== "ready") throw new Error("Real embedding failed while seeding.");
     manifest.push({ slug: fixture.slug,caseId:saved.caseId,revisionId:saved.revisionId,archived:fixture.archived??false });
   }
@@ -70,6 +82,6 @@ async function seed() {
   if(canary && legacy) { const result=await client.rpc("link_cases",{source:canary.caseId,target:legacy.caseId,relation:"supersedes",reason:"Controlled release replaced the old manual procedure.",archive_target:true});if(result.error)throw new Error("Cannot seed supersedes relation."); }
   if(canary && onboarding) { const result=await client.rpc("link_cases",{source:canary.caseId,target:onboarding.caseId,relation:"related_to",reason:"Both use pilots and explicit review checkpoints; domain applicability must be checked.",archive_target:false});if(result.error)throw new Error("Cannot seed cross-domain relation."); }
   mkdirSync(".superpowers/evals",{recursive:true});writeFileSync(".superpowers/evals/seed.json",JSON.stringify(manifest,null,2)+"\n");
-  process.stdout.write(`Seeded ${manifest.length} labelled synthetic cases with real embeddings and fixed concepts. Existing users were preserved.\n`);
+  process.stdout.write(`Seeded ${manifest.length} labelled synthetic cases. Active cases use the configured embedding profile. Archived history and existing users were preserved.\n`);
 }
 seed().catch((error: unknown) => { process.stderr.write(error instanceof Error ? error.message + "\n" : "Seed failed.\n"); process.exitCode = 1; });

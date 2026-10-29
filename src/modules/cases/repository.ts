@@ -2,25 +2,27 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { WorkspaceContext } from "@/lib/auth/schema";
-import { caseInputSchema, type CaseInput } from "./schema";
+import { caseInputSchema, type CaseInput } from "./schema.ts";
 import type { CaseStore } from "./service";
 
-import { savedCaseSchema } from "./contracts";
+import { savedCaseSchema } from "./contracts.ts";
 export const revisionSchema = z.object({ id: z.uuid(), case_id: z.uuid(), content: caseInputSchema, index_state: z.enum(["pending", "ready", "failed"]), created_at: z.iso.datetime({ offset: true }) });
 export const caseRecordSchema = z.object({ id: z.uuid(), lifecycle: z.enum(["active", "archived"]), published_revision_id: z.uuid().nullable(), latest_revision_id: z.uuid().nullable(), created_at: z.iso.datetime({ offset: true }) });
 export type CaseRecord = z.infer<typeof caseRecordSchema>;
 export type CaseRevision = z.infer<typeof revisionSchema>;
-export function caseRepository(client: SupabaseClient<Database>, context: WorkspaceContext, config: { embeddingModel: string; dimensions: number }, targetCase?: string): CaseStore {
+export function caseRepository(client: SupabaseClient<Database>, context: Pick<WorkspaceContext, "workspaceId">, config: { embeddingModel: string; dimensions: number }, targetCase?: string): CaseStore {
   return {
     async save(input: CaseInput) {
-      const result = await client.rpc("save_case_revision", { w: context.workspaceId, input, target_case: targetCase });
+      const result = await client.rpc("save_case_revision", { w: context.workspaceId, input, target_case: targetCase, model: config.embeddingModel, dimensions: config.dimensions });
       if (result.error) throw new Error("CASE_SAVE_FAILED");
       return savedCaseSchema.parse(result.data);
     },
     async revision(id) {
-      const result = await client.from("case_revisions").select("id,case_id,content,index_state,created_at").eq("id", id).eq("workspace_id", context.workspaceId).single();
+      const result = await client.from("case_revisions").select("id,case_id,content,index_state,created_at,embedding_model,embedding_dimensions").eq("id", id).eq("workspace_id", context.workspaceId).single();
       if (result.error) throw new Error("CASE_UNAVAILABLE");
       const revision = revisionSchema.parse(result.data);
+      const profile = z.object({ embedding_model: z.string(), embedding_dimensions: z.number().int() }).parse(result.data);
+      if (profile.embedding_model !== config.embeddingModel || profile.embedding_dimensions !== config.dimensions) throw new Error("EMBEDDING_PROFILE_MISMATCH");
       return { caseId: revision.case_id, revisionId: revision.id, input: revision.content, indexState: revision.index_state };
     },
     async index(id, sections) {

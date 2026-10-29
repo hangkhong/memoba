@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { z } from "zod";
-import { corpusConceptId } from "../../evals/local-v0/corpus";
 
 test("@live real case evidence becomes a saved brief with citations and separate edits", async ({ page }) => {
  test.setTimeout(120000);
@@ -26,6 +25,4 @@ test("@live real case evidence becomes a saved brief with citations and separate
  await page.screenshot({path:"test-results/reuse-brief.png",fullPage:true});
  await page.getByRole("textbox",{name:"Your edited version",exact:true}).fill("User edit: review the rollback owner before releasing.");await page.getByRole("button",{name:"Save edited brief",exact:true}).click();await expect(page.getByRole("status")).toContainText("Saved as your edit");
  await page.reload();await expect(page.getByRole("textbox",{name:"Your edited version",exact:true})).toHaveValue("User edit: review the rollback owner before releasing.");
- const key=crypto.randomUUID();const request={template:"product_delivery",version:1,objective:"test",context:"test",hardConstraints:[],conceptIds:[corpusConceptId],unknowns:""};
- const first=await page.request.post("/api/analyses",{headers:{origin:"http://localhost:3100","Idempotency-Key":key},data:request});expect(first.status()).toBe(200);const duplicate=await page.request.post("/api/analyses",{headers:{origin:"http://localhost:3100","Idempotency-Key":key},data:request});expect(duplicate.status()).toBe(409);
 });

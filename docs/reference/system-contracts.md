@@ -1,10 +1,10 @@
 # System contracts
 
-This reference defines domain behavior. Storage, retrieval, run lifecycle, analysis wiring, and brief persistence are implemented. A complete live model brief and semantic evaluation remain unverified.
+This reference defines domain behavior. Storage, retrieval, run lifecycle, analysis wiring, and brief persistence are implemented. One OpenAI case-to-brief runtime check completed with tool execution, authorized citations, and refresh persistence on 2026-10-29. Semantic evaluation remains pending.
 
 ## Runtime
 
-The app uses Node.js 24, ESM, TypeScript, npm, and Next.js App Router. AI SDK major 7 provides the agent loop. The Google provider connects directly to the Gemini API.
+The app uses Node.js 24, ESM, TypeScript, npm, and Next.js App Router. AI SDK major 7 provides the agent loop. The model factory uses the SDK provider registry for direct OpenAI and Google access. Reasoning and embedding select providers independently. OpenAI reasoning uses Responses with low effort. Provider options apply through model middleware to both generation and repair.
 
 Local Supabase uses project CLI `2.122.0`, native runtime, experimental stack, and Postgres 17. Endpoints come from JSON output. Native Auth, pgvector, migration, and SQL smoke checks precede repository integration.
 
@@ -61,7 +61,7 @@ The entities are `workspaces`, `workspace_members`, `cases`, `case_revisions`, `
 
 Membership is set up before the demo. Public sign-up does not enroll a member. Runtime queries use user scope and RLS. Save, publish, archive, and admission operations use transactional RPCs.
 
-The vector migration, stored vectors, and query embedding model have matching model IDs and dimensions. A model change requires reindexing.
+The vector migration, stored vectors, and query embedding model have matching model IDs and dimensions. Supported profiles are `gemini-embedding-2` and `text-embedding-3-small`, both at 1536 dimensions. Search filters both keyword and semantic candidates by the requested profile. A model change requires new indexed revisions through `npm run ai:migrate-embeddings`, with the app stopped until the whole active corpus is verified. Existing revisions and historical evidence remain immutable. Preparation reuses matching pending replacements, rejects a stale source or unrelated pending edit, and can recover an unpublished failed source.
 
 ## Conversation foundation
 
