@@ -2,12 +2,12 @@
 
 ## Read the project contracts
 
-Read `docs/superpowers/specs/2026-10-27-memory-bank-design.md` for product scope.
+Read `docs/superpowers/specs/2026-10-29-text-agent-design.md` for product scope.
 Read `docs/architecture/FOUNDATION.md` for architecture decisions.
 Read `docs/reference/system-contracts.md` for limits, states, tools, and data rules.
-Use `docs/superpowers/plans/2026-10-27-local-v0.md` for the first local release.
+Use `docs/superpowers/plans/2026-10-29-agent-engine-simplification.md` for the current implementation.
 
-Build for one PM, one demo workspace, and a seven-day challenge. Keep the two fixed case templates. Keep request intake structured.
+Build for one PM, one demo workspace, and a seven-day challenge. Keep the two fixed case templates. Accept natural-language requests.
 
 ## Use the existing frameworks
 
@@ -25,7 +25,7 @@ The Supabase native stack is an explicit experimental exception. Pin CLI `2.122.
 
 Put product modules in `src/modules/cases`, `src/modules/knowledge`, `src/modules/analysis`, and `src/modules/briefs`.
 Keep route handlers and UI components thin. Put business rules in typed functions and services.
-Make pre-retrieval and agent tools call the same knowledge service.
+Make agent tools call the knowledge service.
 Keep SDK and database types behind adapters. Use domain contracts between modules.
 Create files when a task needs them. Do not create empty modules for future features.
 
@@ -43,8 +43,8 @@ Keep generated briefs separate from observed case outcomes.
 
 ## Bound the analysis
 
-Keep hard constraints outside model control. Do not expose SQL, workspace selection, or write tools to the model.
-Apply the 90-second deadline to planning, retrieval, reasoning, retries, and output repair together.
+Enforce execution constraints outside model control and preserve user-stated restrictions in context. Do not expose SQL, workspace selection, or write tools to the model.
+Apply the run deadline to retrieval, reasoning, retries, and output repair together.
 Enforce tool, step, candidate, and context limits from `docs/reference/system-contracts.md`.
 Distinguish a successful empty search from a failed search. Do not replace missing services with runtime mocks.
 Use actual tool events for progress. Do not invent a reasoning narrative.
@@ -66,7 +66,7 @@ Read the relevant skill before applying it. Preserve the user's approved scope a
 
 After bootstrap, use the scripts defined in `package.json`. The plan defines the initial scripts and their owners.
 Run focused tests while editing. Before closing a local release, run lint, typecheck, tests, the production build, and the required local database checks.
-Open the running app and verify the case-to-brief flow. A passing build does not prove the flow works.
+Open the running app and verify the case-to-answer flow. A passing build does not prove the flow works.
 Report which checks ran and which checks remain blocked. Do not call planned checks passing.
 
 ## Keep the documents short

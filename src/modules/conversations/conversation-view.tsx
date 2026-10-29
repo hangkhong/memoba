@@ -41,10 +41,10 @@ export function ConversationView({ detail, userId, concepts }: { detail: Convers
         return <section key={turn.id} aria-label={`Turn ${turn.position}`}>
           <div className="ml-auto max-w-2xl rounded-2xl bg-muted px-5 py-4">
             <p className="whitespace-pre-wrap break-words leading-7">{turn.message}</p>
-            <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Request snapshot</summary><p className="mt-2 whitespace-pre-wrap">{turn.request.context}</p>{turn.request.hardConstraints.map((constraint, index) => <p key={index}>{constraint.kind}: {constraint.text}</p>)}</details>
+            {turn.request.version === 1 && <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Request snapshot</summary><p className="mt-2 whitespace-pre-wrap">{turn.request.context}</p>{turn.request.hardConstraints.map((constraint, index) => <p key={index}>{constraint.kind}: {constraint.text}</p>)}</details>}
           </div>
           <div className="mt-5 space-y-4">
-            {run?.brief && !liveWorking && !pendingRun ? <><h2 className="text-xl font-semibold">Reuse Brief</h2><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
+            {run?.brief && !liveWorking && !pendingRun ? <><h2 className="text-xl font-semibold">{"version" in run.brief.generated ? "Answer" : "Reuse Brief"}</h2><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
               {status ? <p className="text-sm text-muted-foreground">{status === "running" ? "Analysis in progress" : status.replaceAll("_", " ")}</p> : <p className="text-sm text-muted-foreground">Question saved. Analysis has not started.</p>}
               {status === "gap_report" && <section className="rounded-xl border p-5"><h2 className="font-semibold">No precedent found</h2><p className="mt-3">The search completed successfully without usable evidence. Add cases covering the method, applicability conditions, and failures or exceptions for this request.</p></section>}
               {!liveWorking && !pendingRun && run?.error_code && <p className="text-sm">{run.error_code}. Check the knowledge and model services before retrying.</p>}
@@ -60,7 +60,7 @@ export function ConversationView({ detail, userId, concepts }: { detail: Convers
       <ChatScrollButton/>
     </ChatConversation>
     <div className="mx-auto w-full max-w-5xl shrink-0 border-t bg-background px-5 py-3 md:px-10">
-      {owner ? <Composer key={latest?.id ?? "empty"} conversationId={detail.conversation.id} parentTurnId={latest?.id} initial={latest?.request} concepts={concepts} disabled={running || awaitingSaved}/> : <p className="text-sm text-muted-foreground">You can read this conversation. Start a new chat to ask your own question.</p>}
+      {owner ? <Composer key={latest?.id ?? "empty"} conversationId={detail.conversation.id} parentTurnId={latest?.id} concepts={concepts} disabled={running || awaitingSaved}/> : <p className="text-sm text-muted-foreground">You can read this conversation. Start a new chat to ask your own question.</p>}
       {(running || awaitingSaved) && !active?.busy && <p className="mt-3 text-sm text-muted-foreground">Reading saved analysis state. Refresh does not resume generation.</p>}
     </div>
   </div>;

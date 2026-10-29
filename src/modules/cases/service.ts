@@ -17,7 +17,7 @@ export function caseSections(input: CaseInput): { key: SectionKey; text: string 
     ] : [
       { key: "customerImpact" as const, text: input.customerImpact }, { key: "handlingConditions" as const, text: input.handlingConditions }, { key: "escalationNotes" as const, text: input.escalationNotes },
     ]),
-  ];
+  ].filter((section) => /\S/.test(section.text));
 }
 export function createCaseService(store: CaseStore, embed?: Embed) {
   async function reindex(revisionId: string): Promise<Saved> {

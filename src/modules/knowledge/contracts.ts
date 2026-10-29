@@ -25,9 +25,20 @@ export const toolResultSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("error"), code: z.enum(["UNAVAILABLE", "ACCESS_DENIED", "QUERY_FAILED", "INVALID_RESULT"]), retryable: z.boolean() }),
 ]);
 export type ToolResult = z.infer<typeof toolResultSchema>;
-export type EvidenceBundle = {
-  items: EvidenceItem[];
-  gaps: z.infer<typeof purposeSchema>[];
-  warnings: ("CONTEXT_LIMIT" | "PINNED_REVISION_CONFLICT")[];
-  estimatedTokens: number;
+
+
+export type CasePreview = {
+  caseId: EvidenceItem["caseId"];
+  revisionId: EvidenceItem["revisionId"];
+  title: string;
+  outcome: EvidenceItem["outcome"];
+  sections: { sectionKey: EvidenceItem["sectionKey"]; excerpt: string; truncated: boolean }[];
 };
+export type DisclosedSource = { marker: string; evidence: EvidenceItem };
+export type ReadSection = { marker: string; caseId: EvidenceItem["caseId"]; revisionId: EvidenceItem["revisionId"]; title: string; outcome: EvidenceItem["outcome"]; sectionKey: EvidenceItem["sectionKey"]; text: string };
+export type RunToolResult<T> =
+  | { kind: "success"; items: T[] }
+  | { kind: "empty"; items: [] }
+  | { kind: "partial"; items: T[]; reason: "CANDIDATE_LIMIT" | "CONTEXT_LIMIT" | "SOURCE_UNAVAILABLE" | "PINNED_REVISION_CONFLICT" }
+  | { kind: "no_progress"; alreadyRead: string[] }
+  | { kind: "error"; code: Extract<ToolResult, { kind: "error" }>["code"]; retryable: boolean };

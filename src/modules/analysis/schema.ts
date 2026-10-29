@@ -1,8 +1,9 @@
 import { z } from "zod";
 import { templateSchema } from "../cases/schema.ts";
-import { executionLimits, inputLimits } from "../../lib/contracts/limits.ts";
+import { inputLimits } from "../../lib/contracts/limits.ts";
 
 const text = z.string().trim().regex(/\S/, "Enter non-empty text.").max(inputLimits.text);
+export const rawMessageSchema = z.string().regex(/\S/, "Enter non-empty text.").max(inputLimits.text);
 export const purposeSchema = z.enum(["method", "conditions", "exceptions"]);
 export const requestSchema = z.object({
   template: templateSchema,
@@ -14,6 +15,15 @@ export const requestSchema = z.object({
   unknowns: z.string().trim().max(inputLimits.text),
 }).strict();
 export type NormalizedRequest = z.infer<typeof requestSchema>;
-export const planQueriesSchema = z.object({ queries: z.array(z.object({ purpose: purposeSchema, query: text }).strict()).min(1).max(executionLimits.planQueries) }).strict();
-export type PlanQueries = z.infer<typeof planQueriesSchema>;
-export type RequestPlan = { request: NormalizedRequest; queries: PlanQueries["queries"] };
+export const conversationMessageSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  text: rawMessageSchema,
+}).strict();
+export const textRunInputSchema = z.object({
+  version: z.literal(2),
+  message: rawMessageSchema,
+  history: z.array(conversationMessageSchema).max(inputLimits.conversationMessages),
+}).strict();
+export const storedRunInputSchema = z.union([requestSchema, textRunInputSchema]);
+export type TextRunInput = z.infer<typeof textRunInputSchema>;
+export type StoredRunInput = z.infer<typeof storedRunInputSchema>;
