@@ -1,6 +1,6 @@
 # Evaluation status
 
-The foundation is tested separately from live model quality. The user paused API model checks on 2026-10-28 because Gemini requests were rate-limited.
+The foundation is tested separately from live model quality. Gemini checks were paused on 2026-10-28 because requests were rate-limited. The user authorized a small OpenAI runtime check on 2026-10-29, without model comparison or a semantic evaluation campaign.
 
 ## Corpus and request fixtures
 
@@ -10,14 +10,24 @@ The foundation is tested separately from live model quality. The user paused API
 
 The fixture contract tests check counts, schemas, and source references. These authored expectations need human review before they can serve as calibrated ground truth. They are not model-generated evaluation scores.
 
-## Observed results
+## Gemini checkpoint on 2026-10-28
 
 - Direct Gemini embeddings returned two vectors with 1536 dimensions.
 - Six labelled cases were indexed with the real embedding provider before the rate limit.
 - A browser saved and published a real synthetic case and inspected its revision.
-- The first live analysis failed structured output validation. A later attempt failed during the provider call. No complete live brief or semantic acceptance result is claimed.
+- The first live analysis failed structured output validation. A later attempt failed during the provider call. That checkpoint did not establish a complete live brief or semantic acceptance.
+
+## OpenAI runtime checkpoint on 2026-10-29
+
+The browser saved and indexed a synthetic case using `text-embedding-3-small` at 1536 dimensions. A structured analysis using `gpt-6-luna` through Responses with low effort completed, executed `search_knowledge`, and persisted its brief. The user-visible citations opened, the authorized brief endpoint returned successfully, and refresh did not start another analysis.
+
+The completed run reported 8188 input tokens, 1395 output tokens, and 9583 total tokens. It completed in approximately 18.6 seconds within the existing deadline. The existing output budget was sufficient for this run. These observations establish runtime integration for one scenario, not semantic acceptance or general latency guarantees.
+
+The claim schema retains its literal `kind` variants and observed-reference requirements. It uses a Zod union so the emitted provider schema contains supported `anyOf`. The earlier SQL `oneOf` constraint remains equivalent because the kind literals make its branches mutually exclusive.
 
 ## Foundation verification
+
+On 2026-10-29, the OpenAI integration passed lint, typecheck, production build, 65 Vitest tests, 94 native SQL assertions, and eight browser regression tests. Both provider credentials were disabled for offline tests.
 
 On 2026-10-28, the default suite passed 45 Vitest tests, 55 native SQL assertions, and five browser tests with model credentials disabled. Clean installation, lint, typecheck, production build, and security advisors also passed. These checks establish deterministic behavior; they do not measure model quality.
 

@@ -338,6 +338,9 @@ isOneToOne: false
 "link_cases":
 { Args: { "archive_target"?: boolean,"reason": string,"relation": string,"source": string,"target": string }; Returns: undefined
                            },
+"prepare_case_embedding_revision":
+{ Args: { "dimensions": number,"model": string,"source_revision": string,"target_case": string,"w": string }; Returns: Json
+                           },
 "publish_case_revision":
 { Args: { "dimensions": number,"model": string,"r": string,"sections": Json }; Returns: Json
                            },
@@ -348,7 +351,7 @@ isOneToOne: false
 { Args: { "run": string }; Returns: undefined
                            },
 "save_case_revision":
-{ Args: { "input": Json,"target_case"?: string,"w": string }; Returns: Json
+{ Args: { "dimensions"?: number,"input": Json,"model"?: string,"target_case"?: string,"w": string }; Returns: Json
                            },
 "save_conversation_turn":
 { Args: { "body": string,"conversation": string,"input": Json,"key": string,"parent"?: string }; Returns: string

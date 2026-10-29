@@ -14,6 +14,7 @@ jobs:
       CI: true
       DEMO_EMAIL: pm@memoba.local
       GOOGLE_GENERATIVE_AI_API_KEY: ""
+      OPENAI_API_KEY: ""
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

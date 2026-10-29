@@ -1,21 +1,34 @@
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { generateText, tool } from "ai";
+import { z } from "zod";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { readAIConfig } from "../src/lib/config/env.ts";
-import { createEmbeddingAdapter } from "../src/lib/ai/embeddings.ts";
+import { configuredModels } from "../src/lib/ai/models.ts";
+import { executionLimits } from "../src/lib/contracts/limits.ts";
 
-const config = readAIConfig(process.env);
-if (config.kind === "unavailable") {
-  process.stdout.write("AI unavailable. Set the server-only AI values in .env.local before probing or creating the vector migration.\n");
-  process.exitCode = 2;
-} else {
-  const google = createGoogleGenerativeAI({ apiKey: config.value.GOOGLE_GENERATIVE_AI_API_KEY });
-  const embed = createEmbeddingAdapter({ model: google.embedding(config.value.AI_EMBEDDING_MODEL), dimensions: config.value.AI_EMBEDDING_DIMENSIONS });
-  const result = await embed({ texts: ["A controlled release with a rollback plan.", "Triển khai có kiểm soát với phương án quay lui."], signal: AbortSignal.timeout(30000) });
-  if (result.kind === "error") { process.stdout.write(JSON.stringify({ kind: result.kind, code: result.code }) + "\n"); process.exitCode = 1; }
-  else {
-    const report = { model: config.value.AI_EMBEDDING_MODEL, dimensions: config.value.AI_EMBEDDING_DIMENSIONS, vectors: result.vectors.length, tokens: result.tokens, verifiedAt: new Date().toISOString() };
-    mkdirSync(".superpowers/probes", { recursive: true });
-    writeFileSync(".superpowers/probes/embedding.json", JSON.stringify(report, null, 2) + "\n");
-    process.stdout.write(JSON.stringify(report, null, 2) + "\nEmbedding capability verified. Reasoning/tool capability still needs the live harness check.\n");
+async function probe() {
+  const config = readAIConfig(process.env);
+  if (config.kind !== "configured") { process.stdout.write("AI unavailable. Set server-only provider credentials and model references in .env.local.\n"); process.exitCode = 2; return; }
+  const models = configuredModels();
+  if (process.argv.includes("--tool")) {
+    let executed = false;
+    const result = await generateText({
+      model: models.reasoning,
+      prompt: "Call the check_runtime tool with value ready. Do not call any other tool.",
+      tools: { check_runtime: tool({ description: "Check the synthetic runtime probe.", inputSchema: z.object({ value: z.literal("ready") }), execute: async () => { executed = true; return { ready: true }; } }) },
+      toolChoice: { type: "tool", toolName: "check_runtime" },
+      maxOutputTokens: executionLimits.outputTokens,
+      maxRetries: 0,
+      abortSignal: AbortSignal.timeout(30000),
+    });
+    if (!executed) throw new Error("TOOL_NOT_EXECUTED");
+    process.stdout.write(JSON.stringify({ kind: "success", capability: "tool", model: config.value.AI_REASONING_MODEL.registryId, toolCalls: result.toolCalls.length, usage: { inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens, totalTokens: result.usage.totalTokens } }) + "\n");
+    return;
   }
+  const result = await models.embed({ texts: ["A controlled release with a rollback plan.", "Triển khai có kiểm soát với phương án quay lui."], signal: AbortSignal.timeout(30000) });
+  if (result.kind === "error") { process.stdout.write(JSON.stringify({ kind: result.kind, code: result.code }) + "\n"); process.exitCode = 1; return; }
+  const report = { model: models.embeddingModel, dimensions: models.dimensions, vectors: result.vectors.length, tokens: result.tokens, verifiedAt: new Date().toISOString() };
+  mkdirSync(".superpowers/probes", { recursive: true });
+  writeFileSync(".superpowers/probes/embedding.json", JSON.stringify(report, null, 2) + "\n");
+  process.stdout.write(JSON.stringify(report, null, 2) + "\nEmbedding capability verified. Use one real analysis to verify reasoning and the app flow.\n");
 }
+probe().catch(() => { process.stderr.write("AI_CAPABILITY_PROBE_FAILED\n"); process.exitCode = 1; });

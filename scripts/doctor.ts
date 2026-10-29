@@ -26,5 +26,6 @@ process.stdout.write(JSON.stringify({
   nativeStack: status.success ? { readiness: status.data.readiness, services: status.data.services } : "unavailable",
   app: config.kind,
   ai: ai.kind,
+  models: ai.kind === "configured" ? { reasoning: ai.value.AI_REASONING_MODEL.registryId, embedding: ai.value.AI_EMBEDDING_MODEL.registryId, dimensions: ai.value.AI_EMBEDDING_DIMENSIONS } : undefined,
 }, null, 2) + "\n");
 if (config.kind === "invalid" || cliVersion !== "2.122.0") process.exitCode = 1;
