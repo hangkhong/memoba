@@ -12,7 +12,9 @@ select public.publish_case_revision((select (result->>'revisionId')::uuid from i
 
 create temporary table snapshots as select value as item from public.read_knowledge_case('20000000-0000-4000-8000-000000000007',(select (result->>'caseId')::uuid from ids),(select (result->>'revisionId')::uuid from ids),array['approach'],1) value;
 create temporary table runs(result jsonb);
-insert into runs values(public.admit_analysis('20000000-0000-4000-8000-000000000007','{"template":"product_delivery","version":1,"objective":"Release","context":"Team","hardConstraints":[],"conceptIds":[],"unknowns":""}',gen_random_uuid(),2,90000));
+reset role;
+with saved as (insert into public.analysis_runs(workspace_id,author_id,request_key,request,knowledge_version,deadline_at) values('20000000-0000-4000-8000-000000000007','10000000-0000-4000-8000-000000000007',gen_random_uuid(),'{"template":"product_delivery","version":1,"objective":"Release","context":"Team","hardConstraints":[],"conceptIds":[],"unknowns":""}',0,now()+interval '90 seconds') returning id) insert into runs select jsonb_build_object('runId',id) from saved;
+set local role authenticated;
 select throws_ok($$select public.finish_analysis((select (result->>'runId')::uuid from runs),'complete','{"reusableApproach":[],"adjustments":[],"conflicts":[],"unknowns":[],"nextSteps":[]}',(select jsonb_build_array(jsonb_set(item,'{outcome}','"unknown"')) from snapshots),'',null)$$,'P0001','Invalid evidence','snapshot outcome cannot be forged');
 select throws_ok($$select public.finish_analysis((select (result->>'runId')::uuid from runs),'complete','{"reusableApproach":[{"kind":"observed","text":"Fact","references":[]}],"adjustments":[],"conflicts":[],"unknowns":[],"nextSteps":[]}',(select jsonb_agg(item) from snapshots),'',null)$$,'P0001','Missing citation','observed claim requires source');
 select public.archive_case((select (result->>'caseId')::uuid from ids));

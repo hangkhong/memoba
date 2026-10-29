@@ -1,5 +1,7 @@
 # Eve chat integration
 
+Historical record: the Framed sheet redesign replaces this viewport with shadcn Message Scroller and AI Elements. See [UI presentation](ui-presentation.md) for the current implementation.
+
 Memoba adapts the [Eve chat template](https://github.com/vercel/eve/tree/1cf022a6d2c096d30c62024dade8f093b456947e/apps/templates/eve-chat-template) for an evidence-backed workspace product. The template supplies chat presentation patterns. Memoba's services continue to own structured requests, case knowledge, retrieval, analysis, and briefs.
 
 ## Presentation and execution

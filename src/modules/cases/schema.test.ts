@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { caseInputSchema } from "./schema";
 const core = { title: "Release checkout", problem: "Reduce failed checkouts", context: "A small product team", constraints: "No downtime", approach: "Ship behind a flag", outcome: "unknown", observedOutcome: "Still measuring", lessons: "Monitor the rollout", sources: [], conceptIds: [] };
 describe("fixed case templates", () => {
-  it("requires product fields for Product/Delivery", () => {
-    expect(caseInputSchema.safeParse({ ...core, template: "product_delivery" }).success).toBe(false);
+  it("accepts minimal Product/Delivery cases", () => {
+    expect(caseInputSchema.safeParse({ ...core, template: "product_delivery" }).success).toBe(true);
     expect(caseInputSchema.safeParse({ ...core, template: "product_delivery", deliverable: "Checkout", changeScope: "Payments", deploymentConditions: "Flag enabled" }).success).toBe(true);
   });
-  it("requires CS fields and never infers a successful outcome", () => {
+  it("requires outcome state and details for a known outcome", () => {
+    expect(caseInputSchema.safeParse({ ...core, observedOutcome: "", outcome: "achieved", template: "product_delivery" }).success).toBe(false);
     expect(caseInputSchema.safeParse({ ...core, outcome: undefined, template: "cs_operations", customerImpact: "Unable to sign in", handlingConditions: "Verified identity", escalationNotes: "Escalate to support" }).success).toBe(false);
   });
   it("rejects third templates, unsafe reference URLs, and oversized fields", () => {

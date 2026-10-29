@@ -5,7 +5,7 @@ const credentials = z.object({ DEMO_EMAIL: z.email(), DEMO_PASSWORD: z.string().
 test("anonymous workspace access requires sign-in", async ({ page, request }) => {
   await page.goto("/workspace");
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   const response = await request.get("/api/workspace");
   expect(response.status()).toBe(401);
   expect(response.headers()["cache-control"]).toContain("no-store");
@@ -21,7 +21,6 @@ test("member login reaches the workspace and survives refresh without AI", async
   await expect(page.getByRole("heading", { name: "What are you working on?" })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "What are you working on?" })).toBeVisible();
-  await page.getByText("Request details · context and constraints", { exact: true }).click();
   await page.screenshot({ path: "test-results/workspace.png", fullPage: true, caret: "initial" });
   const response = await page.request.get("/api/workspace?workspaceId=20000000-0000-4000-8000-000000000002");
   expect(response.status()).toBe(200);

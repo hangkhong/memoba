@@ -1,108 +1,85 @@
 # System contracts
 
-This reference defines domain behavior. Storage, retrieval, run lifecycle, analysis wiring, and brief persistence are implemented. One OpenAI case-to-brief runtime check completed with tool execution, authorized citations, and refresh persistence on 2026-10-29. Semantic evaluation remains pending.
+This reference describes the implemented data and runtime contracts. [Evaluation status](evaluation.md) separates the prior OpenAI runtime check from semantic evaluation. The text agent and Vercel deployment still need live acceptance evidence.
 
 ## Runtime
 
-The app uses Node.js 24, ESM, TypeScript, npm, and Next.js App Router. AI SDK major 7 provides the agent loop. The model factory uses the SDK provider registry for direct OpenAI and Google access. Reasoning and embedding select providers independently. OpenAI reasoning uses Responses with low effort. Provider options apply through model middleware to both generation and repair.
+The app uses Node.js 24, ESM, TypeScript, npm, and Next.js App Router. AI SDK 7 provides the agent loop. The provider registry selects reasoning and embedding providers independently. OpenAI reasoning uses Responses with low effort. Provider options apply to generation and correction.
 
-Local Supabase uses project CLI `2.122.0`, native runtime, experimental stack, and Postgres 17. Endpoints come from JSON output. Native Auth, pgvector, migration, and SQL smoke checks precede repository integration.
+Local Supabase uses project CLI `2.122.0`, the native experimental stack, and Postgres 17. Endpoint configuration comes from CLI JSON output. SQL migrations and generated database types define storage.
 
-## Domain contracts
+Runtime and input limits are owned by [`executionLimits` and `inputLimits`](../../src/lib/contracts/limits.ts). Database admission applies defensive bounds. A run uses the persisted deadline for model, tool, and validation work. New investigation stops when the synthesis reserve begins or the tool or step budget is exhausted. One correction can run within the same deadline. Cancellation and the hard deadline abort unfinished operations; terminal persistence has a separate bounded attempt.
 
-| Contract | Content |
-|---|---|
-| `NormalizedRequest` | Template/version, objective, context, typed constraints, concepts, unknowns |
-| `RequestContext` | Verified user/workspace, knowledge version, run ID, deadline, limits |
-| `RequestPlan` | Queries with purpose `method`, `conditions`, or `exceptions` |
-| `EvidenceItem` | Evidence/case/revision/section IDs, excerpt, source metadata, retrieval path |
-| `EvidenceBundle` | Deduplicated items, coverage gaps, warnings, context size |
-| `ToolResult` | Discriminated success, empty success, or error with retryability |
-| `DraftBrief` | Reusable approach, adjustments, conflicts, unknowns, next steps, references |
-| `RunResult` | Terminal state, result or error, usage, timestamps |
+Both analysis routes export `maxDuration = 300`. On Vercel, the application anchors its cutoff to handler entry and passes an absolute cutoff to admission. The implementation leaves additional admission and clock headroom inside the configured hosted limit. SQL clamps the persisted deadline to that cutoff and rejects an expired cutoff. Refresh reconciles expired runs. The deployed project settings, clock alignment, stream behavior, and effective host duration have not been verified.
 
-The server creates `RequestContext`. The model cannot choose workspace IDs, SQL, table names, depth, or write operations.
+## Input and answer formats
 
-## Tools
+[`analysis/schema.ts`](../../src/modules/analysis/schema.ts) owns these request shapes:
 
-| Tool | Input | Service checks |
+- Version 2 stores the raw message and a bounded ordered history of user and assistant messages. New chat turns use this shape. The server constructs and saves the snapshot before admission.
+- Version 1 is the legacy `NormalizedRequest`, with template, objective, context, constraints, concepts, and unknowns. Readers preserve historical runs. New attempts convert that request to a version 2 snapshot and use the text agent.
+
+History includes previous user text and completed assistant answers, including legacy briefs. Assistant text is conversation context, not evidence. A history that cannot fit the limits is rejected instead of truncated. A new chat can carry forward the restrictions that still matter.
+
+[`briefs/schema.ts`](../../src/modules/briefs/schema.ts) owns the legacy structured brief and version 2 text answer. A text answer stores the prose and a server-derived mapping from run-scoped markers to evidence IDs. Saved source snapshots retain case, revision, section, text, and metadata. Readers check current access before returning source content. A marker from an earlier run cannot resolve in a later run.
+
+## Knowledge tools
+
+Version 2 exposes two model-facing tools:
+
+| Tool | Input | Result |
 |---|---|---|
-| `search_knowledge` | Query, purpose, concept filters | Scope, active published cases, caps, evidence registry |
-| `read_case` | Case ID, section keys | Access, pinned revision, unavailable state |
-| `expand_relations` | Seed IDs, allowed relation types | Same workspace, active targets, visited-set, caps |
+| `search_cases` | Natural-language query | Grouped case previews and explicit empty, partial, no-progress, or error states |
+| `read_case` | Case ID and section keys | Requested sections and surrounding case context, with markers for content delivered in this run |
 
-Initial retrieval and tools use the same service. New evidence enters the run registry before citation. Each root can expand once, and expanded targets cannot become seeds for a second hop in the same run. Tool results return references for already-disclosed sections rather than repeating their text; repair receives the final bounded evidence set. Search failure is an error, not empty success.
+Search uses the knowledge service's hybrid keyword and vector retrieval. It returns previews, not citeable evidence. The run pins one revision per case. Repeated reads report when they add no content. Candidate and context limits can omit content; the tool reports that state. An embedding provider failure is an error, not an empty search or a keyword-only fallback. Archived cases and unpublished revisions are excluded from new retrieval.
 
-## Limits
+The model cannot select a workspace, issue SQL, or write data. Case text and prior assistant text are treated as data. Validation checks each citation marker against disclosed read content and current access. It can request one correction for invalid output. Marker validation does not establish that a source supports a claim.
 
-Runtime and input limits are defined in [`executionLimits` and `inputLimits`](../../src/lib/contracts/limits.ts). That file owns the numeric values used by schemas, evidence assembly, and run budgets. Database admission and the agent receive these limits. SQL also applies defensive upper bounds against direct RPC calls.
-
-The planner is off by default. The persisted run deadline is reused after admission. AbortSignal and call timeouts enforce the total deadline. SDK step limits alone do not stop a hanging call.
+Relation data remains stored for historical use. The text agent does not expose relation expansion as a tool.
 
 ## Case rules
 
-Core fields are title, problem, context, constraints, approach, outcome, lessons, source metadata, and concepts. Outcomes are `achieved`, `not_achieved`, or `unknown`.
+The two templates are Product/Delivery and CS/Operations. A case requires title, problem, context, approach, and outcome state. The outcome is `achieved`, `not_achieved`, or `unknown`; a known outcome also requires outcome details. Constraints, lessons, template-specific fields, sources, and concepts are optional. [`caseInputSchema`](../../src/modules/cases/schema.ts) owns the field validation and caps.
 
-Field and collection caps are defined in [`inputLimits`](../../src/lib/contracts/limits.ts). Source metadata allows at most 12 URL references per case, enforced by [`caseInputSchema`](../../src/modules/cases/schema.ts).
+Concept types are `problem_type`, `system`, `approach`, and `constraint`. Direct links are `related_to`, `contrasts_with`, and `supersedes`. Links stay within a workspace. Supersedes links cannot form cycles. Source URLs use HTTP or HTTPS and are not fetched automatically.
 
-Product/Delivery adds deliverable, change scope, and deployment conditions. CS/Operations adds customer impact, handling conditions, and escalation notes. Template choice does not restrict retrieval by domain.
+Case content revisions are immutable. Indexing includes nonempty sections. Publication requires the expected sections to be indexed and does not replace the published revision until the new revision is ready. Retry preserves the revision and reports the returned index state. Archive is transactional. Historical citations retain their source revision subject to access checks.
 
-Concept types are `problem_type`, `system`, `approach`, and `constraint`. Direct links are `related_to`, `contrasts_with`, and `supersedes`. Links stay within a workspace. Supersedes links cannot form cycles.
+SQL JSON constraints are generated from the owning Zod schemas with `npm run db:contracts -- <new-migration.sql>`. Postgres also checks publication, admission, and evidence integrity for direct RPC calls.
 
-SQL JSON constraints are generated from the owning Zod input schemas with `npm run db:contracts -- <new-migration.sql>`. PostgreSQL rejects malformed direct RPC payloads before they can become unreadable rows.
+## Persistence and access
 
-Content revisions are immutable. A pending revision does not replace the published revision. Publication follows successful indexing. Retry does not duplicate sections. Archive is an explicit transactional action.
+The main entities are `workspaces`, `workspace_members`, `cases`, `case_revisions`, `case_sections`, `concepts`, `revision_concepts`, `case_links`, `conversations`, `conversation_turns`, `analysis_runs`, and `briefs`.
 
-Archived cases and unpublished revisions do not enter new retrieval. Saved briefs retain source versions. Current access checks precede the return of saved excerpts.
+Membership is established before the demo. Public sign-up does not enroll a member. Runtime operations derive user and workspace from verified server context. RLS and transactional RPCs enforce workspace access. Workspace members can read conversations; only the author can append turns or admit attempts.
 
-## Persistence
+A turn is saved before model availability and run admission. Missing model access leaves the question saved without creating a run. Turn creation and attempt admission have separate idempotency keys. Admission checks the latest parent, prevents concurrent runs in one conversation, and enforces the workspace quota. A failed, cancelled, or timed-out attempt can be retried as a new run on the latest turn. Existing independent runs retain a null turn reference.
 
-The entities are `workspaces`, `workspace_members`, `cases`, `case_revisions`, `case_sections`, `concepts`, `revision_concepts`, `case_links`, `conversations`, `conversation_turns`, `analysis_runs`, and `briefs`.
+A text run saves the final answer, cited source snapshots, usage, and terminal state. Activity comes from actual tool and run events. Refresh reads saved state and does not restart generation. The stream is request-bound; background continuation and durable resume are not supported.
 
-Membership is set up before the demo. Public sign-up does not enroll a member. Runtime queries use user scope and RLS. Save, publish, archive, and admission operations use transactional RPCs.
+The vector migration, stored vectors, and query embedding model use matching model IDs and dimensions. Supported profiles are `gemini-embedding-2` and `text-embedding-3-small`, both at 1536 dimensions. Search filters keyword and semantic candidates by profile. A model change requires indexed replacement revisions through `npm run ai:migrate-embeddings`, with the app stopped until the active corpus is verified.
 
-The vector migration, stored vectors, and query embedding model have matching model IDs and dimensions. Supported profiles are `gemini-embedding-2` and `text-embedding-3-small`, both at 1536 dimensions. Search filters both keyword and semantic candidates by the requested profile. A model change requires new indexed revisions through `npm run ai:migrate-embeddings`, with the app stopped until the whole active corpus is verified. Existing revisions and historical evidence remain immutable. Preparation reuses matching pending replacements, rejects a stale source or unrelated pending edit, and can recover an unpublished failed source.
+## States and HTTP
 
-## Conversation foundation
-
-Workspace members can read conversations. Only the conversation author can append turns or admit attempts. Turns contain user text and immutable normalized request snapshots. Their schemas are owned by [`conversations/schema.ts`](../../src/modules/conversations/schema.ts) and the existing request schema. SQL JSON checks are generated from those schemas.
-
-The first question becomes the objective. A follow-up appends user text to the explicitly confirmed request context. Context overflow is rejected without truncation. Objective, template, and constraint changes remain explicit user edits. Prior generated or edited answers are not passed into the next model call. Proposal reference resolution and broader conversational reasoning are deferred.
-
-A turn is saved before AI availability and run admission. Missing model access creates no run and leaves the question available. Turn creation and attempt admission have separate idempotency keys. The database checks the latest parent, prevents simultaneous runs in one conversation, and preserves the workspace quota. A failed, cancelled, or timed-out attempt can be retried as a new run on the latest turn. Complete and gap-report turns require a new follow-up.
-
-Runs reference a turn in the same workspace. Each attempt retains its own deadline, evidence registry, and brief. Existing independent runs keep a null turn reference. Brief evidence remains behind the existing access checks; chat does not store another copy of excerpts.
-
-The shared workspace layout owns the analysis stream across client navigation. Activity and validated briefs render in the conversation. Refresh reads saved runs and reconciles expired deadlines without admitting another run. Cancellation and full-page disconnect retain the existing request-driven behavior; durable resume is not implemented.
-
-## States and errors
-
-Runs contain intake, planning, retrieval, context, reasoning, and validation events. Terminal states are complete, gap report, failed, cancelled, or timed out. Incomplete analysis is not complete output.
-
-Idempotency keys prevent duplicate analysis. Expired leases become timed out. Refresh reads persisted state and does not promise generation resume.
-
-Validation checks schema, the evidence registry, source revisions, and access. Semantic support needs evaluation. Edits have separate provenance. Generated briefs are not observed case outcomes.
-
-## HTTP contracts
+Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A completed run does not prove semantic support. Logs include operational IDs, counts, timing, errors, and usage, and exclude case text and secrets.
 
 | Endpoint | Result |
 |---|---|
 | `GET /api/conversations` | Recent conversations in the verified workspace |
 | `POST /api/conversations` | Idempotent conversation creation |
-| `GET /api/conversations/:id` | Authorized turns, attempts, and permitted briefs |
-| `POST /api/conversations/:id/turns` | Saved immutable turn, before model access |
+| `GET /api/conversations/:id` | Authorized turns, attempts, and permitted answers |
+| `POST /api/conversations/:id/turns` | Saved text turn before model access |
 | `POST /api/conversations/:id/turns/:turnId/analyses` | Attempt through the shared analysis service and UI stream |
 | `POST /api/cases` | Saved IDs and index state |
 | `PATCH /api/cases/:id` | New revision |
 | `POST /api/cases/:id/revisions/:revisionId/reindex` | Idempotent index state |
 | `POST /api/cases/:id/archive` | Archived case |
-| `GET /api/cases/:id` | Authorized detail |
-| `POST /api/cases/:id/links` | Same-workspace typed link; explicit archive with supersedes |
+| `GET /api/cases/:id` | Authorized case detail |
+| `POST /api/cases/:id/links` | Same-workspace typed link |
 | `POST /api/analyses` | AI SDK UI stream with run ID |
-| `GET /api/analyses/:id` | Authorized state, events, result |
-| `GET /api/briefs/:id` | Generated/edited brief and permitted evidence |
-| `PATCH /api/briefs/:id` | Edited/saved state |
+| `GET /api/analyses/:id` | Authorized run state, events, and result |
+| `GET /api/briefs/:id` | Saved answer or legacy brief and permitted evidence |
+| `PATCH /api/briefs/:id` | Edited text and saved state |
 
-Errors use `400` for invalid input, `401` for missing identity, `404` for inaccessible resources, `409` for duplicate analysis keys, and `429` for concurrent quota.
-
-Authenticated responses are private and use `no-store`. Within-run caches include scope and knowledge version. Source URLs use HTTP or HTTPS and are not fetched automatically. Logs exclude source text and credentials.
+Authenticated responses are private and use `no-store`. Errors use `400` for invalid input, `401` for missing identity, `404` for inaccessible resources, `409` for conflicting requests, and `429` for concurrent quota.

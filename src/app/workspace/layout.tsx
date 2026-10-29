@@ -5,8 +5,9 @@ import { AccessError, requireWorkspace } from "@/lib/auth/workspace";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { listConversations } from "@/modules/conversations/repository";
 import { ChatSession } from "@/modules/conversations/chat-session";
-import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { WorkspaceHeader } from "./workspace-header";
 import { WorkspaceSidebar } from "./workspace-sidebar";
 export const dynamic = "force-dynamic";
 export default async function WorkspaceLayout({children}:{children:ReactNode}) {
@@ -16,5 +17,5 @@ export default async function WorkspaceLayout({children}:{children:ReactNode}) {
   });
   if (!context) return <main className="p-10"><h1>Workspace unavailable</h1><Link href="/login">Return to sign in</Link></main>;
   const conversations = await listConversations(await createServerSupabase(), context);
-  return <TooltipProvider><ChatSession><SidebarProvider><WorkspaceSidebar workspaceName={context.workspaceName} conversations={conversations}/><SidebarInset><header className="flex h-14 shrink-0 items-center gap-3 border-b px-4"><SidebarTrigger/><span className="text-sm text-muted-foreground">{context.workspaceName}</span></header><div className="min-w-0 flex-1">{children}</div></SidebarInset></SidebarProvider></ChatSession></TooltipProvider>;
+  return <TooltipProvider><ChatSession><SidebarProvider className="bg-sidebar"><WorkspaceSidebar workspaceName={context.workspaceName} conversations={conversations}/><SidebarInset className="min-w-0 bg-sidebar"><WorkspaceHeader/><div className="min-w-0 flex-1 bg-background md:mr-2 md:mb-2 md:rounded-2xl md:border">{children}</div></SidebarInset></SidebarProvider></ChatSession></TooltipProvider>;
 }

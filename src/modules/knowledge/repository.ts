@@ -19,7 +19,7 @@ export function knowledgeRepository(client: SupabaseClient<Database>, context: W
       const embedding = await embed({ texts: [input.query], signal });
       if (embedding.kind === "error") return { kind: "error", code: "UNAVAILABLE", retryable: embedding.retryable };
       const vector = embedding.vectors[0]; if (!vector) return { kind: "error", code: "INVALID_RESULT", retryable: false };
-      return parse(await client.rpc("search_knowledge", { w: context.workspaceId, query_text: input.query, query_embedding: JSON.stringify(vector), purpose: input.purpose, concept_ids: input.conceptIds, max_results: executionLimits.contextSections, model }).abortSignal(signal));
+      return parse(await client.rpc("search_knowledge", { w: context.workspaceId, query_text: input.query, query_embedding: JSON.stringify(vector), purpose: input.purpose, concept_ids: input.conceptIds, max_results: executionLimits.candidateSections, model }).abortSignal(signal));
     },
     async read(input) {
       let revision = input.revisionId;

@@ -31,10 +31,32 @@ On 2026-10-29, the OpenAI integration passed lint, typecheck, production build, 
 
 On 2026-10-28, the default suite passed 45 Vitest tests, 55 native SQL assertions, and five browser tests with model credentials disabled. Clean installation, lint, typecheck, production build, and security advisors also passed. These checks establish deterministic behavior; they do not measure model quality.
 
-## Remaining acceptance work
+## Text-agent evaluation
 
-When quota is available, run both local requests and inspect citations, activity, usage, and latency. Then run each of the 12 challenge requests twice. Record actual source IDs and evaluate support for historical claims, hard constraints, contradictions, unknowns, and access.
+On 2026-10-29, a local browser saved and indexed one synthetic case, asked a text question, opened its cited source, and submitted a referential follow-up. Both runs completed and both answers remained visible after refresh. The case recorded a controlled canary with rollback ready and an unknown outcome. Both answers distinguished that record from proposed steps and did not claim a successful historical outcome. The follow-up addressed the smaller-team request and retained the no-downtime constraint. This is one reviewed scenario, not a general quality score.
 
-Compare basic hybrid retrieval against one-hop relation expansion and context assembly on four requests with comparable context budgets. Report retrieval coverage and counterexample retention separately from semantic support. An ID-valid citation does not demonstrate that the source supports a conclusion.
+The first run (`2bc69604-6f35-4bfe-a725-43ef1e67dc31`) called `search_cases` and `read_case`, used 4,226 tokens, and took 11.411 seconds between database admission and completion. The follow-up (`7f70483f-bac4-4d8a-9d50-66727def9b33`) called `search_cases` twice and `read_case` once, used 5,867 tokens, and took 9.819 seconds. Both cited the saved approach and outcome sections. These are two individual local observations, not a latency comparison or a guarantee. The ignored evidence file is `.superpowers/verification/agent-engine-simplification/live-runs.json`; the follow-up UI capture is beside it. The original end-to-end script was interrupted after reaching the first answer because it used an outdated follow-up field label. A separate UI session completed and reloaded the follow-up.
 
-The complete case-to-brief acceptance suite remains pending until these live checks and semantic reviews pass. Run commands are in [Run locally](../how-to/run-locally.md).
+The runs reported 513 and 491 output tokens, below the current per-call cap. Neither approached the deadline or exercised the final 60-second synthesis reserve. These observations do not establish that the model-step, tool-call, context, or output caps are sufficient for more complex cases.
+
+[`evals/text/scenarios.json`](../../evals/text/scenarios.json) defines eight synthetic scenarios. They cover a direct precedent, complementary and conflicting cases, a failure, changed conditions, no precedent, ambiguity, and a referential follow-up. The expected source slugs and review points are proposed fixtures. They have not been reviewed by the user and are not calibrated scores. Source expectations assume that the 24-case challenge corpus is published and indexed.
+
+The runner executes one named scenario per invocation against a local running app. It needs the demo credentials in ignored `.env.local`, a configured real model, and indexed synthetic cases. Seeding the challenge corpus uses the real embedding provider. Each run creates a conversation in the demo workspace and does not delete it.
+
+```sh
+node --env-file-if-exists=.env.local evals/text/runner.mjs --live --scenario direct-precedent
+```
+
+Set `MEMOBA_EVAL_URL` only to a local HTTP origin when the app uses a different port. The runner writes a mode-600 JSON artifact under `.superpowers/evals/text/`. It records the question, observed tool-start events, final text and cited source identities, reported usage, client elapsed time, and terminal status. A failed or incomplete scenario produces a nonzero exit. Follow-up scenarios stop when the first turn does not complete.
+
+The HTTP API does not expose tool arguments, all source IDs delivered to the model, or individual correction attempts. The HTTP artifact sets those fields to null. It records `INVALID_CITATION` when that is the saved terminal error, but cannot reconstruct an earlier corrected citation failure. A source ID in a saved answer is a cited source, not a complete list of sources read.
+
+For an optional local, non-persistent trace, use `--trace-live --scenario <id>` instead of `--live`. It uses the agent and knowledge adapters with an authenticated local Supabase client and records tool inputs, source IDs submitted to model steps, and validation events in a private artifact. It does not save a run or brief. A submitted source ID does not prove provider receipt if the model step fails. The runner does not score semantic support or advice quality.
+
+Inspect each answer against the fixture review points and its authorized sources. Check the decision, user restrictions, adaptations, contradictory evidence, and any asserted historical outcome. Record incomplete runs rather than excluding them. Compare duration and resource use only after identifying what the recorded measurement includes.
+
+## Deterministic checks and remaining work
+
+`npx vitest run src/modules/analysis/text-agent.test.ts src/modules/analysis/budget.test.ts` exercises scripted tool errors, citation failures, and deadline behavior without a paid model call. `npx vitest run evals/text/runner.test.ts` checks stream parsing and fixture structure. To exercise the runner against a temporary scripted local server, run `MEMOBA_EVAL_RUNNER_SMOKE=1 npx vitest run evals/text/runner.test.ts` with permission to bind a local port. That test does not establish live model quality.
+
+An initial exploratory pass completed eight scenarios with the synthetic corpus. It exposed a context limit in five scenarios; in one comparison, the answer repeated a pilot claim from the question without reading that case. The disclosed-section cap was subsequently increased while the token budget remained bounded. Deterministic tests cover three short cases and explicit omissions, but the model scenarios have not been repeated after that change. Further evaluation and observation are deferred. A Vercel preview smoke test remains separate from local verification. Neither a completed run nor a valid citation ID proves that its source supports the claim.

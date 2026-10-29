@@ -1,10 +1,14 @@
-import type { NormalizedRequest } from "../analysis/schema.ts";
-import type { TurnInput } from "./schema.ts";
-
-// The submitted details are the user's explicit state, including constraint edits.
-// Only user text is carried forward. Generated answers never enter case evidence.
-export function requestForTurn(input: TurnInput): NormalizedRequest {
-  return input.parentTurnId === null
-    ? { ...input.request, objective: input.message }
-    : { ...input.request, context: `${input.request.context}\n\nFollow-up from user: ${input.message}` };
+import type { ConversationDetail } from "./view-schema";
+export function historyForConversation(turns: ConversationDetail["turns"]) {
+  return turns.flatMap((turn) => {
+    const previous = turn.request.version === 1
+      ? `${turn.message}\nSaved request: ${JSON.stringify(turn.request)}`
+      : turn.message;
+    const answer = turn.runs.filter((run) => run.status === "complete" && run.brief).at(-1)?.brief?.generated;
+    const text = !answer ? undefined : "version" in answer ? answer.text : [
+      ...(["reusableApproach", "adjustments", "conflicts", "nextSteps"] as const).flatMap((section) => answer[section].map((claim) => `${section} (${claim.kind}): ${claim.text}`)),
+      ...answer.unknowns.map((item) => `unknown: ${item}`),
+    ].join("\n");
+    return [{ role: "user" as const, text: previous }, ...(text ? [{ role: "assistant" as const, text }] : [])];
+  });
 }

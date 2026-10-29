@@ -1,0 +1,18 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(4);
+insert into auth.users(id,email) values ('10000000-0000-4000-8000-000000000099','minimal@test.invalid');
+insert into public.workspaces(id,name) values ('20000000-0000-4000-8000-000000000099','Minimal case test');
+insert into public.workspace_members values ('20000000-0000-4000-8000-000000000099','10000000-0000-4000-8000-000000000099','owner',now());
+create temporary table minimal_case(result jsonb);
+grant all on minimal_case to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000099","role":"authenticated"}',true);
+insert into minimal_case values(public.save_case_revision('20000000-0000-4000-8000-000000000099','{"title":"Minimal","template":"product_delivery","outcome":"unknown","problem":"Risk","context":"Team","constraints":"","approach":"Canary","observedOutcome":"","lessons":"","deliverable":"","changeScope":"","deploymentConditions":"","conceptIds":[],"sources":[]}'));
+select throws_ok($$select public.save_case_revision('20000000-0000-4000-8000-000000000099',(select jsonb_set(content,'{outcome}','"achieved"') from public.case_revisions limit 1))$$,'23514',null,'known outcomes require details');
+select public.publish_case_revision((select (result->>'revisionId')::uuid from minimal_case),(select jsonb_agg(jsonb_build_object('key',key,'text',value,'embedding',to_jsonb(array_prepend(1::float8,array_fill(0::float8,array[1535]))))) from public.case_revisions,jsonb_each_text(content) where key in ('problem','context','approach')),'gemini-embedding-2',1536);
+select is((select count(*) from public.case_sections),3::bigint,'only nonempty sections are indexed');
+select is((select index_state from public.case_revisions),'ready','minimal revision is published');
+select is((select published_revision_id from public.cases),(select (result->>'revisionId')::uuid from minimal_case),'published revision matches the saved case');
+select * from finish();
+rollback;

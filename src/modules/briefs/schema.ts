@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { inputLimits } from "../../lib/contracts/limits.ts";
+import { executionLimits, inputLimits } from "../../lib/contracts/limits.ts";
 import { sectionKeySchema } from "../cases/schema.ts";
 
 export const referenceSchema = z.object({ evidenceId: z.string().min(1), caseId: z.uuid(), revisionId: z.uuid(), sectionKey: sectionKeySchema }).strict();
@@ -17,3 +17,14 @@ export const draftBriefSchema = z.object({
   nextSteps: z.array(claimSchema).min(1),
 }).strict();
 export type DraftBrief = z.infer<typeof draftBriefSchema>;
+export const textAnswerSchema = z.object({
+  version: z.literal(2),
+  text: z.string().regex(/\S/).max(20_000),
+  citations: z.array(z.object({
+    marker: z.string().regex(/^\[S:[0-9a-f-]{36}:[1-9][0-9]*\]$/),
+    evidenceId: z.uuid(),
+  }).strict()).max(executionLimits.contextSections),
+}).strict();
+export const storedAnswerSchema = z.union([draftBriefSchema, textAnswerSchema]);
+export type TextAnswer = z.infer<typeof textAnswerSchema>;
+export type StoredAnswer = z.infer<typeof storedAnswerSchema>;

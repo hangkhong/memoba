@@ -2,32 +2,27 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowUp, Plus, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import { inputLimits } from "@/lib/contracts/limits";
-import { requestSchema, type NormalizedRequest } from "@/modules/analysis/schema";
-import { templates } from "@/modules/cases/templates";
+import type { NormalizedRequest } from "@/modules/analysis/schema";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { InputGroup, InputGroupAddon, InputGroupTextarea } from "@/components/ui/input-group";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useChatSession } from "./chat-session";
-import { turnInputSchema } from "./schema";
-const composerSchema = turnInputSchema.pick({ message: true, request: true });
+import { textTurnInputSchema } from "./schema";
+const composerSchema = textTurnInputSchema.pick({ message: true });
 type Values = z.infer<typeof composerSchema>;
-const emptyRequest: NormalizedRequest = { template: "product_delivery", version: 1, objective: "New question", context: "", hardConstraints: [], conceptIds: [], unknowns: "" };
 const errorSchema = z.object({ error: z.string() });
-export function Composer({ conversationId, parentTurnId = null, initial = emptyRequest, concepts, disabled = false }: { conversationId?: string; parentTurnId?: string | null; initial?: NormalizedRequest; concepts: { id: string; label: string }[]; disabled?: boolean }) {
+export function Composer({ conversationId, parentTurnId = null, disabled = false }: { conversationId?: string; parentTurnId?: string | null; initial?: NormalizedRequest; concepts: { id: string; label: string }[]; disabled?: boolean }) {
   const router = useRouter(); const session = useChatSession();
-  const [error, setError] = useState(""); const [detailsOpen, setDetailsOpen] = useState(false);
+  const [error, setError] = useState("");
   const textarea = useRef<HTMLTextAreaElement | null>(null);
   const composing = useRef(false);
   const sending = useRef(false);
   const pending = useRef<{ conversationId: string; turnKey: string } | null>(null);
-  const form = useForm<Values>({ resolver: zodResolver(composerSchema), defaultValues: { message: "", request: initial } });
-  const constraints = useFieldArray({ control: form.control, name: "request.hardConstraints" });
+  const form = useForm<Values>({ resolver: zodResolver(composerSchema), defaultValues: { message: "" } });
   const message = form.register("message");
   const busy = !!session.state?.busy;
   const canStop = busy && session.state?.conversationId === conversationId;
@@ -48,34 +43,26 @@ export function Composer({ conversationId, parentTurnId = null, initial = emptyR
         const created = await fetch("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attempt.conversationId }) });
         if (!created.ok) { const parsed = errorSchema.safeParse(await created.json()); setError(parsed.success ? parsed.data.error : "Could not create conversation."); return; }
       }
-      const response = await fetch(`/api/conversations/${attempt.conversationId}/turns`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: attempt.turnKey, parentTurnId, message: values.message, request: requestSchema.parse(values.request) }) });
+      const response = await fetch(`/api/conversations/${attempt.conversationId}/turns`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: attempt.turnKey, parentTurnId, message: values.message }) });
       const raw: unknown = await response.json();
       if (!response.ok) { const parsed = errorSchema.safeParse(raw); setError(parsed.success ? parsed.data.error : "Could not save your question."); return; }
       const { turnId } = z.object({ turnId: z.uuid() }).parse(raw);
       pending.current = null;
-      form.reset({ message: "", request: values.request });
+      form.reset({ message: "" });
       void session.start(attempt.conversationId, turnId, attempt.turnKey);
       router.push(`/workspace/chat/${attempt.conversationId}`); router.refresh();
     } catch { setError("Could not send your question. Your input is still here; try again."); }
     finally { sending.current = false; }
   }
-  return <form onSubmit={(event) => { void form.handleSubmit(submit, () => setDetailsOpen(true))(event); }} className="rounded-2xl border bg-background p-4 shadow-sm">
-    <Label htmlFor="question">{parentTurnId ? "Follow-up question" : "What do you want to achieve?"}</Label>
-    <Textarea id="question" rows={2} className="mt-2 max-h-32 resize-none border-0 shadow-none focus-visible:ring-0" placeholder={parentTurnId ? "Add context or ask how to adapt the approach…" : "Ask about a decision, a problem, or your next step…"} maxLength={inputLimits.text} disabled={blocked} {...message} ref={(element) => { message.ref(element); textarea.current = element; }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onKeyDown={(event) => {
+  return <form onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-2">
+    <Label htmlFor="question" className="sr-only">{parentTurnId ? "Follow-up question" : "What do you want to achieve?"}</Label>
+    <InputGroup className="rounded-xl bg-background"><InputGroupTextarea id="question" rows={1} className="max-h-32 min-h-12 resize-none px-4 py-3 text-base" placeholder={parentTurnId ? "Add context or ask how to adapt the approach…" : "Ask about a decision, a problem, or your next step…"} maxLength={inputLimits.text} aria-invalid={!!form.formState.errors.message} disabled={blocked} {...message} ref={(element) => { message.ref(element); textarea.current = element; }} onCompositionStart={() => { composing.current = true; }} onCompositionEnd={() => { composing.current = false; }} onKeyDown={(event) => {
       if (event.key !== "Enter" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey || composing.current || event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
       event.preventDefault();
       if (!blocked) event.currentTarget.form?.requestSubmit();
     }}/>
-    {form.formState.errors.message && <p className="text-sm text-destructive">Enter your question.</p>}
-    <details open={detailsOpen} onToggle={(event) => setDetailsOpen(event.currentTarget.open)} className="my-3 border-t pt-3"><summary className="cursor-pointer text-sm text-muted-foreground">Request details · context and constraints</summary><div className="mt-4 max-h-[28svh] space-y-4 overflow-y-auto overscroll-contain pr-1">
-      {parentTurnId && <div><Label htmlFor="objective">Objective</Label><Input id="objective" {...form.register("request.objective")} maxLength={inputLimits.text}/></div>}
-      <div><Label htmlFor="context">Context</Label><Textarea id="context" rows={3} placeholder="Who is affected, what is happening, and what have you tried?" maxLength={inputLimits.text} {...form.register("request.context")}/>{form.formState.errors.request?.context && <p className="text-sm text-destructive">Add context before sending.</p>}</div>
-      <div><Label htmlFor="template">Request type</Label><Controller control={form.control} name="request.template" render={({ field }) => <Select items={templates.map((item) => ({ value: item.id, label: item.label }))} value={field.value} onValueChange={field.onChange}><SelectTrigger id="template" className="w-full"><SelectValue/></SelectTrigger><SelectContent>{templates.map((item) => <SelectItem key={item.id} value={item.id}>{item.label}</SelectItem>)}</SelectContent></Select>}/></div>
-      <fieldset className="space-y-2"><legend className="text-sm font-medium">Hard constraints</legend>{constraints.fields.map((item, index) => <div key={item.id} className="flex flex-wrap gap-2"><select aria-label={`Constraint ${index + 1} type`} className="rounded border p-2 text-sm" {...form.register(`request.hardConstraints.${index}.kind`)}><option value="requirement">Required</option><option value="prohibition">Prohibited</option></select><Input aria-label={`Constraint ${index + 1}`} className="min-w-40 flex-1" maxLength={inputLimits.text} {...form.register(`request.hardConstraints.${index}.text`)}/><Button type="button" variant="ghost" aria-label={`Remove constraint ${index + 1}`} onClick={() => constraints.remove(index)}>Remove</Button></div>)}<Button type="button" variant="outline" size="sm" disabled={constraints.fields.length >= inputLimits.hardConstraints} onClick={() => constraints.append({ kind: "requirement", text: "" })}><Plus/>Add constraint</Button>{form.formState.errors.request?.hardConstraints && <p className="text-sm text-destructive">Complete every constraint.</p>}</fieldset>
-      <div><Label htmlFor="unknowns">What is still unknown?</Label><Textarea id="unknowns" rows={2} maxLength={inputLimits.text} {...form.register("request.unknowns")}/></div>
-      {concepts.length > 0 && <fieldset><legend className="text-sm font-medium">Concepts</legend>{concepts.map((concept) => <label key={concept.id} className="mr-4 inline-flex gap-2 py-2 text-sm"><input type="checkbox" value={concept.id} {...form.register("request.conceptIds")}/>{concept.label}</label>)}</fieldset>}
-    </div></details>
-    <div className="flex items-center justify-between gap-4"><p className="text-xs text-muted-foreground">{busy && !canStop ? "Another conversation is running. Wait for it to finish before sending." : disabled && !busy ? "Reading the saved analysis. Wait for its result before sending." : "Answers use published cases from your Knowledge Hub."}</p>{canStop ? <Button type="button" variant="outline" onClick={session.cancel}><Square/>Stop analysis</Button> : <Button type="submit" disabled={blocked}><ArrowUp/>{form.formState.isSubmitting ? "Saving…" : "Send question"}</Button>}</div>
+    <InputGroupAddon align="block-end" className="justify-between gap-3 px-4 pb-3"><p className="text-xs text-muted-foreground">{busy && !canStop ? "Another conversation is running. Wait for it to finish before sending." : disabled && !busy ? "Reading the saved analysis. Wait for its result before sending." : "Answers use published cases from your Knowledge Hub."}</p>{canStop ? <Button type="button" variant="outline" onClick={session.cancel}><Square/>Stop analysis</Button> : <Button type="submit" disabled={blocked}><ArrowUp/>{form.formState.isSubmitting ? "Saving…" : "Send question"}</Button>}</InputGroupAddon></InputGroup>
+    {form.formState.errors.message && <p role="alert" className="text-sm text-destructive">Enter your question.</p>}
     {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
   </form>;
 }

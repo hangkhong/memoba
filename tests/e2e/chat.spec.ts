@@ -8,14 +8,6 @@ test("chat persists two turns and explicit constraints without model access", as
   await page.goto("/workspace/requests/new");
   await expect(page).toHaveURL(/\/workspace\/chat$/);
   await page.getByLabel("What do you want to achieve?", { exact: true }).fill("Release a checkout update safely");
-  await page.getByRole("button", { name: "Send question", exact: true }).click();
-  await expect(page.getByText("Add context before sending.", { exact: true })).toBeVisible();
-  await page.getByLabel("Context", { exact: true }).fill("A small team wants a controlled rollout.");
-  for (let index = 1; index <= 8; index++) {
-    await page.getByRole("button", { name: "Add constraint", exact: true }).click();
-    await page.getByRole("textbox", { name: `Constraint ${index}`, exact: true }).fill(`Requirement ${index}`);
-  }
-  await expect(page.getByRole("button", { name: "Add constraint", exact: true })).toBeDisabled();
   // Finish the real unavailable-AI response before allowing the first navigation.
   // Refreshing the old route here must not cancel the conversation navigation.
   let releaseNavigation: () => void = () => {};
@@ -34,7 +26,7 @@ test("chat persists two turns and explicit constraints without model access", as
   expect(firstResponse.headers()["cache-control"]).toContain("no-store");
   const first = conversationDetailSchema.parse(await firstResponse.json());
   expect(first.turns).toHaveLength(1); expect(first.turns[0]?.runs).toHaveLength(0);
-  expect(first.turns[0]?.request.objective).toBe("Release a checkout update safely");
+  expect(first.turns[0]?.request).toEqual({ version: 2, message: "Release a checkout update safely", history: [] });
   await page.getByLabel("Follow-up question", { exact: true }).fill("Only one operator is available.");
   await page.getByRole("button", { name: "Send question", exact: true }).click();
   await expect(page.getByRole("region", { name: "Turn 2", exact: true })).toContainText("Only one operator is available.");
@@ -42,8 +34,7 @@ test("chat persists two turns and explicit constraints without model access", as
   const second = conversationDetailSchema.parse(await (await page.request.get(`/api/conversations/${id}`)).json());
   expect(second.turns).toHaveLength(2);
   expect(second.turns[0]?.request).toEqual(first.turns[0]?.request);
-  expect(second.turns[1]?.request.hardConstraints).toEqual(first.turns[0]?.request.hardConstraints);
-  expect(second.turns[1]?.request.context).toContain("Follow-up from user: Only one operator is available.");
+  expect(second.turns[1]?.request).toEqual({ version: 2, message: "Only one operator is available.", history: [{ role: "user", text: "Release a checkout update safely" }] });
   let analysisCalls = 0;
   page.on("request", (request) => { if (request.method() === "POST" && request.url().endsWith("/analyses")) analysisCalls++; });
   await page.reload();
@@ -74,7 +65,7 @@ test("mobile navigation and conversation API boundaries", async ({ page }) => {
   expect((await page.request.get(`/api/conversations/${crypto.randomUUID()}`)).status()).toBe(404);
   const id = crypto.randomUUID();
   expect((await page.request.post("/api/conversations", { headers: origin, data: { id } })).status()).toBe(200);
-  const body = { key: crypto.randomUUID(), parentTurnId: null, message: "How to release?", request: { template: "product_delivery", version: 1, objective: "Release", context: "Small team", hardConstraints: [], conceptIds: [], unknowns: "" } };
+  const body = { key: crypto.randomUUID(), parentTurnId: null, message: "How to release?" };
   const first = await page.request.post(`/api/conversations/${id}/turns`, { headers: origin, data: body });
   const replay = await page.request.post(`/api/conversations/${id}/turns`, { headers: origin, data: body });
   expect(first.status()).toBe(200); expect(await replay.json()).toEqual(await first.json());

@@ -1,64 +1,39 @@
 # Architecture foundation
 
-Memory Bank uses one Next.js application, one Supabase database, and one AI SDK agent. A PM builds the MVP in seven days.
+The [text-first product design](../superpowers/specs/2026-10-29-text-agent-design.md) defines the demo scope.
 
-The [product design](../superpowers/specs/2026-10-27-memory-bank-design.md) defines scope. The [system contracts](../reference/system-contracts.md) define runtime limits and data rules. The [local plan](../superpowers/plans/2026-10-27-local-v0.md) defines implementation tasks.
+Memoba uses one Next.js application, one Supabase database, and one AI SDK agent for a PM's seven-day demo. The [agent engine plan](../superpowers/plans/2026-10-29-agent-engine-simplification.md) defines the current work. [System contracts](../reference/system-contracts.md) define the runtime and data rules.
 
-## Framework reuse
+## Frameworks and boundaries
 
-Next.js provides pages, route handlers, server rendering, and the build. shadcn/ui provides UI components. React Hook Form and Zod handle forms and boundary validation.
+Next.js provides pages, route handlers, server rendering, and the build. shadcn/ui provides UI components. React Hook Form and Zod handle forms and boundary validation. Supabase provides Auth, Postgres, pgvector, migrations, and generated database types. The app uses the official SSR clients. AI SDK 7 provides model calls, tools, streams, and the agent loop.
 
-Supabase provides Auth, Postgres, pgvector, migrations, and generated database types. The app uses its official SSR clients and SDK. A second ORM would duplicate the schema without helping this release.
+`src/modules/cases` owns templates and revisions. `src/modules/knowledge` owns search, case reads, revision pinning, and evidence disclosure. `src/modules/analysis` owns the run budget, model loop, tools, and activity. `src/modules/briefs` validates and saves answers with evidence. `src/modules/conversations` owns ordered turns and immutable input snapshots.
 
-AI SDK 7 provides model calls, tools, streams, and the agent loop. Memory Bank owns case rules, retrieval policy, evidence contracts, and analysis budgets.
+Chat is the default workspace view. Knowledge Hub reuses the case authoring and publication services. The shared workspace shell owns the chat connection, so navigation does not unmount an active stream. Refresh reads persisted state and does not restart generation. The presentation uses shadcn AI Elements as described in [UI presentation](ui-presentation.md).
 
-The chat presentation adapts the Eve template's conversation viewport, composer behavior, and compact activity. [Eve chat integration](eve-chat-integration.md) records the source revision and the boundary between reusable UI and Memoba's execution services.
+## Text questions and evidence
 
-Vitest checks domain rules. pgTAP checks SQL and access. Playwright checks the local case-to-brief flow. Live-model evaluation checks semantic support.
+A new chat turn stores the user's text and bounded prior conversation as a versioned snapshot. Earlier assistant text is context, not case evidence. The model can answer, ask for clarification, or call `search_cases` and `read_case`. It chooses whether to investigate rather than receiving mandatory pre-retrieval results.
 
-## Module boundaries
+Search groups previews of active, published cases. A read supplies sections and surrounding case context from a pinned revision. Only sections delivered by a read receive run-scoped citation markers. Validation resolves markers to disclosed sources and checks access before the app saves the answer and source snapshots. This establishes citation identity, not semantic support or advice quality.
 
-`src/modules/cases` owns templates and revisions. `src/modules/knowledge` owns search, case reads, relation expansion, and evidence assembly. `src/modules/analysis` owns planning, budgets, the agent, and activity. `src/modules/briefs` owns output validation and saved edits.
+Readers accept legacy structured requests and briefs so historical runs remain available. New attempts, including retries of legacy turns, use a version 2 snapshot and the text agent. Generated advice remains separate from observed case outcomes.
 
-`src/modules/conversations` owns ordered user turns and immutable request snapshots. Runs link to turns, and briefs remain attached to runs. The shared workspace shell owns the chat connection, so navigation between Chat and Knowledge Hub does not unmount an active stream. Refresh reads persisted state and does not restart generation.
+## Storage and execution
 
-Chat is the default workspace view. Knowledge Hub reuses the case authoring and publication services. Follow-ups carry user-confirmed structured context and constraints into a new run. Prior assistant answers are not included as evidence or model history in the foundation release. Resolving references to prior proposals is deferred to a feature branch.
+Concepts and typed case links use Postgres. Content revisions are immutable. A new revision becomes published only after its nonempty sections are indexed. An unfinished edit cannot replace the published source used by retrieval.
 
-Routes and components call application services. Agent tools call the same knowledge services as initial retrieval. Pure rules do not import framework or database clients.
+The persisted admission deadline bounds model calls, tool work, and citation correction. The Vercel route also applies a request-entry cutoff with headroom for setup and persistence. The hosted cutoff and synthesis reserve are runtime policies to verify with a deployment, not proof of hosted behavior. The app stores terminal state and reconciles expired runs on later reads; it does not resume interrupted generation.
 
-The Pele [component diagram](diagrams/architecture.svg) and [analysis flow](diagrams/harness.svg) have editable `.mmd` sources beside them.
+Local development uses the project-pinned Supabase CLI `2.122.0` with the native experimental stack. Endpoint configuration comes from CLI JSON output. Docker and fixed local ports are not prerequisites.
 
-## Evidence before reasoning
+## Verification and prior decisions
 
-The app normalizes the structured request, builds a plan, retrieves evidence, and prepares context before it calls the reasoning agent.
+Vitest checks domain behavior, pgTAP checks SQL and access, and Playwright checks user journeys. Live-model evaluation and reviewed examples are needed to assess whether answers use evidence correctly. See [evaluation status](../reference/evaluation.md) for the recorded results.
 
-The agent can request more evidence through typed tools. Each result records its case, section, revision, and retrieval path. Several cases can contribute different parts of a recommendation.
-
-Citation validation checks provenance. Evaluation checks whether a source supports a claim. The optional small-model planner stays off until a comparison shows enough benefit to justify its cost.
-
-## Postgres relationships
-
-Concepts and typed case links support bounded SQL traversal. A separate graph service would add synchronization and access rules for a small corpus.
-
-Content revisions are immutable. A new revision becomes published only after indexing succeeds. An unfinished edit cannot replace the source used by retrieval.
-
-## Local runtime
-
-The project uses native Supabase with CLI `2.122.0`, an explicit experimental exception to the stable-dependency rule. The plan verifies the native services before application work depends on them.
-
-One native local project fits the first checkpoint. Its endpoint configuration comes from the CLI. Docker and fixed local ports are not required.
-
-## Delivery trade-offs
-
-The first release uses bounded requests for indexing and analysis. It stores state and reports failures but does not resume interrupted generation. Durable jobs become useful when measured workloads require resume.
-
-The local checkpoint uses six reviewed demo cases and two real-model requests. The full challenge suite follows the design spec.
-
-## Decisions and sources
+The earlier ADRs record the foundation decisions; their fixed-pipeline descriptions predate the text agent:
 
 - [ADR-0001: Framework-first application](adr/0001-framework-first-single-app.md)
 - [ADR-0002: Postgres knowledge and evidence](adr/0002-postgres-knowledge-evidence.md)
 - [ADR-0003: Bounded analysis with AI SDK](adr/0003-bounded-harness-ai-sdk.md)
-- [shadcn forms](https://ui.shadcn.com/docs/forms/react-hook-form)
-- [Supabase native runtime](https://supabase.com/docs/guides/local-development/docker-and-native-runtimes)
-- [AI SDK agents](https://ai-sdk.dev/docs/agents/building-agents)

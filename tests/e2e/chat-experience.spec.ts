@@ -27,13 +27,10 @@ async function sendWithEnter(page: Page, label: string, message: string) {
   await expect(page.getByRole("button", { name: "Send question", exact: true })).toBeEnabled();
 }
 
-test("Eve-derived composer keeps structured validation and handles Enter, newline and IME", async ({ page }) => {
+test("Composer handles text-only questions, Enter, newline and IME", async ({ page }) => {
   await signIn(page);
   const question = page.getByLabel("What do you want to achieve?", { exact: true });
   await question.fill(`Synthetic Eve keyboard proof ${Date.now()}`);
-  await question.press("Enter");
-  await expect(page.getByText("Add context before sending.", { exact: true })).toBeVisible();
-  await page.getByLabel("Context", { exact: true }).fill("A synthetic team needs a safe release plan.");
   let turnPosts = 0;
   page.on("request", (request) => { if (request.method() === "POST" && request.url().endsWith("/turns")) turnPosts++; });
   await question.focus();
@@ -53,7 +50,7 @@ test("Eve-derived composer keeps structured validation and handles Enter, newlin
   const detail = conversationDetailSchema.parse(await (await page.request.get(`/api/conversations/${id}`)).json());
   expect(detail.turns).toHaveLength(1);
   expect(detail.turns[0]?.message).toBe(message.trim());
-  expect(detail.turns[0]?.request.context).toBe("A synthetic team needs a safe release plan.");
+  expect(detail.turns[0]?.request).toEqual({ version: 2, message, history: [] });
   expect(detail.turns[0]?.runs).toHaveLength(0);
   await test.info().attach("saved-conversation", { body: JSON.stringify({ id, turnCount: detail.turns.length }), contentType: "application/json" });
   await page.screenshot({ path: "test-results/eve-composer.png", fullPage: true });
@@ -63,10 +60,6 @@ test("long conversations scroll independently, jump to latest and retain mobile 
   test.setTimeout(90000);
   await signIn(page);
   await page.getByLabel("What do you want to achieve?", { exact: true }).fill(`Synthetic Eve scrolling proof ${Date.now()}`);
-  await page.getByText("Request details · context and constraints", { exact: true }).click();
-  await page.getByLabel("Context", { exact: true }).fill("Synthetic scrolling test. Preserve the release constraint.");
-  await page.getByRole("button", { name: "Add constraint", exact: true }).click();
-  await page.getByRole("textbox", { name: "Constraint 1", exact: true }).fill("Keep the existing sign-in flow.");
   const title = await page.getByLabel("What do you want to achieve?", { exact: true }).inputValue();
   await sendWithEnter(page, "What do you want to achieve?", title);
   for (let position = 2; position <= 8; position++) {
@@ -84,18 +77,18 @@ test("long conversations scroll independently, jump to latest and retain mobile 
   await page.screenshot({ path: "test-results/eve-chat-reading-history.png", fullPage: true });
   await latest.click();
   await expect(page.getByRole("region", { name: "Turn 8", exact: true })).toBeInViewport();
-  await expect(latest).toBeHidden();
+  await expect(latest).toHaveAttribute("data-active", "false");
   const id = new URL(page.url()).pathname.split("/").pop();
   const detail = conversationDetailSchema.parse(await (await page.request.get(`/api/conversations/${id}`)).json());
   expect(detail.turns).toHaveLength(8);
-  expect(detail.turns[7]?.request.hardConstraints).toEqual([{ kind: "requirement", text: "Keep the existing sign-in flow." }]);
+  const finalRequest = detail.turns[7]?.request;
+  expect(finalRequest?.version).toBe(2);
+  if (finalRequest?.version === 2) expect(finalRequest.history).toHaveLength(7);
   await page.reload();
   await expect(page.getByRole("region", { name: "Turn 8", exact: true })).toBeInViewport();
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByLabel("Follow-up question", { exact: true })).toBeInViewport();
   await page.screenshot({ path: "test-results/eve-chat-mobile.png", fullPage: true });
-  await page.getByText("Request details · context and constraints", { exact: true }).click();
-  await expect(page.getByRole("textbox", { name: "Constraint 1", exact: true })).toHaveValue("Keep the existing sign-in flow.");
   await expect(page.getByRole("button", { name: "Send question", exact: true })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-results/eve-chat-mobile-details.png", fullPage: true });

@@ -306,10 +306,10 @@ isOneToOne: false
           }
           Functions: {
             "admit_analysis":
-{ Args: { "deadline_ms": number,"input": Json,"max_concurrent": number,"request_key": string,"w": string }; Returns: Json
+{ Args: { "cutoff_at"?: string,"deadline_ms": number,"input": Json,"max_concurrent": number,"request_key": string,"w": string }; Returns: Json
                            },
 "admit_conversation_analysis":
-{ Args: { "deadline_ms": number,"max_concurrent": number,"request_key": string,"turn": string }; Returns: Json
+{ Args: { "cutoff_at"?: string,"deadline_ms": number,"max_concurrent": number,"request_key": string,"turn": string }; Returns: Json
                            },
 "append_analysis_event":
 { Args: { "event": Json,"run": string }; Returns: undefined

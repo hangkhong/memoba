@@ -5,8 +5,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BriefView } from "@/modules/briefs/brief-view";
 import { AnalysisActivity } from "@/modules/analysis/activity";
+import { Message, MessageContent } from "@/components/ui/message";
+import { Bubble, BubbleContent } from "@/components/ui/bubble";
+import { MessageScrollerItem } from "@/components/ui/message-scroller";
+import { EvidenceLayout } from "@/modules/briefs/evidence-view";
 import { Composer } from "./composer";
-import { ChatConversation, ChatConversationContent, ChatScrollButton } from "./conversation";
+import { ChatConversation, ChatConversationContent } from "./conversation";
 import { useChatSession } from "./chat-session";
 import { selectLiveAttempt } from "./presentation";
 import type { ConversationDetail } from "./view-schema";
@@ -26,8 +30,8 @@ export function ConversationView({ detail, userId, concepts }: { detail: Convers
     return () => clearInterval(timer);
   }, [running, awaitingSaved, active?.busy, router]);
 
-  return <div className="flex h-[calc(100svh-3.5rem)] min-h-0 flex-col">
-    <h1 className="mx-auto w-full max-w-5xl shrink-0 truncate px-5 py-4 text-lg font-semibold tracking-tight md:px-10">{detail.conversation.title}</h1>
+  return <EvidenceLayout key={detail.conversation.id}><div className="flex h-[calc(100svh-3rem)] min-h-0 min-w-0 flex-1 flex-col md:h-[calc(100svh-3rem-10px)]">
+    <h1 className="mx-auto w-full max-w-[var(--transcript-width)] shrink-0 truncate px-4 py-4 text-base font-medium tracking-tight md:px-8">{detail.conversation.title}</h1>
     <ChatConversation key={detail.conversation.id} aria-label="Conversation messages">
       <ChatConversationContent>{detail.turns.map((turn) => {
         const run = turn.runs.at(-1);
@@ -38,30 +42,29 @@ export function ConversationView({ detail, userId, concepts }: { detail: Convers
         const liveWorking = !!live?.busy && !savedTerminal;
         const events = liveWorking || pendingRun ? live?.events ?? [] : run?.events ?? live?.events ?? [];
         const status = liveWorking ? "running" : pendingRun ? live?.outcome?.status : run?.status;
-        return <section key={turn.id} aria-label={`Turn ${turn.position}`}>
-          <div className="ml-auto max-w-2xl rounded-2xl bg-muted px-5 py-4">
+        return <MessageScrollerItem key={turn.id} messageId={turn.id} scrollAnchor><section aria-label={`Turn ${turn.position}`}>
+          <Message align="end"><MessageContent><Bubble align="end" variant="muted" className="max-w-xl"><BubbleContent className="px-5 py-4">
             <p className="whitespace-pre-wrap break-words leading-7">{turn.message}</p>
-            <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Request snapshot</summary><p className="mt-2 whitespace-pre-wrap">{turn.request.context}</p>{turn.request.hardConstraints.map((constraint, index) => <p key={index}>{constraint.kind}: {constraint.text}</p>)}</details>
-          </div>
-          <div className="mt-5 space-y-4">
-            {run?.brief && !liveWorking && !pendingRun ? <><h2 className="text-xl font-semibold">Reuse Brief</h2><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
+            {turn.request.version === 1 && <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Request snapshot</summary><p className="mt-2 whitespace-pre-wrap">{turn.request.context}</p>{turn.request.hardConstraints.map((constraint, index) => <p key={index}>{constraint.kind}: {constraint.text}</p>)}</details>}
+          </BubbleContent></Bubble></MessageContent></Message>
+          <Message className="mt-6"><MessageContent className="gap-5">
+            <AnalysisActivity key={run?.id ?? live?.runId ?? "pending"} events={events} status={status}/>
+            {run?.brief && !liveWorking && !pendingRun ? <><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
               {status ? <p className="text-sm text-muted-foreground">{status === "running" ? "Analysis in progress" : status.replaceAll("_", " ")}</p> : <p className="text-sm text-muted-foreground">Question saved. Analysis has not started.</p>}
               {status === "gap_report" && <section className="rounded-xl border p-5"><h2 className="font-semibold">No precedent found</h2><p className="mt-3">The search completed successfully without usable evidence. Add cases covering the method, applicability conditions, and failures or exceptions for this request.</p></section>}
               {!liveWorking && !pendingRun && run?.error_code && <p className="text-sm">{run.error_code}. Check the knowledge and model services before retrying.</p>}
               {pendingRun && live?.outcome?.status === "complete" && <p className="text-sm">Analysis complete. Loading the saved brief.</p>}
             </>}
-            <AnalysisActivity events={events}/>
             {turn.runs.length > 1 && <details><summary className="cursor-pointer text-sm text-muted-foreground">Previous attempts</summary>{turn.runs.slice(0, -1).map((attempt) => <p key={attempt.id}><Link className="underline" href={`/workspace/analyses/${attempt.id}`}>{attempt.status.replaceAll("_", " ")}</Link></p>)}</details>}
             {live?.message && !savedTerminal && <p role="status" className="rounded-lg border p-4 text-sm">{live.message}</p>}
             {owner && turn.id === latest?.id && !running && !awaitingSaved && !session.state?.busy && (!run || ["failed", "cancelled", "timed_out"].includes(run.status)) && <Button variant="outline" onClick={() => { void session.start(detail.conversation.id, turn.id, run ? crypto.randomUUID() : turn.id); }}>{run ? "Retry analysis" : "Run analysis"}</Button>}
-          </div>
-        </section>;
+          </MessageContent></Message>
+        </section></MessageScrollerItem>;
       })}</ChatConversationContent>
-      <ChatScrollButton/>
     </ChatConversation>
-    <div className="mx-auto w-full max-w-5xl shrink-0 border-t bg-background px-5 py-3 md:px-10">
-      {owner ? <Composer key={latest?.id ?? "empty"} conversationId={detail.conversation.id} parentTurnId={latest?.id} initial={latest?.request} concepts={concepts} disabled={running || awaitingSaved}/> : <p className="text-sm text-muted-foreground">You can read this conversation. Start a new chat to ask your own question.</p>}
+    <div className="mx-auto w-full max-w-[var(--transcript-width)] shrink-0 bg-background px-4 pt-2 pb-4 md:px-8">
+      {owner ? <Composer key={latest?.id ?? "empty"} conversationId={detail.conversation.id} parentTurnId={latest?.id} concepts={concepts} disabled={running || awaitingSaved}/> : <p className="text-sm text-muted-foreground">You can read this conversation. Start a new chat to ask your own question.</p>}
       {(running || awaitingSaved) && !active?.busy && <p className="mt-3 text-sm text-muted-foreground">Reading saved analysis state. Refresh does not resume generation.</p>}
     </div>
-  </div>;
+  </div></EvidenceLayout>;
 }

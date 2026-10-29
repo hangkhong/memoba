@@ -3,5 +3,5 @@ import { listConcepts } from "@/modules/cases/queries";
 import { Composer } from "@/modules/conversations/composer";
 export default async function NewChatPage() {
   const context = await requireWorkspace();
-  return <div className="mx-auto flex min-h-[75svh] max-w-3xl flex-col justify-center px-5 py-10"><p className="mb-3 text-sm text-muted-foreground">Your team&apos;s experience, ready to use</p><h1 className="text-4xl font-semibold tracking-tight">What are you working on?</h1><p className="mb-10 mt-4 max-w-xl leading-7 text-muted-foreground">Bring a question. Find approaches, lessons, and conditions from the cases your team has recorded.</p><Composer concepts={await listConcepts(context)}/></div>;
+  return <div className="mx-auto flex min-h-[calc(100svh-3rem-10px)] w-full max-w-[var(--transcript-width)] flex-col justify-center px-4 py-12 md:px-8"><h1 className="page-title">What are you working on?</h1><p className="page-description mb-7">Ask a question using your team&apos;s recorded experience.</p><Composer concepts={await listConcepts(context)}/></div>;
 }
