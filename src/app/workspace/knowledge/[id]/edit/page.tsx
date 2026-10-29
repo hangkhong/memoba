@@ -10,5 +10,5 @@ export default async function EditCase({ params }: { params: Promise<{ id: strin
   const context = await requireWorkspace(); const id = z.uuid().safeParse((await params).id); if (!id.success) notFound();
   const detail = await caseDetail(await createServerSupabase(), context, id.data); if (!detail || detail.lifecycle === "archived") notFound();
   const latest = detail.revisions.find((revision) => revision.id === detail.latest_revision_id); if (!latest) notFound();
-  return <div className="mx-auto max-w-3xl p-8"><Link href={`/workspace/knowledge/${id.data}`}>← Case</Link><h1 className="my-8 text-3xl font-semibold">Save a new revision</h1><CaseForm initial={latest.content} caseId={id.data} concepts={await listConcepts(context)}/></div>;
+  return <div className="workspace-page max-w-3xl"><Link href={`/workspace/knowledge/${id.data}`}>← Case</Link><h1 className="page-title my-6">Save a new revision</h1><CaseForm initial={latest.content} caseId={id.data} concepts={await listConcepts(context)}/></div>;
 }

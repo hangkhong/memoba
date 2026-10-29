@@ -77,7 +77,7 @@ test("long conversations scroll independently, jump to latest and retain mobile 
   await page.screenshot({ path: "test-results/eve-chat-reading-history.png", fullPage: true });
   await latest.click();
   await expect(page.getByRole("region", { name: "Turn 8", exact: true })).toBeInViewport();
-  await expect(latest).toBeHidden();
+  await expect(latest).toHaveAttribute("data-active", "false");
   const id = new URL(page.url()).pathname.split("/").pop();
   const detail = conversationDetailSchema.parse(await (await page.request.get(`/api/conversations/${id}`)).json());
   expect(detail.turns).toHaveLength(8);

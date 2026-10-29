@@ -5,7 +5,7 @@ const credentials = z.object({ DEMO_EMAIL: z.email(), DEMO_PASSWORD: z.string().
 test("anonymous workspace access requires sign-in", async ({ page, request }) => {
   await page.goto("/workspace");
   await expect(page).toHaveURL(/\/login$/);
-  await expect(page.getByRole("heading", { name: "Welcome back" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   const response = await request.get("/api/workspace");
   expect(response.status()).toBe(401);
   expect(response.headers()["cache-control"]).toContain("no-store");
