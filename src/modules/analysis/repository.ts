@@ -35,12 +35,26 @@ export function analysisRepository(client: SupabaseClient<Database>, context: Wo
       if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
       return z.object({ id: z.uuid() }).nullable().parse(result.data) !== null;
     },
+    // One query for all items; each must match a readable section on id, revision and key, as canRead does.
+    async canReadAll(items: EvidenceItem[]) {
+      if (items.length === 0) return true;
+      const result = await client.from("case_sections").select("id,revision_id,section_key").eq("workspace_id", context.workspaceId).in("id", [...new Set(items.map((item) => item.sectionId))]).abortSignal(AbortSignal.timeout(5000));
+      if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
+      const readable = new Set(z.array(z.object({ id: z.uuid(), revision_id: z.uuid(), section_key: z.string() })).parse(result.data).map((row) => `${row.id}:${row.revision_id}:${row.section_key}`));
+      return items.every((item) => readable.has(`${item.sectionId}:${item.revisionId}:${item.sectionKey}`));
+    },
   };
 }
 export async function readStoredRun(client: SupabaseClient<Database>, context: WorkspaceContext, runId: string) {
-  const reconciled = await client.rpc("reconcile_analysis", { run: runId }); if (reconciled.error) return null;
-  const result = await client.from("analysis_runs").select("*").eq("id", runId).eq("workspace_id", context.workspaceId).maybeSingle();
+  const readRun = () => client.from("analysis_runs").select("*").eq("id", runId).eq("workspace_id", context.workspaceId).maybeSingle();
+  let result = await readRun();
   if (result.error || !result.data) return null;
+  // Only a running run can expire, so a terminal run needs no reconcile round trip.
+  if (result.data.status === "running") {
+    const reconciled = await client.rpc("reconcile_analysis", { run: runId }); if (reconciled.error) return null;
+    result = await readRun();
+    if (result.error || !result.data) return null;
+  }
   const run = storedRunSchema.parse(result.data);
   const brief = await client.from("briefs").select("id").eq("run_id", run.id).eq("workspace_id", context.workspaceId).maybeSingle();
   if (brief.error) throw new Error("BRIEF_UNAVAILABLE");

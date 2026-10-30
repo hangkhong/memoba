@@ -14,7 +14,7 @@ export async function readStoredBrief(client: SupabaseClient<Database>, context:
   if (result.error || !result.data) return null;
   const brief = storedBriefRecordSchema.parse(result.data);
   const repository = analysisRepository(client, context);
-  for (const item of brief.evidence) if (!await repository.canRead(item)) return null;
+  if (!await repository.canReadAll(brief.evidence)) return null;
   return brief;
 }
 export const briefEditSchema = z.object({ text: z.string().max(20000), saved: z.boolean() }).strict();
