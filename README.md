@@ -32,6 +32,7 @@ An answer is built from the few most relevant cases one run can read, and it sta
 Use Node.js 24 and npm. [Run locally](docs/how-to/run-locally.md) starts the pinned native Supabase stack and prints the App, Studio and API URLs. [Deploy the demo](docs/how-to/deploy-demo.md) covers Supabase Cloud and Vercel.
 
 - [Product design](docs/superpowers/specs/2026-10-29-text-agent-design.md)
+- [How the agent engine steers the model](docs/architecture/agent-engine.md)
 - [Architecture foundation](docs/architecture/FOUNDATION.md)
 - [System contracts](docs/reference/system-contracts.md)
 - [Evaluation status](docs/reference/evaluation.md)

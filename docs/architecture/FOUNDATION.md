@@ -10,7 +10,7 @@ Next.js provides pages, route handlers, server rendering, and the build. shadcn/
 
 `src/modules/cases` owns templates, revisions, and the non-persistent draft from pasted notes. `src/modules/knowledge` owns search, case reads, revision pinning, and evidence disclosure. `src/modules/analysis` owns the run budget, model loop, tools, and activity. `src/modules/briefs` validates and saves answers with evidence. `src/modules/conversations` owns ordered turns and immutable input snapshots.
 
-Chat is the default workspace view. Knowledge Hub reuses the case authoring and publication services. The shared workspace shell owns the chat connection, so navigation does not unmount an active stream. Refresh reads persisted state and does not restart generation. The presentation uses shadcn AI Elements as described in [UI presentation](ui-presentation.md).
+Chat is the default workspace view. Knowledge Hub reuses the case authoring and publication services. The shared workspace shell owns the chat connection, so navigation does not unmount an active stream. Refresh reads persisted state and does not restart generation. The presentation uses shadcn AI Elements as described in [UI presentation](ui-presentation.md). [How the agent engine steers the model](agent-engine.md) explains the run controls and the evidence behind them.
 
 ## Text questions and evidence
 
