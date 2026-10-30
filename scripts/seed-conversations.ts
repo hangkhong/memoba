@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { demoPrompts } from "../evals/demo/prompts.ts";
+import { demoConversations } from "../evals/demo/prompts.ts";
 
 // Drives the running app as the demo user so each saved conversation holds a real, completed run.
 const config = z.object({ DEMO_EMAIL: z.email(), DEMO_PASSWORD: z.string().min(12).max(128) });
@@ -27,7 +27,7 @@ async function seedConversations() {
   const existing = listSchema.parse(await (await call("/api/conversations", { method: "GET" })).json());
   if (existing.length > 0) { process.stdout.write(`Workspace already has ${existing.length} conversations; run npm run demo:reset first to replace them.\n`); return; }
   // Oldest first so the last prompt is the most recent in the sidebar.
-  for (const prompt of [...demoPrompts].reverse()) {
+  for (const prompt of [...demoConversations].reverse()) {
     const conversation = crypto.randomUUID();
     const created = await call("/api/conversations", { method: "POST", body: { id: conversation } });
     if (!created.ok) throw new Error(`Cannot create conversation for "${prompt.label}" (${created.status}).`);

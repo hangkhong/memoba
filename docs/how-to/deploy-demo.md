@@ -49,6 +49,6 @@ Deploy, then on the deployed URL check that:
 npm run demo:reset -- --remote --app-url https://<your-app>.vercel.app
 ```
 
-With `--app-url` (or `APP_URL`) the reset then signs in as the demo user and re-creates the three conversations from the suggested prompts, each with a real completed answer. This calls the model three times. Without it the conversations are left empty; run `npm run demo:conversations -- --app-url <url>` later.
+With `--app-url` (or `APP_URL`) the reset then signs in as the demo user and re-creates the three seeded conversations (separate from the suggested prompts), each with a real completed answer. This calls the model three times. Without it the conversations are left empty; run `npm run demo:conversations -- --app-url <url>` later.
 
 This removes visitor cases, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay. The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.

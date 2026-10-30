@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { caseInputSchema } from "../../src/modules/cases/schema";
 import { demoCases } from "./corpus";
-import { demoPrompts } from "./prompts";
+import { demoConversations, demoPrompts } from "./prompts";
 
 describe("demo corpus", () => {
   const inputs = demoCases.map((item) => item.input);
@@ -30,7 +30,12 @@ describe("demo corpus", () => {
     expect(demoPrompts).toHaveLength(3);
     for (const prompt of demoPrompts) expect(prompt.message.length).toBeLessThan(400);
   });
+  it("seeds three conversations that repeat no suggested prompt", () => {
+    expect(demoConversations).toHaveLength(3);
+    const suggested = new Set(demoPrompts.map((prompt) => prompt.message));
+    for (const item of demoConversations) { expect(suggested.has(item.message)).toBe(false); expect(item.message.length).toBeLessThan(400); }
+  });
   it("is written in English", () => {
-    expect(JSON.stringify([demoCases, demoPrompts])).not.toMatch(/[à-ỹ]/i);
+    expect(JSON.stringify([demoCases, demoPrompts, demoConversations])).not.toMatch(/[à-ỹ]/i);
   });
 });
