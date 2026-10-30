@@ -16,19 +16,21 @@ function listeners() {
     throw error;
   }
 }
-function replaceOldServer() {
-  for (const pid of listeners()) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+async function freePort() {
+  const pids = listeners();
+  for (const pid of pids) {
     const command = execFileSync("ps", ["-p", pid, "-o", "command="], { encoding: "utf8" }).trim();
-    const cwd = execFileSync("lsof", ["-a", "-p", pid, "-d", "cwd", "-Fn"], { encoding: "utf8" }).split("\n").find((line) => line.startsWith("n"))?.slice(1);
-    if (!command.startsWith("next-server") || !cwd || realpathSync(cwd) !== root) {
-      throw new Error(`Port 3000 is used by another process (PID ${pid}). Stop it before starting Memoba.`);
-    }
-    process.stdout.write(`Stopping the previous Memoba server (PID ${pid}).\n`);
+    process.stdout.write(`Port 3000 is in use. Stopping PID ${pid} (${command.slice(0, 80)}).\n`);
     process.kill(Number(pid), "SIGTERM");
   }
+  for (let attempt = 0; attempt < 20 && listeners().length > 0; attempt++) await sleep(250);
+  for (const pid of listeners()) process.kill(Number(pid), "SIGKILL");
+  for (let attempt = 0; attempt < 20 && listeners().length > 0; attempt++) await sleep(250);
+  if (listeners().length > 0) throw new Error("Port 3000 is still in use after stopping its process. Stop it manually.");
 }
 try {
-  replaceOldServer();
+  await freePort();
   process.stdout.write("Starting local Supabase...\n");
   let started;
   try {
