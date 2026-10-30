@@ -22,7 +22,7 @@ it("lets the model search, read, revise its search and answer using the disclose
   const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => {
     calls++;
     if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
-    if (calls === 2) return modelResult([{ type: "tool-call", toolCallId: "r1", toolName: "read_case", input: JSON.stringify({ caseId: item.caseId, sectionKeys: ["approach"] }) }], true);
+    if (calls === 2) return modelResult([{ type: "tool-call", toolCallId: "r1", toolName: "read_case", input: JSON.stringify({ caseIds: [item.caseId], sectionKeys: ["approach"] }) }], true);
     if (calls === 3) return modelResult([{ type: "tool-call", toolCallId: "s2", toolName: "search_cases", input: JSON.stringify({ query: "failure" }) }], true);
     expect(JSON.stringify(prompt)).toContain(item.excerpt);
     return modelResult([{ type: "text", text: `We reviewed a pilot [S:${runId}:1].` }], false);
@@ -35,7 +35,7 @@ it("lets the model search, read, revise its search and answer using the disclose
     expect(searches).toEqual(["pilot", "failure"]);
     expect(events).toEqual(["search_cases:started", "search_cases:completed", "read_case:started", "read_case:completed", "search_cases:started", "search_cases:completed"]);
     expect(knowledge.disclosed()).toHaveLength(1);
-    expect(trace.filter((event) => event.kind === "tool_call")).toMatchObject([{ name: "search_cases", input: { query: "pilot" } }, { name: "read_case", input: { caseId: item.caseId, sectionKeys: ["approach"] } }, { name: "search_cases", input: { query: "failure" } }]);
+    expect(trace.filter((event) => event.kind === "tool_call")).toMatchObject([{ name: "search_cases", input: { query: "pilot" } }, { name: "read_case", input: { caseIds: [item.caseId], sectionKeys: ["approach"] } }, { name: "search_cases", input: { query: "failure" } }]);
     expect(trace.filter((event) => event.kind === "model_sources")).toEqual([{ kind: "model_sources", sources: [{ marker: `[S:${runId}:1]`, evidenceId: item.evidenceId, caseId: item.caseId, revisionId: item.revisionId, sectionKey: "approach" }] }]);
     expect(JSON.stringify(trace)).not.toContain(item.excerpt);
   } finally { budget.dispose(); }

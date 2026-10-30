@@ -33,6 +33,11 @@ export function knowledgeRepository(client: SupabaseClient<Database>, context: W
       }
       return parse(await client.rpc("read_knowledge_case", { w: context.workspaceId, target: input.caseId, revision, keys: input.sectionKeys, max_results: executionLimits.candidateSections }).abortSignal(signal));
     },
+    async template(revisionId) {
+      const result = await client.from("case_revisions").select("template:content->>template").eq("workspace_id", context.workspaceId).eq("id", revisionId).abortSignal(signal).maybeSingle();
+      const parsed = z.object({ template: z.enum(["product_delivery", "cs_operations"]) }).safeParse(result.data);
+      return parsed.success ? parsed.data.template : undefined;
+    },
     async expand(input) { return parse(await client.rpc("expand_knowledge", { w: context.workspaceId, seeds: input.seedIds, relations: input.relationTypes, max_results: executionLimits.candidateSections }).abortSignal(signal)); },
   };
 }

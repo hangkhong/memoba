@@ -38,8 +38,11 @@ export function textReasoningAdapter(model: LanguageModel, knowledge: ReturnType
             const markers = new Set<string>();
             for (const result of steps.at(-1)?.toolResults ?? []) {
               if (result.toolName !== "read_case") continue;
-              const output = z.object({ items: z.array(z.object({ marker: z.string() })).optional() }).safeParse(result.output);
-              if (output.success) for (const item of output.data.items ?? []) markers.add(item.marker);
+              const output = z.object({ items: z.array(z.object({ marker: z.string() })).optional(), cases: z.array(z.object({ observedOutcome: z.object({ marker: z.string() }).optional() })).optional() }).safeParse(result.output);
+              if (output.success) {
+                for (const item of output.data.items ?? []) markers.add(item.marker);
+                for (const header of output.data.cases ?? []) if (header.observedOutcome) markers.add(header.observedOutcome.marker);
+              }
             }
             const sources = knowledge.disclosed().filter(({ marker }) => markers.has(marker)).map(({ marker, evidence }) => ({ marker, evidenceId: evidence.evidenceId, caseId: evidence.caseId, revisionId: evidence.revisionId, sectionKey: evidence.sectionKey }));
             if (sources.length) trace({ kind: "model_sources", sources });
