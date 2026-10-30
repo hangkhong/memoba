@@ -1,6 +1,5 @@
 "use client";
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
 import { z } from "zod";
 import type { AnalysisEvent } from "@/modules/analysis/events";
 import { readAnalysisStream, type AnalysisOutcome } from "./stream";
@@ -11,7 +10,6 @@ const ChatContext = createContext<Session | null>(null);
 const errorSchema = z.object({ error: z.string() });
 
 export function ChatSession({ children }: { children: ReactNode }) {
-  const router = useRouter();
   const controller = useRef<AbortController | null>(null);
   const [state, setState] = useState<SessionState | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
@@ -46,7 +44,6 @@ export function ChatSession({ children }: { children: ReactNode }) {
       if (controller.current === abort) {
         controller.current = null;
         setState((current) => current && { ...current, busy: false });
-        router.refresh();
       }
     }
   }

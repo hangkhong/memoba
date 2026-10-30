@@ -1,6 +1,5 @@
 "use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BriefView } from "@/modules/briefs/brief-view";
@@ -13,23 +12,37 @@ import { Composer } from "./composer";
 import { ChatConversation, ChatConversationContent } from "./conversation";
 import { useChatSession } from "./chat-session";
 import { selectLiveAttempt } from "./presentation";
+import { fetchConversationDetail, hasRunningRun, isAwaitingSaved, watchSavedResult } from "./saved-result";
 import type { ConversationDetail } from "./view-schema";
 
 const statusNotes = { complete: "Loading the saved answer…", failed: "The analysis didn’t finish.", cancelled: "Analysis stopped.", timed_out: "Analysis reached its time limit." } as const;
-export function ConversationView({ detail, userId, concepts }: { detail: ConversationDetail; userId: string; concepts: { id: string; label: string }[] }) {
-  const router = useRouter();
+export function ConversationView({ detail: serverDetail, userId, concepts }: { detail: ConversationDetail; userId: string; concepts: { id: string; label: string }[] }) {
+  const [served, setServed] = useState(serverDetail);
+  const [detail, setDetail] = useState(serverDetail);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  if (served !== serverDetail) { setServed(serverDetail); setDetail(serverDetail); }
   const session = useChatSession();
   const latest = detail.turns.at(-1);
   const owner = detail.conversation.author_id === userId;
   const active = session.state?.conversationId === detail.conversation.id ? session.state : null;
-  const running = detail.turns.some((turn) => turn.runs.some((run) => run.status === "running"));
-  const awaitingSaved = !!active?.runId && !active.busy && !detail.turns.some((turn) => turn.runs.some((run) => run.id === active.runId && run.status !== "running"));
+  const running = hasRunningRun(detail);
+  const awaitingSaved = !active?.busy && isAwaitingSaved(detail, active?.runId);
+  const waiting = running || awaitingSaved;
+  const watchedRunId = active?.runId;
+  const conversationId = detail.conversation.id;
 
   useEffect(() => {
-    if ((!running && !awaitingSaved) || active?.busy) return;
-    const timer = setInterval(() => router.refresh(), 2000);
-    return () => clearInterval(timer);
-  }, [running, awaitingSaved, active?.busy, router]);
+    if (!waiting || active?.busy) return;
+    const abort = new AbortController();
+    void watchSavedResult({
+      load: (signal) => fetchConversationDetail(conversationId, signal),
+      settled: (next) => !hasRunningRun(next) && !isAwaitingSaved(next, watchedRunId),
+      onDetail: setDetail,
+      signal: abort.signal,
+    }).then((result) => { if (result === "failed") setLoadFailed(true); });
+    return () => abort.abort();
+  }, [waiting, active?.busy, conversationId, watchedRunId, attempt]);
 
   return <EvidenceLayout key={detail.conversation.id}><div className="flex h-[calc(100svh-3rem)] min-h-0 min-w-0 flex-1 flex-col md:h-[calc(100svh-3rem-10px)]">
     <h1 className="sr-only">{detail.conversation.title}</h1>
@@ -57,6 +70,7 @@ export function ConversationView({ detail, userId, concepts }: { detail: Convers
               
             </>}
             {turn.runs.length > 1 && <details><summary className="cursor-pointer text-sm text-muted-foreground">Previous attempts</summary>{turn.runs.slice(0, -1).map((attempt) => <p key={attempt.id}><Link className="underline" href={`/workspace/analyses/${attempt.id}`}>{attempt.status.replaceAll("_", " ")}</Link></p>)}</details>}
+            {loadFailed && waiting && turn.id === latest?.id && <p role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border p-4 text-sm">Could not load the saved answer.<Button variant="outline" size="sm" onClick={() => { setLoadFailed(false); setAttempt((count) => count + 1); }}>Try again</Button></p>}
             {live?.message && !savedTerminal && <p role="status" className="rounded-lg border p-4 text-sm">{live.message}</p>}
             {owner && turn.id === latest?.id && !running && !awaitingSaved && !session.state?.busy && (!run || ["failed", "cancelled", "timed_out"].includes(run.status)) && <Button variant="outline" onClick={() => { void session.start(detail.conversation.id, turn.id, run ? crypto.randomUUID() : turn.id); }}>{run ? "Retry analysis" : "Run analysis"}</Button>}
           </MessageContent></Message>
