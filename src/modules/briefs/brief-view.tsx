@@ -6,20 +6,16 @@ import { AnswerMarkdown } from "./answer-markdown";
 import { EvidenceSources, InlineEvidence } from "./evidence-view";
 import { Textarea } from "@/components/ui/textarea";
 import { coverageLine } from "./coverage-presentation";
-export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredBrief; evidencePrefix?: string }) {
- if ("version" in brief.generated) return <TextAnswerView brief={brief} evidencePrefix={evidencePrefix}/>;
+import { CoverageTrace } from "./coverage-trace";
+export function BriefView({ brief, evidencePrefix = brief.id, showCoverage = true }: { brief: StoredBrief; evidencePrefix?: string; showCoverage?: boolean }) {
+ if ("version" in brief.generated) return <TextAnswerView brief={brief} evidencePrefix={evidencePrefix} showCoverage={showCoverage}/>;
  return <LegacyBriefView brief={{ ...brief, generated: brief.generated }} evidencePrefix={evidencePrefix}/>;
 }
-function TextAnswerView({ brief }: { brief: StoredBrief; evidencePrefix: string }) {
+function TextAnswerView({ brief, showCoverage }: { brief: StoredBrief; evidencePrefix: string; showCoverage: boolean }) {
  if (!("version" in brief.generated)) return null;
  const answer = brief.generated;
- const line = coverageLine(answer.coverage);
- return <div>{line && <CoverageNote text={line.text} unread={line.unread}/>}<AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
-}
-
-function CoverageNote({ text, unread }: { text: string; unread: string[] }) {
- if (!unread.length) return <p className="mb-3 text-xs text-muted-foreground">{text}</p>;
- return <details className="mb-3 text-xs text-muted-foreground"><summary className="cursor-pointer">{text}</summary><p className="mt-1">Not read:</p><ul className="ml-4 list-disc">{unread.map((title) => <li key={title}>{title}</li>)}</ul></details>;
+ const line = showCoverage ? coverageLine(answer.coverage) : null;
+ return <div>{line && <CoverageTrace line={line}/>}<AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
 }
 
 function LegacyBriefView({ brief }: { brief: SavedBrief; evidencePrefix: string }) {
