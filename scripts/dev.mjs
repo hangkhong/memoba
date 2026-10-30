@@ -1,10 +1,8 @@
 import { execFileSync, spawn } from "node:child_process";
-import { realpathSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { formatLocalEndpoints, findStudioUrl, parseNativeStack } from "../src/lib/supabase/local-stack.ts";
 import { cli, cliDbUrl, stackArgs } from "./local-stack.ts";
 
-const root = realpathSync(process.cwd());
 function run(command, args, options = {}) {
   execFileSync(command, args, { stdio: "inherit", ...options });
 }
