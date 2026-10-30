@@ -139,6 +139,10 @@ it("checks each citation when contradictory cases are cited together", async () 
 it("instructs the model to answer in English with the reuse sections", () => {
   for (const phrase of ["Answer in English", "How similar cases went", "What's different this time", "Suggested next step"]) expect(textInstructions).toContain(phrase);
 });
+it("requires a coverage statement naming matching cases it did not read", () => {
+  expect(textInstructions).toContain("Advise from the most relevant cases, reading at most about 8");
+  expect(textInstructions).toContain('State coverage, for example "Reviewed 5 of 9 matching cases", and name matching cases you did not read');
+});
 it("forbids filling the precedent section when search found nothing", () => {
   expect(textInstructions).toContain("If a successful search finds no relevant case, say so and omit How similar cases went");
 });
