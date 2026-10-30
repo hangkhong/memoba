@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { executionLimits, inputLimits } from "@/lib/contracts/limits";
+import { inputLimits } from "@/lib/contracts/limits";
 import { sectionKeySchema } from "@/modules/cases/schema";
 import type { createRunKnowledge } from "@/modules/knowledge/service";
 import type { RunBudget } from "./harness";

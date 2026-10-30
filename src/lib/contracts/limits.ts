@@ -15,5 +15,6 @@ export const executionLimits = Object.freeze({
   relationDepth: 1,
   concurrentRuns: 2,
   draftDeadlineMs: 30_000,
+  maxModelInputTokens: 64_000,
 });
 export const inputLimits = Object.freeze({ title: 200, text: 4_000, concepts: 12, hardConstraints: 8, conversationMessages: 12, importText: 12_000 });

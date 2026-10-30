@@ -1,5 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
+import { executionLimits } from "@/lib/contracts/limits";
 import { textInstructions, textReasoningAdapter } from "./agent";
 import { createRunBudget } from "./budget";
 import { createRunKnowledge } from "@/modules/knowledge/service";
@@ -145,4 +146,31 @@ it("requires a coverage statement naming matching cases it did not read", () => 
 });
 it("forbids filling the precedent section when search found nothing", () => {
   expect(textInstructions).toContain("If a successful search finds no relevant case, say so and omit How similar cases went");
+});
+
+async function toolsOverSteps(firstStepInputTokens: number) {
+  const knowledge = createRunKnowledge({ search: async () => ({ kind: "success", items: [item] }), read: async () => empty, expand: async () => empty }, runId);
+  const events: string[] = [];
+  const toolsSeen: number[] = [];
+  let calls = 0;
+  const model = new MockLanguageModelV4({ doGenerate: async ({ tools }) => {
+    calls++; toolsSeen.push(tools?.length ?? 0);
+    if (calls === 1) return { ...modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true), usage: { inputTokens: { total: firstStepInputTokens, noCache: firstStepInputTokens, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } } };
+    return modelResult([{ type: "text", text: "Answer from what was read." }], false);
+  } });
+  const budget = createRunBudget();
+  try { await textReasoningAdapter(model, knowledge, async (event) => { events.push(`${event.stage}:${event.state}:${event.code ?? ""}`); }).generate(question, budget); }
+  finally { budget.dispose(); }
+  return { toolsSeen, events };
+}
+it("removes tools and records an activity event when step input nears the ceiling", async () => {
+  const { toolsSeen, events } = await toolsOverSteps(Math.ceil(executionLimits.maxModelInputTokens * 0.8));
+  expect(toolsSeen[0]).toBeGreaterThan(0);
+  expect(toolsSeen[1]).toBe(0);
+  expect(events).toContain("context:completed:INPUT_CEILING");
+});
+it("keeps tools available while step input stays below the ceiling", async () => {
+  const { toolsSeen, events } = await toolsOverSteps(Math.floor(executionLimits.maxModelInputTokens * 0.8) - 1);
+  expect(toolsSeen[1]).toBeGreaterThan(0);
+  expect(events).not.toContain("context:completed:INPUT_CEILING");
 });
