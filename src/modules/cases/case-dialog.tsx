@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 // Shared frame for the case dialogs: fixed header, scrolling body, fixed footer.
 export function CaseDialog({ open, onOpenChange, title, description, children }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description: string; children: ReactNode }) {
-  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="flex max-h-[min(92svh,56rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-3xl">
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="flex max-h-[min(92svh,56rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-[40rem]">
     <DialogHeader className="shrink-0 gap-1.5 border-b px-6 py-4 pr-14"><DialogTitle className="text-base">{title}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>
     {children}
   </DialogContent></Dialog>;

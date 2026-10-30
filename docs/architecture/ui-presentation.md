@@ -1,6 +1,6 @@
 # UI presentation
 
-Memoba uses a Framed sheet layout with shared tokens in `src/app/globals.css`. Next.js loads IBM Plex Sans. The workspace keeps one sidebar, one context header, and a white working sheet. Mobile navigation uses shadcn Sheet.
+Memoba uses a full-bleed workspace layout with shared tokens in `src/app/globals.css`. Next.js loads Geist (Latin and Vietnamese subsets). The workspace keeps one sidebar (`variant="sidebar"`) and a white content area separated from it by a border, with no inset padding, radius, or shadow. Mobile navigation uses shadcn Sheet.
 
 ## Framework patterns
 

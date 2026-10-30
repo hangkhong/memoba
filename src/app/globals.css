@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-plex), Arial, sans-serif;
+  --font-sans: var(--font-geist), Arial, sans-serif;
   --font-mono: ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -83,7 +83,6 @@
   --sidebar-ring: #1b6c80;
   --radius: 0.5rem;
   --evidence-accent: #1b6c80;
-  --frame-height: 3rem;
   --transcript-width: 48.5rem;
 }
 
@@ -98,7 +97,7 @@
     @apply font-sans;
   }
 }
-/* Framed sheet: one cool frame, a white working sheet, and quiet controls. */
+/* Full-bleed workspace: sidebar and content separated by borders, with quiet controls. */
 @layer components {
   .workspace-page { @apply mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8; }
   .page-title { @apply text-[22px] font-semibold tracking-tight; }

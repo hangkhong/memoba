@@ -18,7 +18,7 @@ export function PendingConversation({ id }: { id: string }) {
   const { ask } = useChatSession();
   const pending = ask?.conversationId === id && ask.status !== "failed" ? ask : null;
   if (!pending) return <div className="workspace-page"><h1 className="page-title">Conversation unavailable</h1><p className="page-description"><Link className="underline" href="/workspace/chat">Start a new chat</Link></p></div>;
-  return <div className="flex h-[calc(100svh-3rem)] min-h-0 min-w-0 flex-1 flex-col md:h-[calc(100svh-3rem-10px)]">
+  return <div className="flex h-[calc(100svh-3rem)] min-h-0 min-w-0 flex-1 flex-col md:h-svh">
     <ChatConversation aria-label="Conversation messages"><ChatConversationContent><PendingQuestion ask={pending}/></ChatConversationContent></ChatConversation>
     <div className="mx-auto w-full max-w-[var(--transcript-width)] shrink-0 bg-background px-4 pt-2 pb-4 md:px-8"><Composer conversationId={id} concepts={[]} disabled/></div>
   </div>;
