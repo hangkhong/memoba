@@ -64,3 +64,22 @@ test("CS template validates fields locally and retains input after a failed save
   await expect(page.getByRole('alert').filter({hasText:'Save unavailable for this test.'})).toContainText('Save unavailable for this test.');
   await expect(page.getByLabel('Observed outcome', { exact: true })).toHaveValue('The next owner continued from the recorded queue.');
 });
+
+test("import shows coming-soon parsing and keeps the form editable without AI", async ({ page }) => {
+  const env = z.object({ DEMO_EMAIL: z.string(), DEMO_PASSWORD: z.string() }).parse(process.env);
+  expect((await page.request.post("/api/auth/login", { headers: { origin: "http://localhost:3100" }, data: { email: env.DEMO_EMAIL, password: env.DEMO_PASSWORD } })).status()).toBe(200);
+  await page.goto("/workspace/knowledge/new");
+  await page.getByRole("button", { name: "Import from notes", exact: true }).click();
+  await page.getByLabel("Choose documents", { exact: true }).setInputFiles({ name: "postmortem.pdf", mimeType: "application/pdf", buffer: Buffer.from("not parsed") });
+  await expect(page.getByText("Document parsing — coming soon", { exact: false })).toBeVisible();
+  await expect(page.getByText("postmortem.pdf", { exact: true })).toBeVisible();
+  await page.getByLabel("Paste your notes", { exact: true }).fill("We moved invoice sending to a queue and watched failures for a week.");
+  await page.getByRole("button", { name: "Draft case", exact: true }).click();
+  await expect(page.getByRole("alert").filter({ hasText: "AI drafting is unavailable." })).toBeVisible();
+  await page.getByLabel("Title", { exact: true }).fill(`Manual after import ${Date.now()}`);
+  await page.getByLabel("Problem / objective", { exact: true }).fill("Invoice sending was slow.");
+  await page.getByLabel("Context", { exact: true }).fill("Small team");
+  await page.getByLabel("Approach and reasoning", { exact: true }).fill("Move sending to a queue.");
+  await page.getByRole("button", { name: "Save case", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace\/knowledge\/[0-9a-f-]+$/);
+});

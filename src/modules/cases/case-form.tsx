@@ -13,12 +13,15 @@ import { Field, FieldLabel, FieldError, FieldSet, FieldLegend, FieldDescription 
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { sectionLabels } from "./presentation";
 import { Textarea } from "@/components/ui/textarea";
+import { ImportPanel } from "./import-panel";
+import type { DraftResult } from "./draft-contract";
 
 const common = { title: "", problem: "", context: "", constraints: "", approach: "", observedOutcome: "", lessons: "", outcome: "unknown" as const, sources: [], conceptIds: [] };
 const domain = { product_delivery: { deliverable: "", changeScope: "", deploymentConditions: "" }, cs_operations: { customerImpact: "", handlingConditions: "", escalationNotes: "" } };
 
 export function CaseForm({ initial, caseId, concepts }: { initial?: CaseInput; caseId?: string; concepts: { id: string; label: string }[] }) {
   const router = useRouter(); const [error, setError] = useState<string>();
+  const [importing, setImporting] = useState(false); const [drafted, setDrafted] = useState(false);
   const form = useForm<z.input<typeof caseInputSchema>, unknown, CaseInput>({ resolver: zodResolver(caseInputSchema), defaultValues: initial ?? { ...common, template: "product_delivery", ...domain.product_delivery } });
   const template = useWatch({ control: form.control, name: "template" });
   const outcome = useWatch({ control: form.control, name: "outcome" });
@@ -33,12 +36,22 @@ export function CaseForm({ initial, caseId, concepts }: { initial?: CaseInput; c
       const saved = savedCaseSchema.parse(raw); router.push(`/workspace/knowledge/${saved.caseId}`); router.refresh();
     } catch { setError("Cannot confirm save. Check the case library before trying again."); }
   }
+  function applyDraft(result: Extract<DraftResult, { kind: "draft" }>) {
+    form.reset(result.draft);
+    for (const name of result.missing) form.setError(name, { type: "required", message: "Not found in your notes. Add it before saving." });
+    setDrafted(true); setImporting(false); setError(undefined);
+  }
   const groups = [
     { title: "Core experience", description: "What happened, and how you approached it.", fields: ["problem", "context", "constraints", "approach"] as const },
     { title: template === "product_delivery" ? "Delivery conditions" : "Customer and operations", description: "Optional details that explain when the approach applies.", fields },
     { title: "Outcome and lessons", description: "Separate observed results from what you would try next.", fields: ["observedOutcome", "lessons"] as const },
   ];
   return <form noValidate onSubmit={form.handleSubmit(submit)} className="space-y-9">
+    {!caseId && <div className="space-y-4">
+      <Button type="button" variant="outline" aria-expanded={importing} onClick={() => setImporting((open) => !open)}>Import from notes</Button>
+      {importing && <ImportPanel onDraft={applyDraft}/>}
+      {drafted && <p role="status" className="rounded-lg border p-4 text-sm">Drafted from your notes. Review every field before saving.</p>}
+    </div>}
     <Field><FieldLabel htmlFor="case-template">Template</FieldLabel><NativeSelect id="case-template" disabled={!form.formState.isReady} value={template} onChange={(event) => { const choice = event.target.value === "cs_operations" ? "cs_operations" : "product_delivery"; const { title, problem, context, constraints, approach, observedOutcome, lessons, outcome, sources, conceptIds } = form.getValues(); const core = { title, problem, context, constraints, approach, observedOutcome, lessons, outcome, sources, conceptIds }; form.reset(choice === "product_delivery" ? { ...core, template: choice, ...domain.product_delivery } : { ...core, template: choice, ...domain.cs_operations }); }}>{templates.map((item) => <NativeSelectOption key={item.id} value={item.id}>{item.label}</NativeSelectOption>)}</NativeSelect></Field>
     <Field data-invalid={!!form.formState.errors.title}><FieldLabel htmlFor="title">Title</FieldLabel><Input id="title" required maxLength={200} aria-invalid={!!form.formState.errors.title} aria-describedby={form.formState.errors.title ? "title-error" : undefined} {...form.register("title")}/><FieldError id="title-error" errors={[form.formState.errors.title]}/></Field>
     {groups.map((group) => <FieldSet key={group.title} className="gap-5 border-t pt-7"><div><FieldLegend className="mb-1">{group.title}</FieldLegend><FieldDescription>{group.description}</FieldDescription></div>
