@@ -1,40 +1,70 @@
 # Deploy the hosted demo
 
-Draft: these steps have not been run against real projects. Record the first deployment's results in [evaluation status](../reference/evaluation.md).
+Steps 1 to 3 and the deploy were run on 2026-10-30 against Supabase project `memoba` and Vercel project `nguyen-khang/memoba`. Record the step 4 results in [evaluation status](../reference/evaluation.md).
 
 You need a Supabase Cloud project, a Vercel Hobby project connected to this repository, and a dedicated OpenAI project with a hard spending limit. The spending limit and `concurrentRuns` in [`limits.ts`](../../src/lib/contracts/limits.ts) bound cost; the app has no rate limit.
 
 ## 1. Prepare variables
 
-Copy [`.env.example`](../../.env.example) to `.env.local`. Put `SUPABASE_URL` and `SUPABASE_SECRET_KEY` there for scripts only. Do not add them to Vercel.
+Copy [`.env.example`](../../.env.example) to `.env.local`. Add `SUPABASE_URL` (`https://<project-ref>.supabase.co`) and `SUPABASE_SECRET_KEY` (Project Settings → API Keys → Secret keys). Only the scripts read them. Keep the same `AI_*` values you will set in Vercel, because the seed embeds with them.
 
 ## 2. Prepare Supabase Cloud
 
-Link the project and apply the migrations with the pinned CLI:
+Log in, then push the migrations by connection string. Copy the Session pooler string from the dashboard's Connect panel, and percent-encode any special characters in the password:
 
 ```bash
-npx supabase link --project-ref <project-ref>
+npx supabase login
 ```
 
 ```bash
-npx supabase db push
+npx supabase db push --db-url "<session-pooler-connection-string>"
 ```
 
-In Auth settings, disable public sign-up. Then seed the corpus and the demo account:
+Do not use `supabase link`. It pins the Cloud Postgres and Storage versions into the committed [`supabase/supabase.lock`](../../supabase/supabase.lock), and the next local `npm run dev` refuses to start the native stack. If you linked by mistake, run `npx supabase unlink` and `git checkout supabase/supabase.lock`.
+
+Check that every local version appears remotely:
+
+```bash
+npx supabase migration list --db-url "<session-pooler-connection-string>"
+```
+
+In Authentication → Sign In / Providers, turn off "Allow new users to sign up". Leave Integrations → GitHub → "Deploy to production" off, so a merge never changes the schema before you push it. Then seed the corpus and the demo account:
 
 ```bash
 npm run db:seed -- --demo --remote
 ```
 
-Expected: the seed reports the case count with index state ready. Seeding is incremental; rerunning embeds only missing cases. The seed sets the demo user's password to `DEMO_PASSWORD` every run, so `npm run demo:reset -- --remote` also recovers the account if a reviewer changes it.
+Expected: the seed reports the case count with index state ready (20 for the demo corpus). Seeding is incremental; rerunning embeds only missing cases. The seed sets the demo user's password to `DEMO_PASSWORD` every run, so `npm run demo:reset -- --remote` also recovers the account if a reviewer changes it.
 
 ## 3. Configure Vercel
 
-Create the project from the GitHub repository on the Hobby plan with Fluid Compute and Node.js 24. Set these Production variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `OPENAI_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIMENSIONS`. Do not set `DEMO_EMAIL` or `DEMO_PASSWORD` in Vercel; only the scripts read them. Reviewers sign in with the provided account on the normal form.
+Create the project from the GitHub repository on the Hobby plan with Fluid Compute and Node.js 24. Connecting it through the Supabase Vercel integration sets `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The integration also syncs server keys and `POSTGRES_*` variables that the app never reads; leave them, because it re-syncs them.
+
+Set `OPENAI_API_KEY` in the dashboard. Add the model variables with the CLI after `vercel link`:
+
+```bash
+printf 'openai:gpt-6-luna' | vercel env add AI_REASONING_MODEL production
+```
+
+Repeat for `AI_EMBEDDING_MODEL` and `AI_EMBEDDING_DIMENSIONS`. Do not set `DEMO_EMAIL` or `DEMO_PASSWORD` in Vercel; only the scripts read them. Reviewers sign in with the provided account on the normal form.
 
 ## 4. Deploy and verify
 
-Deploy, then on the deployed URL check that:
+Deploy from a clean export of `main`, so local `.env*` files are never uploaded. `vercel link` writes a `.env.local` with an OIDC token into the export; delete it before deploying.
+
+```bash
+mkdir ../memoba-deploy && git archive main | tar -x -C ../memoba-deploy
+```
+
+```bash
+cd ../memoba-deploy && vercel link --yes --project memoba
+```
+
+```bash
+vercel deploy --prod
+```
+
+Then on the deployed URL check that:
 
 - the provided demo account signs in through the email and password form;
 - each suggested prompt completes with working citations;
