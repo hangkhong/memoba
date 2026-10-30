@@ -14,6 +14,7 @@
     "doctor": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/doctor.ts",
     "db:types": "node --experimental-strip-types scripts/db-types.ts",
     "db:seed": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/seed-demo.ts",
+    "demo:reset": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/demo-reset.ts",
     "db:configure": "node --experimental-strip-types scripts/configure-local.ts",
     "ai:probe": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/probe-ai.ts",
     "ai:migrate-embeddings": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/migrate-embeddings.ts",

@@ -1,7 +1,7 @@
 // Runtime and input limits. docs/reference/system-contracts.md links here.
 export const executionLimits = Object.freeze({
   deadlineMs: 300_000,
-  hostedDeadlineMs: 270_000,
+  hostedDeadlineMs: 240_000,
   synthesisReserveMs: 60_000,
   reasoningSteps: 6,
   toolCalls: 12,
