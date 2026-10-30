@@ -1,10 +1,9 @@
 "use client";
-import { useRef, useState, type RefObject } from "react";
+import { useState } from "react";
 import type { SavedBrief, StoredBrief } from "./repository";
 import { Button } from "@/components/ui/button";
 import { AnswerMarkdown } from "./answer-markdown";
 import { EvidenceSources, InlineEvidence } from "./evidence-view";
-import { MessageFooter } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
 import { coverageLine } from "./coverage-presentation";
 export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredBrief; evidencePrefix?: string }) {
@@ -12,21 +11,15 @@ export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredB
  return <LegacyBriefView brief={{ ...brief, generated: brief.generated }} evidencePrefix={evidencePrefix}/>;
 }
 function TextAnswerView({ brief }: { brief: StoredBrief; evidencePrefix: string }) {
- const content = useRef<HTMLDivElement>(null);
  if (!("version" in brief.generated)) return null;
  const answer = brief.generated;
  const line = coverageLine(answer.coverage);
- return <div>{line && <CoverageNote text={line.text} unread={line.unread}/>}<div ref={content}><AnswerMarkdown answer={answer} evidence={brief.evidence}/></div><EvidenceSources evidence={brief.evidence}/><CopyAnswer content={content}/></div>;
+ return <div>{line && <CoverageNote text={line.text} unread={line.unread}/>}<AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
 }
 
 function CoverageNote({ text, unread }: { text: string; unread: string[] }) {
  if (!unread.length) return <p className="mb-3 text-xs text-muted-foreground">{text}</p>;
  return <details className="mb-3 text-xs text-muted-foreground"><summary className="cursor-pointer">{text}</summary><p className="mt-1">Not read:</p><ul className="ml-4 list-disc">{unread.map((title) => <li key={title}>{title}</li>)}</ul></details>;
-}
-
-function CopyAnswer({ content }: { content: RefObject<HTMLDivElement | null> }) {
- const [message, setMessage] = useState("");
- return <MessageFooter className="mt-3 gap-3 px-0"><Button variant="ghost" size="sm" onClick={async () => { try { await navigator.clipboard.writeText(content.current?.innerText ?? ""); setMessage("Copied"); } catch { setMessage("Could not copy. Select the answer text to copy it."); } }}>Copy answer</Button><span role="status" className="text-xs text-muted-foreground">{message}</span></MessageFooter>;
 }
 
 function LegacyBriefView({ brief }: { brief: SavedBrief; evidencePrefix: string }) {

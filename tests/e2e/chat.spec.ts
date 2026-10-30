@@ -56,7 +56,7 @@ test("mobile navigation and conversation API boundaries", async ({ page }) => {
   await page.getByRole("link", { name: "Knowledge Hub", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Knowledge Hub", exact: true })).toBeVisible();
-  await page.getByRole("link", { name: "Record a case", exact: true }).click();
+  await page.getByRole("button", { name: "Record a case", exact: true }).click();
   await expect(page.getByLabel("Title", { exact: true })).toBeVisible();
   await page.screenshot({ path: "test-results/mobile-knowledge.png", fullPage: true });
   const origin = { origin: "http://localhost:3100" };
