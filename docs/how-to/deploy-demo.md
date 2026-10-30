@@ -26,17 +26,17 @@ In Auth settings, disable public sign-up. Then seed the corpus and the demo acco
 npm run db:seed -- --demo --remote
 ```
 
-Expected: the seed reports the case count with index state ready. Seeding is incremental; rerunning embeds only missing cases.
+Expected: the seed reports the case count with index state ready. Seeding is incremental; rerunning embeds only missing cases. The seed sets the demo user's password to `DEMO_PASSWORD` every run, so `npm run demo:reset -- --remote` also recovers the account if a reviewer changes it.
 
 ## 3. Configure Vercel
 
-Create the project from the GitHub repository on the Hobby plan with Fluid Compute and Node.js 24. Set these Production variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `OPENAI_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIMENSIONS`, `DEMO_EMAIL`, `DEMO_PASSWORD`. Without the last two the demo button is hidden.
+Create the project from the GitHub repository on the Hobby plan with Fluid Compute and Node.js 24. Set these Production variables: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `OPENAI_API_KEY`, `AI_REASONING_MODEL`, `AI_EMBEDDING_MODEL`, `AI_EMBEDDING_DIMENSIONS`. Do not set `DEMO_EMAIL` or `DEMO_PASSWORD` in Vercel; only the scripts read them. Reviewers sign in with the provided account on the normal form.
 
 ## 4. Deploy and verify
 
 Deploy, then on the deployed URL check that:
 
-- the demo button signs in;
+- the provided demo account signs in through the email and password form;
 - each suggested prompt completes with working citations;
 - the Singapore prompt does not invent precedent;
 - Import drafts from notes and Save indexes the case;
@@ -46,7 +46,9 @@ Deploy, then on the deployed URL check that:
 ## 5. Reset between reviewers
 
 ```bash
-npm run demo:reset -- --remote
+npm run demo:reset -- --remote --app-url https://<your-app>.vercel.app
 ```
+
+With `--app-url` (or `APP_URL`) the reset then signs in as the demo user and re-creates the three seeded conversations (separate from the suggested prompts), each with a real completed answer. This calls the model three times. Without it the conversations are left empty; run `npm run demo:conversations -- --app-url <url>` later.
 
 This removes visitor cases, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay. The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.

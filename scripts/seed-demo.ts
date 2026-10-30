@@ -32,7 +32,11 @@ async function seed() {
   const users = z.array(userSchema).parse(listed.data.users);
   async function ensureUser(email: string) {
     const existing = users.find((user) => user.email === email);
-    if (existing) return existing.id;
+    if (existing) {
+      const updated = await client.auth.admin.updateUserById(existing.id, { password: values.DEMO_PASSWORD, email_confirm: true });
+      if (updated.error) throw new Error("Cannot update local demo user password.");
+      return existing.id;
+    }
     const result = await client.auth.admin.createUser({ email, password: values.DEMO_PASSWORD, email_confirm: true });
     if (result.error) throw new Error("Cannot create local demo user.");
     return userSchema.parse(result.data.user).id;
@@ -45,7 +49,7 @@ async function seed() {
   const membership = await client.from("workspace_members").upsert({ user_id: userId, workspace_id: workspaceId, role: "owner" }, { onConflict: "workspace_id,user_id" });
   if (membership.error) throw new Error("Cannot seed membership.");
   const login = await client.auth.signInWithPassword({ email: values.DEMO_EMAIL, password: values.DEMO_PASSWORD });
-  if (login.error) throw new Error("Demo sign-in failed; existing passwords are preserved.");
+  if (login.error) throw new Error("Demo sign-in failed after the password was set; check Auth configuration.");
   const admin = createClient<Database>(local.url, local.secretKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const conceptRows = demo ? demoConcepts.map((concept) => ({ ...concept, workspace_id: workspaceId, aliases: [...concept.aliases] })) : [
     { id: corpusConceptId, workspace_id: workspaceId, kind: "system", label: "Synthetic demo corpus", aliases: ["demo"] },
@@ -93,6 +97,6 @@ async function seed() {
   if(canary && legacy) { const result=await client.rpc("link_cases",{source:canary.caseId,target:legacy.caseId,relation:"supersedes",reason:"Controlled release replaced the old manual procedure.",archive_target:true});if(result.error)throw new Error("Cannot seed supersedes relation."); }
   if(canary && onboarding) { const result=await client.rpc("link_cases",{source:canary.caseId,target:onboarding.caseId,relation:"related_to",reason:"Both use pilots and explicit review checkpoints; domain applicability must be checked.",archive_target:false});if(result.error)throw new Error("Cannot seed cross-domain relation."); }
   mkdirSync(".superpowers/evals",{recursive:true});writeFileSync(".superpowers/evals/seed.json",JSON.stringify(manifest,null,2)+"\n");
-  process.stdout.write(`Seeded ${manifest.length} cases with index state ready on the configured embedding profile. Archived history and existing users were preserved.\n`);
+  process.stdout.write(`Seeded ${manifest.length} cases with index state ready on the configured embedding profile. Archived history was preserved and the demo user password now matches DEMO_PASSWORD.\n`);
 }
 seed().catch((error: unknown) => { process.stderr.write(error instanceof Error ? error.message + "\n" : "Seed failed.\n"); process.exitCode = 1; });

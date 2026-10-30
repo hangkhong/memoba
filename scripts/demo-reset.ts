@@ -28,5 +28,9 @@ async function reset() {
   // Seeding skips cases that are already indexed, so only missing seed cases cost embeddings.
   const seedArgs = ["--env-file-if-exists=.env.local", "--experimental-strip-types", "scripts/seed-demo.ts", "--demo", ...(target.kind === "remote" ? ["--remote"] : [])];
   execFileSync(process.execPath, seedArgs, { stdio: "inherit" });
+  // Conversations need the running app and a real model, so they are seeded only when its URL is given.
+  const appFlag = process.argv.indexOf("--app-url");
+  if (appFlag >= 0 || process.env.APP_URL) execFileSync(process.execPath, ["--env-file-if-exists=.env.local", "--experimental-strip-types", "scripts/seed-conversations.ts", ...(appFlag >= 0 ? ["--app-url", process.argv[appFlag + 1] ?? ""] : [])], { stdio: "inherit" });
+  else process.stdout.write("No --app-url or APP_URL given: the three demo conversations were not re-created. Run npm run demo:conversations -- --app-url <url>.\n");
 }
 reset().catch((error: unknown) => { process.stderr.write(error instanceof Error ? error.message + "\n" : "Reset failed.\n"); process.exitCode = 1; });

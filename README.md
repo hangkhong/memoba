@@ -9,7 +9,7 @@ Two things to try:
 
 ## Try the demo
 
-Live demo: _link added after the first deployment_. Choose **Enter demo workspace** on the sign-in page. The workspace holds 20 cases from one invented SaaS company. Three suggested prompts on the new-chat screen show the main behaviors:
+Live demo: _link added after the first deployment_. Sign in with the account provided with the submission. The workspace holds 20 cases from one invented SaaS company. Three suggested prompts on the new-chat screen show the main behaviors:
 
 1. A launch with a strong precedent.
 2. A price change that resembles a failed case under a changed condition.
