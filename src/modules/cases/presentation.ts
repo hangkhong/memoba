@@ -25,6 +25,9 @@ export const relationLabels = {
   supersedes: { outgoing: "Supersedes", incoming: "Superseded by" },
 } satisfies Record<RelationType, Record<LinkDirection, string>>;
 
+export const relationOrder = ["related_to", "contrasts_with", "supersedes"] as const satisfies RelationType[];
+export function relationOptions(direction: LinkDirection) { return relationOrder.map((value) => ({ value, label: relationLabels[value][direction] })); }
+
 export type Tone = "success" | "warning" | "danger" | "neutral";
 // Pale tint with dark text of the same hue; the dot uses the saturated step.
 export const toneStyles = {

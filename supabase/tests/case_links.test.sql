@@ -1,0 +1,43 @@
+begin;
+create extension if not exists pgtap with schema extensions;
+select plan(14);
+insert into auth.users(id,email) values ('10000000-0000-4000-8000-000000000095','links@test.invalid'),('10000000-0000-4000-8000-000000000096','links-other@test.invalid');
+insert into public.workspaces(id,name) values ('20000000-0000-4000-8000-000000000095','Links test'),('20000000-0000-4000-8000-000000000096','Links other');
+insert into public.workspace_members(workspace_id,user_id,role) values ('20000000-0000-4000-8000-000000000095','10000000-0000-4000-8000-000000000095','owner'),('20000000-0000-4000-8000-000000000096','10000000-0000-4000-8000-000000000096','owner');
+create temporary table ids(label text primary key, id uuid);
+grant all on ids to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000095","role":"authenticated"}',true);
+insert into ids select 'a',(public.save_case_revision('20000000-0000-4000-8000-000000000095','{"title":"Case A","template":"product_delivery","outcome":"unknown","problem":"Risk","context":"Team","constraints":"None","approach":"Canary","observedOutcome":"Unknown","lessons":"Monitor","deliverable":"Feature","changeScope":"Checkout","deploymentConditions":"Rollback","conceptIds":[],"sources":[]}')->>'caseId')::uuid;
+insert into ids select 'b',(public.save_case_revision('20000000-0000-4000-8000-000000000095','{"title":"Case B","template":"product_delivery","outcome":"unknown","problem":"Risk","context":"Team","constraints":"None","approach":"Canary","observedOutcome":"Unknown","lessons":"Monitor","deliverable":"Feature","changeScope":"Checkout","deploymentConditions":"Rollback","conceptIds":[],"sources":[]}')->>'caseId')::uuid;
+insert into ids select 'c',(public.save_case_revision('20000000-0000-4000-8000-000000000095','{"title":"Case C","template":"product_delivery","outcome":"unknown","problem":"Risk","context":"Team","constraints":"None","approach":"Canary","observedOutcome":"Unknown","lessons":"Monitor","deliverable":"Feature","changeScope":"Checkout","deploymentConditions":"Rollback","conceptIds":[],"sources":[]}')->>'caseId')::uuid;
+select public.link_cases((select id from ids where label='a'),(select id from ids where label='b'),'related_to','First reason',false);
+select public.link_cases((select id from ids where label='b'),(select id from ids where label='c'),'supersedes','B replaces C',false);
+create temporary table version(v bigint);
+grant all on version to authenticated;
+insert into version select knowledge_version from public.workspaces where id='20000000-0000-4000-8000-000000000095';
+
+select public.update_case_link((select id from ids where label='a'),(select id from ids where label='b'),'related_to','contrasts_with','Different reason');
+select is((select count(*) from public.case_links where source_id=(select id from ids where label='a')),1::bigint,'changing the relation keeps one link');
+select is((select relation_type||':'||reason from public.case_links where source_id=(select id from ids where label='a')),'contrasts_with:Different reason','relation and reason change together');
+select is((select knowledge_version from public.workspaces where id='20000000-0000-4000-8000-000000000095'),(select v+1 from version),'editing a link bumps knowledge_version');
+select throws_ok($$select public.update_case_link((select id from ids where label='c'),(select id from ids where label='b'),'related_to','supersedes','No such link')$$,'42501','Resource unavailable','editing a missing link is rejected');
+select public.link_cases((select id from ids where label='a'),(select id from ids where label='b'),'related_to','Second link',false);
+select throws_ok($$select public.update_case_link((select id from ids where label='a'),(select id from ids where label='b'),'related_to','contrasts_with','Collides')$$,'23505','Link exists','a relation that already exists between the pair is rejected');
+select lives_ok($$select public.update_case_link((select id from ids where label='a'),(select id from ids where label='b'),'related_to','supersedes','A replaces B')$$,'an edit to supersedes succeeds without a cycle');
+select public.link_cases((select id from ids where label='c'),(select id from ids where label='a'),'related_to','C to A',false);
+select throws_ok($$select public.update_case_link((select id from ids where label='c'),(select id from ids where label='a'),'related_to','supersedes','Would close a cycle')$$,'P0001','Supersedes cycle','a supersedes edit cannot close a cycle');
+select is((select relation_type from public.case_links where source_id=(select id from ids where label='c')),'related_to','a rejected edit leaves the link unchanged');
+
+select public.unlink_cases((select id from ids where label='b'),(select id from ids where label='c'),'supersedes');
+select is((select count(*) from public.case_links where source_id=(select id from ids where label='b') and relation_type='supersedes'),0::bigint,'unlink removes the chosen link');
+select is((select count(*) from public.case_links where source_id=(select id from ids where label='a')),2::bigint,'other links stay');
+select throws_ok($$select public.unlink_cases((select id from ids where label='b'),(select id from ids where label='c'),'supersedes')$$,'42501','Resource unavailable','unlinking a missing link is rejected');
+
+select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000096","role":"authenticated"}',true);
+select throws_ok($$select public.unlink_cases((select id from ids where label='a'),(select id from ids where label='b'),'related_to')$$,'42501',null,'nonmembers cannot unlink');
+select throws_ok($$select public.update_case_link((select id from ids where label='a'),(select id from ids where label='b'),'related_to','contrasts_with','Nope')$$,'42501',null,'nonmembers cannot edit');
+reset role;
+select ok(not has_function_privilege('anon','public.unlink_cases(uuid,uuid,text)','execute') and not has_function_privilege('anon','public.update_case_link(uuid,uuid,text,text,text)','execute'),'anonymous callers cannot execute either function');
+select * from finish();
+rollback;

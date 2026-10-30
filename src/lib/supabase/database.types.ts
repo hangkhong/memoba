@@ -361,6 +361,12 @@ isOneToOne: false
                            },
 "search_knowledge":
 { Args: { "concept_ids": (string)[],"max_results": number,"model": string,"per_case": number,"purpose": string,"query_embedding": string,"query_text": string,"w": string }; Returns: Json[]
+                           },
+"unlink_cases":
+{ Args: { "relation": string,"source": string,"target": string }; Returns: undefined
+                           },
+"update_case_link":
+{ Args: { "new_reason": string,"new_relation": string,"relation": string,"source": string,"target": string }; Returns: undefined
                            }
           }
           Enums: {

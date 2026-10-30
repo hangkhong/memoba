@@ -6,10 +6,10 @@ import { AccessError, requireWorkspace } from "@/lib/auth/workspace";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { LinkForm } from "@/modules/cases/link-form";
+import { RelatedCases } from "@/modules/cases/related-cases";
 import { caseDetail, listCases } from "@/modules/cases/repository";
 import { listConcepts } from "@/modules/cases/queries";
-import { caseStatus, publicationLabel, relationLabels } from "@/modules/cases/presentation";
+import { caseStatus, publicationLabel } from "@/modules/cases/presentation";
 import { OutcomePill, StatusDot, TemplateChip } from "@/modules/cases/case-badges";
 import { CaseHeaderActions, ReindexButton } from "@/modules/cases/case-detail-actions";
 import { CaseArticle } from "@/modules/cases/case-article";
@@ -26,7 +26,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
   const latest = detail.revisions.find((revision) => revision.id === detail.latest_revision_id); if (!latest) notFound();
   const [all, concepts] = await Promise.all([listCases(supabase, context), listConcepts(context)]);
   const titles = new Map(all.map((item) => [item.id, item.revision?.content.title ?? "Case"]));
-  const links = detail.links.map((link) => { const outgoing = link.source_id === detail.id; const other = outgoing ? link.target_id : link.source_id; return { key: `${link.source_id}:${link.target_id}:${link.relation_type}`, other, title: titles.get(other) ?? "Case", label: relationLabels[link.relation_type][outgoing ? "outgoing" : "incoming"], reason: link.reason }; });
+  const links = detail.links.map((link) => { const outgoing = link.source_id === detail.id; const other = outgoing ? link.target_id : link.source_id; return { key: `${link.source_id}:${link.target_id}:${link.relation_type}`, source: link.source_id, target: link.target_id, other, title: titles.get(other) ?? "Case", relation: link.relation_type, direction: outgoing ? "outgoing" as const : "incoming" as const, reason: link.reason }; });
   const linked = new Set(links.map((link) => link.other));
   const candidates = all.filter((item) => item.id !== detail.id && item.lifecycle === "active" && !linked.has(item.id)).map((item) => ({ id: item.id, title: titles.get(item.id) ?? "Case" }));
   const { content } = latest;
@@ -51,10 +51,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
             {active && latest.index_state !== "ready" && <ReindexButton caseId={detail.id} revisionId={latest.id}/>}
           </RailSection>
           {content.sources.length > 0 && <RailSection title="Sources"><ul className="space-y-1.5">{content.sources.map((source) => <li key={source.url}><a className="text-[var(--evidence-accent)] underline underline-offset-4 break-words" href={source.url} target="_blank" rel="noopener noreferrer">{source.label}<span className="sr-only"> (opens in a new tab)</span></a></li>)}</ul></RailSection>}
-          <RailSection title="Related cases">
-            {links.length === 0 ? <p className="text-muted-foreground">No related cases yet.</p> : <ul className="space-y-3">{links.map((link) => <li key={link.key}><Link className="font-medium underline-offset-4 hover:underline" href={`/workspace/knowledge/${link.other}`}>{link.title}</Link><p className="text-xs text-muted-foreground">{link.label} · {link.reason}</p></li>)}</ul>}
-            {active && <LinkForm caseId={detail.id} cases={candidates}/>}
-          </RailSection>
+          <RelatedCases caseId={detail.id} links={links} candidates={candidates} editable={active}/>
         </RailLayer>
         <RailLayer label="Version history"><RailSection title="Version history"><VersionHistory rows={history}/></RailSection></RailLayer>
       </aside>
