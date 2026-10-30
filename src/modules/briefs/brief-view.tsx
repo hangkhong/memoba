@@ -6,6 +6,7 @@ import { AnswerMarkdown } from "./answer-markdown";
 import { EvidenceSources, InlineEvidence } from "./evidence-view";
 import { MessageFooter } from "@/components/ui/message";
 import { Textarea } from "@/components/ui/textarea";
+import { coverageLine } from "./coverage-presentation";
 export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredBrief; evidencePrefix?: string }) {
  if ("version" in brief.generated) return <TextAnswerView brief={brief} evidencePrefix={evidencePrefix}/>;
  return <LegacyBriefView brief={{ ...brief, generated: brief.generated }} evidencePrefix={evidencePrefix}/>;
@@ -14,7 +15,13 @@ function TextAnswerView({ brief }: { brief: StoredBrief; evidencePrefix: string 
  const content = useRef<HTMLDivElement>(null);
  if (!("version" in brief.generated)) return null;
  const answer = brief.generated;
- return <div><div ref={content}><AnswerMarkdown answer={answer} evidence={brief.evidence}/></div><EvidenceSources evidence={brief.evidence}/><CopyAnswer content={content}/></div>;
+ const line = coverageLine(answer.coverage);
+ return <div>{line && <CoverageNote text={line.text} unread={line.unread}/>}<div ref={content}><AnswerMarkdown answer={answer} evidence={brief.evidence}/></div><EvidenceSources evidence={brief.evidence}/><CopyAnswer content={content}/></div>;
+}
+
+function CoverageNote({ text, unread }: { text: string; unread: string[] }) {
+ if (!unread.length) return <p className="mb-3 text-xs text-muted-foreground">{text}</p>;
+ return <details className="mb-3 text-xs text-muted-foreground"><summary className="cursor-pointer">{text}</summary><p className="mt-1">Not read:</p><ul className="ml-4 list-disc">{unread.map((title) => <li key={title}>{title}</li>)}</ul></details>;
 }
 
 function CopyAnswer({ content }: { content: RefObject<HTMLDivElement | null> }) {

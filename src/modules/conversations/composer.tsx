@@ -15,7 +15,7 @@ import { textTurnInputSchema } from "./schema";
 const composerSchema = textTurnInputSchema.pick({ message: true });
 type Values = z.infer<typeof composerSchema>;
 const errorSchema = z.object({ error: z.string() });
-export function Composer({ conversationId, parentTurnId = null, disabled = false }: { conversationId?: string; parentTurnId?: string | null; initial?: NormalizedRequest; concepts: { id: string; label: string }[]; disabled?: boolean }) {
+export function Composer({ conversationId, parentTurnId = null, disabled = false, prefill }: { conversationId?: string; parentTurnId?: string | null; initial?: NormalizedRequest; concepts: { id: string; label: string }[]; disabled?: boolean; prefill?: { text: string; id: number } }) {
   const router = useRouter(); const session = useChatSession();
   const [error, setError] = useState("");
   const textarea = useRef<HTMLTextAreaElement | null>(null);
@@ -32,6 +32,11 @@ export function Composer({ conversationId, parentTurnId = null, disabled = false
     const frame = requestAnimationFrame(() => textarea.current?.focus({ preventScroll: true }));
     return () => cancelAnimationFrame(frame);
   }, [blocked]);
+  useEffect(() => {
+    if (!prefill) return;
+    form.setValue("message", prefill.text, { shouldValidate: true });
+    textarea.current?.focus({ preventScroll: true });
+  }, [prefill, form]);
   async function submit(values: Values) {
     if (sending.current || disabled || session.state?.busy) return;
     sending.current = true;

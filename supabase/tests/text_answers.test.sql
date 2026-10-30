@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(12);
+select plan(15);
 insert into auth.users(id,email) values ('10000000-0000-4000-8000-000000000008','text-answer@test.invalid');
 insert into public.workspaces(id,name) values ('20000000-0000-4000-8000-000000000008','Text answer test');
 insert into public.workspace_members values ('20000000-0000-4000-8000-000000000008','10000000-0000-4000-8000-000000000008','owner',now());
@@ -30,5 +30,10 @@ select throws_ok($$select public.admit_analysis('20000000-0000-4000-8000-0000000
 create temporary table hosted_run(result jsonb, cutoff timestamptz);
 insert into hosted_run select public.admit_analysis('20000000-0000-4000-8000-000000000008','{"version":2,"message":"Hosted","history":[]}',gen_random_uuid(),2,300000,now()+interval '120 seconds'),now()+interval '120 seconds';
 select ok((select deadline_at<=cutoff from public.analysis_runs,hosted_run where id=(result->>'runId')::uuid),'persisted deadline does not exceed the hosted cutoff');
+create temporary table coverage_run(result jsonb);
+insert into coverage_run values(public.admit_analysis('20000000-0000-4000-8000-000000000008','{"version":2,"message":"Coverage","history":[]}',gen_random_uuid(),2,300000));
+select throws_ok($$select public.finish_analysis((select (result->>'runId')::uuid from coverage_run),'complete','{"version":2,"text":"No cases.","citations":[],"coverage":{"searched":true,"previewed":"many","read":0,"searchFailed":false,"unreadTitles":[]}}'::jsonb,'[]'::jsonb,null,null)$$,'23514',null,'a malformed coverage is rejected');
+select lives_ok($$select public.finish_analysis((select (result->>'runId')::uuid from coverage_run),'complete','{"version":2,"text":"No cases.","citations":[],"coverage":{"searched":true,"previewed":12,"read":3,"searchFailed":false,"unreadTitles":["Case A","Case B"]}}'::jsonb,'[]'::jsonb,null,null)$$,'an answer with coverage is accepted');
+select is((select generated->'coverage'->>'previewed' from public.briefs where run_id=(select (result->>'runId')::uuid from coverage_run)),'12','coverage is saved with the answer');
 select * from finish();
 rollback;

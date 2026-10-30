@@ -25,7 +25,7 @@ it("records actual tool calls and submitted source identity without recording so
     call++;
     const usage = { inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } };
     if (call === 1) return { content: [{ type: "tool-call", toolCallId: "search", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], finishReason: { unified: "tool-calls", raw: undefined }, usage, warnings: [] };
-    if (call === 2) return { content: [{ type: "tool-call", toolCallId: "read", toolName: "read_case", input: JSON.stringify({ caseId: source.caseId, sectionKeys: ["approach"] }) }], finishReason: { unified: "tool-calls", raw: undefined }, usage, warnings: [] };
+    if (call === 2) return { content: [{ type: "tool-call", toolCallId: "read", toolName: "read_case", input: JSON.stringify({ caseIds: [source.caseId], sectionKeys: ["approach"] }) }], finishReason: { unified: "tool-calls", raw: undefined }, usage, warnings: [] };
     const marker = JSON.stringify(prompt).match(/\[S:[0-9a-f-]{36}:[0-9]+\]/)?.[0];
     expect(marker).toBeDefined();
     return { content: [{ type: "text", text: `The pilot was proposed ${marker}.` }], finishReason: { unified: "stop", raw: undefined }, usage, warnings: [] };
@@ -36,7 +36,7 @@ it("records actual tool calls and submitted source identity without recording so
   const turn = parsed.turns[0];
   if (!turn) throw new Error("No recorded turn");
   expect(turn.termination.status).toBe("complete");
-  expect(turn.trace.filter((event) => event.kind === "tool_call")).toMatchObject([{ name: "search_cases", input: { query: "pilot" } }, { name: "read_case", input: { caseId: source.caseId } }]);
+  expect(turn.trace.filter((event) => event.kind === "tool_call")).toMatchObject([{ name: "search_cases", input: { query: "pilot" } }, { name: "read_case", input: { caseIds: [source.caseId] } }]);
   expect(turn.trace.filter((event) => event.kind === "model_sources")).toMatchObject([{ sources: [{ evidenceId: source.evidenceId, revisionId: source.revisionId, sectionKey: "approach" }] }]);
   expect(JSON.stringify(report)).not.toContain(source.excerpt);
   expect(turn.citedSources).toMatchObject([{ evidenceId: source.evidenceId, source: { caseId: source.caseId, revisionId: source.revisionId } }]);

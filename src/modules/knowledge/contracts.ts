@@ -36,6 +36,21 @@ export type CasePreview = {
 };
 export type DisclosedSource = { marker: string; evidence: EvidenceItem };
 export type ReadSection = { marker: string; caseId: EvidenceItem["caseId"]; revisionId: EvidenceItem["revisionId"]; title: string; outcome: EvidenceItem["outcome"]; sectionKey: EvidenceItem["sectionKey"]; text: string };
+export type CaseHeader = {
+  caseId: EvidenceItem["caseId"];
+  revisionId: EvidenceItem["revisionId"];
+  title: string;
+  template?: "product_delivery" | "cs_operations";
+  outcome: EvidenceItem["outcome"];
+  // The marker is returned even when the text was already read earlier in the run.
+  observedOutcome?: { marker: string; text?: string };
+};
+export type ReadResult =
+  | { kind: "success"; cases: CaseHeader[]; items: ReadSection[] }
+  | { kind: "partial"; cases: CaseHeader[]; items: ReadSection[]; reason: "CONTEXT_LIMIT" | "SOURCE_UNAVAILABLE" | "PINNED_REVISION_CONFLICT" }
+  | { kind: "empty"; items: [] }
+  | { kind: "no_progress"; alreadyRead: string[] }
+  | { kind: "error"; code: Extract<ToolResult, { kind: "error" }>["code"]; retryable: boolean };
 export type RunToolResult<T> =
   | { kind: "success"; items: T[] }
   | { kind: "empty"; items: [] }

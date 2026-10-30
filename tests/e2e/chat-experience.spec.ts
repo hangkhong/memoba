@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { z } from "zod";
+import { demoPrompts } from "../../evals/demo/prompts";
 import { conversationDetailSchema } from "../../src/modules/conversations/view-schema";
 
 test.use({ screenshot: "off" });
@@ -94,4 +95,12 @@ test("long conversations scroll independently, jump to latest and retain mobile 
   await page.screenshot({ path: "test-results/eve-chat-mobile-details.png", fullPage: true });
   await test.info().attach("saved-conversation", { body: JSON.stringify({ id, turnCount: detail.turns.length }), contentType: "application/json" });
   await test.info().attach("mobile-chat-aria", { body: await page.locator("body").ariaSnapshot(), contentType: "text/plain" });
+});
+
+test("suggested prompt fills the composer", async ({ page }) => {
+  const first = z.object({ label: z.string(), message: z.string() }).parse(demoPrompts[0]);
+  await signIn(page);
+  await page.getByRole("button", { name: first.label, exact: true }).click();
+  await expect(page.getByLabel("What do you want to achieve?", { exact: true })).toHaveValue(first.message);
+  await expect(page).toHaveURL(/\/workspace\/chat$/);
 });

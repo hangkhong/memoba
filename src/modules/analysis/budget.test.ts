@@ -76,3 +76,11 @@ it("classifies a provider rejection after the absolute deadline as timed out",as
  vi.useFakeTimers();const start=Date.now();const budget=createRunBudget(undefined,start+100);
  await expect(budget.run(async()=>{vi.setSystemTime(start+101);throw Error("provider aborted");})).rejects.toMatchObject({code:"TIMED_OUT"});budget.dispose();vi.useRealTimers();
 });
+
+it("times out a hosted run at 240 seconds", async () => {
+  vi.useFakeTimers();
+  const pending = runBoundedSetup(new AbortController().signal, Date.now(), true, () => new Promise<never>(() => {}));
+  const rejected = expect(pending).rejects.toMatchObject({ code: "TIMED_OUT" });
+  await vi.advanceTimersByTimeAsync(240_000);
+  await rejected;
+});

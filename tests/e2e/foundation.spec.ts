@@ -38,3 +38,10 @@ test("authenticated nonmember cannot enter the workspace", async ({ request }) =
   expect(response.status()).toBe(404);
   expect((await request.get("/api/workspace")).status()).toBe(401);
 });
+
+test("demo button enters the workspace when demo credentials are configured", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("button", { name: "Enter demo workspace", exact: true }).click();
+  await expect(page).toHaveURL(/\/workspace/, { timeout: 15000 });
+  expect((await page.request.get("/api/workspace")).status()).toBe(200);
+});
