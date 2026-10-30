@@ -55,6 +55,20 @@ For an optional local, non-persistent trace, use `--trace-live --scenario <id>` 
 
 Inspect each answer against the fixture review points and its authorized sources. Check the decision, user restrictions, adaptations, contradictory evidence, and any asserted historical outcome. Record incomplete runs rather than excluding them. Compare duration and resource use only after identifying what the recorded measurement includes.
 
+## MVP demo observations on 2026-10-30
+
+These are individual local observations with `gpt-6-luna` and `text-embedding-3-small` against the 20-case demo corpus ([`evals/demo/corpus.ts`](../../evals/demo/corpus.ts)). They are not quality scores, and no hosted run has happened yet.
+
+| Prompt | Run | Time | Tokens | Observation |
+|---|---|---|---|---|
+| Launch to all customers | `aea8a6a3-a00a-4374-bce6-9c5db723f9a0` | 22 s | 10,016 | Three sections. Cited the staged-rollout case. It named the all-at-once launch from a search preview but said it could not retrieve that case's text, so it did not cite it. |
+| Price increase with notice | `9cfc35aa-0eb8-43fc-8753-9ebf841de9a6` | 13 s | 9,767 | Three sections. Cited the failed Pro increase and the Starter increase, and named the changed condition (90 days notice, one-year price protection). |
+| Singapore data center | `d43f5218-a4f5-4753-9153-a5fb93ff24cc` | 6 s | 1,507 | No sections. Said no relevant recorded case was found. |
+
+Import: unaccented Vietnamese-style notes produced an English draft with an `unknown` outcome and an empty observed outcome in about 9.6 seconds. English notes that described a result produced a draft with an `achieved` outcome. After Save, the case reached index state ready and a chat run (`e2641e38-fa84-4227-81ce-f4650a3a3427`, 9 s, 6,165 tokens) found and cited it. One other save attempt did not navigate; the cause was not investigated and is likely a missing required field in the draft, which the form marks.
+
+Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
+
 ## Deterministic checks and remaining work
 
 `npx vitest run src/modules/analysis/text-agent.test.ts src/modules/analysis/budget.test.ts` exercises scripted tool errors, citation failures, and deadline behavior without a paid model call. `npx vitest run evals/text/runner.test.ts` checks stream parsing and fixture structure. To exercise the runner against a temporary scripted local server, run `MEMOBA_EVAL_RUNNER_SMOKE=1 npx vitest run evals/text/runner.test.ts` with permission to bind a local port. That test does not establish live model quality.

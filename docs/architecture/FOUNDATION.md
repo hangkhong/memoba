@@ -2,13 +2,13 @@
 
 The [text-first product design](../superpowers/specs/2026-10-29-text-agent-design.md) defines the demo scope.
 
-Memoba uses one Next.js application, one Supabase database, and one AI SDK agent for a PM's seven-day demo. The [agent engine plan](../superpowers/plans/2026-10-29-agent-engine-simplification.md) defines the current work. [System contracts](../reference/system-contracts.md) define the runtime and data rules.
+Memoba uses one Next.js application, one Supabase database, and one AI SDK agent for a PM's seven-day demo. The [MVP demo plan](../superpowers/plans/2026-10-30-mvp-demo.md) defines the current work. [System contracts](../reference/system-contracts.md) define the runtime and data rules.
 
 ## Frameworks and boundaries
 
 Next.js provides pages, route handlers, server rendering, and the build. shadcn/ui provides UI components. React Hook Form and Zod handle forms and boundary validation. Supabase provides Auth, Postgres, pgvector, migrations, and generated database types. The app uses the official SSR clients. AI SDK 7 provides model calls, tools, streams, and the agent loop.
 
-`src/modules/cases` owns templates and revisions. `src/modules/knowledge` owns search, case reads, revision pinning, and evidence disclosure. `src/modules/analysis` owns the run budget, model loop, tools, and activity. `src/modules/briefs` validates and saves answers with evidence. `src/modules/conversations` owns ordered turns and immutable input snapshots.
+`src/modules/cases` owns templates, revisions, and the non-persistent draft from pasted notes. `src/modules/knowledge` owns search, case reads, revision pinning, and evidence disclosure. `src/modules/analysis` owns the run budget, model loop, tools, and activity. `src/modules/briefs` validates and saves answers with evidence. `src/modules/conversations` owns ordered turns and immutable input snapshots.
 
 Chat is the default workspace view. Knowledge Hub reuses the case authoring and publication services. The shared workspace shell owns the chat connection, so navigation does not unmount an active stream. Refresh reads persisted state and does not restart generation. The presentation uses shadcn AI Elements as described in [UI presentation](ui-presentation.md).
 
@@ -25,6 +25,8 @@ Readers accept legacy structured requests and briefs so historical runs remain a
 Concepts and typed case links use Postgres. Content revisions are immutable. A new revision becomes published only after its nonempty sections are indexed. An unfinished edit cannot replace the published source used by retrieval.
 
 The persisted admission deadline bounds model calls, tool work, and citation correction. The Vercel route also applies a request-entry cutoff with headroom for setup and persistence. The hosted cutoff and synthesis reserve are runtime policies to verify with a deployment, not proof of hosted behavior. The app stores terminal state and reconciles expired runs on later reads; it does not resume interrupted generation.
+
+Hosted, the app runs on Vercel with Supabase Cloud and a shared demo workspace; the [deployment steps](../how-to/deploy-demo.md) and the reset RPC in [system contracts](../reference/system-contracts.md) keep it reproducible. Seeding is incremental: ready cases are not re-embedded, so a reset or reseed pays only for missing cases.
 
 Local development uses the project-pinned Supabase CLI `2.122.0` with the native experimental stack. Endpoint configuration comes from CLI JSON output. Docker and fixed local ports are not prerequisites.
 

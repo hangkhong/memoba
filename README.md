@@ -1,16 +1,35 @@
-# The Memory Bank
+# The Memoba
 
-A local chat workspace for one PM. Ask questions in saved conversations and build the agent's evidence through Product/Delivery and CS/Operations cases in Knowledge Hub.
+Teams repeat work they have already done, and the lessons sit in documents nobody reads. Memoba keeps past cases in one place and answers a new request with how similar cases went, what is different this time, and a suggested next step, with citations to the recorded cases.
 
-The foundation includes a responsive sidebar, structured chat composer, ordered conversation turns, case revisions and publication, shared retrieval, bounded analysis, and saved briefs. Missing model access preserves questions and cases without creating a fake response. Follow-ups carry user-confirmed request context and constraints. Interpreting references to prior assistant proposals is deferred to a feature branch.
+Two things to try:
 
-The Gemini embedding probe and a case save/index/publish flow passed before the provider became rate-limited. A complete live-model brief has not passed verification. Semantic quality and challenge acceptance remain pending. See [evaluation status](docs/reference/evaluation.md).
+- **Capture.** Record a past case in Knowledge Hub with one of two fixed templates (Product/Delivery, CS/Operations), or use **Import from notes** to draft a case from pasted text. The draft is never saved until you review it and press Save.
+- **Reuse.** Ask a new request in chat. The agent searches the recorded cases, reads the relevant ones, and answers. When nothing relevant is recorded, it says so instead of inventing precedent.
 
-Use Node.js 24 and npm. Follow [Run locally](docs/how-to/run-locally.md) for the pinned native Supabase stack and the default checks, which do not call a model.
+## Try the demo
 
+Live demo: _link added after the first deployment_. Choose **Enter demo workspace** on the sign-in page. The workspace holds 20 cases from one invented SaaS company. Three suggested prompts on the new-chat screen show the main behaviors:
+
+1. A launch with a strong precedent.
+2. A price change that resembles a failed case under a changed condition.
+3. A request with no recorded precedent.
+
+Answers are model output grounded in the recorded cases. A valid citation shows which section was read, not that the advice fits your situation.
+
+## What is real, what is a preview
+
+- Real: case capture and revisions, search and citations, chat with follow-ups, saved answers that survive refresh, and drafting a case from pasted notes with one model call.
+- Preview: choosing document files in Import only lists their names. Document parsing is coming soon; files stay in your browser.
+- Deferred: connectors, document upload, multiple agents, per-visitor workspaces, and in-app rate limits. Hosted cost is bounded by a provider spending limit.
+
+## Run it and read more
+
+Use Node.js 24 and npm. [Run locally](docs/how-to/run-locally.md) starts the pinned native Supabase stack and prints the App, Studio and API URLs. [Deploy the demo](docs/how-to/deploy-demo.md) covers Supabase Cloud and Vercel.
+
+- [Product design](docs/superpowers/specs/2026-10-29-text-agent-design.md)
 - [Architecture foundation](docs/architecture/FOUNDATION.md)
 - [System contracts](docs/reference/system-contracts.md)
-- [Implementation plan](docs/superpowers/plans/2026-10-27-local-v0.md)
-- [Chat and Knowledge Hub foundation](docs/superpowers/plans/2026-10-28-chat-knowledge-hub.md)
+- [Evaluation status](docs/reference/evaluation.md)
 
-GitHub PRs run installation, lint, typecheck, unit tests, build, native SQL checks, and browser checks without AI credentials. Live model tests require an explicit opt-in.
+GitHub PRs run installation, lint, typecheck, unit tests, build, native SQL checks, and browser checks without AI credentials.

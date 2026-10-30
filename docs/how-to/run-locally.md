@@ -12,17 +12,19 @@ Start the app:
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in with the demo credentials. The command starts the native stack, applies migrations, updates local connection settings, and seeds the workspace. It replaces an existing Memoba server on port 3000. If another application owns the port, stop that application first.
+Open http://localhost:3000 and sign in with the demo credentials, or choose **Enter demo workspace**. The command starts the native stack, applies migrations, updates local connection settings, seeds the workspace, and prints the App, Studio and API URLs. It never seeds cases; when the Knowledge Hub is empty it says so. It replaces an existing Memoba server on port 3000. If another application owns the port, stop that application first.
 
-The native stack assigns its own ports. To inspect its Studio endpoint, run `npx supabase status --output-format json`. Keep the output local because it includes credentials.
+The native stack assigns its own ports, so use the printed URLs. The printout never includes keys.
 
 `db:seed` creates the local workspace, its member, a nonmember test account, and fixed concepts. It preserves existing users and passwords. It does not call a model by default.
+
+To load the demo company's 20 cases, run `npm run db:seed -- --demo`. It calls the embedding provider only for cases that are not already indexed. To remove visitor cases and conversations and restore the seed corpus, run `npm run demo:reset`.
 
 After sign-in, Chat opens by default. Enter a question and add context in **Request details**. Conversations persist even without model access. Follow-up turns retain the confirmed request state, and reload does not restart analysis.
 
 Press Enter to send a question or Shift+Enter to add a line. During an active analysis, choose **Stop analysis** in the composer. Scroll upward to read earlier turns, then choose **Scroll to latest message** to follow new content again. Expand **Activity** to inspect actual stage and tool events.
 
-Open **Knowledge Hub** in the sidebar and select **Record a case** to enter or paste a case through either fixed template. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
+Open **Knowledge Hub** in the sidebar and select **Record a case** to enter a case through either fixed template, or choose **Import from notes** to draft one from pasted text. Review every field before saving; document files in Import are a preview and are not read. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
 
 If the native project changes, rerun `db:configure` and restart Next.js. Do not run another native Supabase project concurrently.
 

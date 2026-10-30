@@ -5,7 +5,7 @@
 Read `docs/superpowers/specs/2026-10-29-text-agent-design.md` for product scope.
 Read `docs/architecture/FOUNDATION.md` for architecture decisions.
 Read `docs/reference/system-contracts.md` for limits, states, tools, and data rules.
-Use `docs/superpowers/plans/2026-10-29-agent-engine-simplification.md` for the current implementation.
+Use `docs/superpowers/plans/2026-10-30-mvp-demo.md` for the current implementation.
 
 Build for one PM, one demo workspace, and a seven-day challenge. Keep the two fixed case templates. Accept natural-language requests.
 

@@ -10,7 +10,7 @@ Local Supabase uses project CLI `2.122.0`, the native experimental stack, and Po
 
 Runtime and input limits are owned by [`executionLimits` and `inputLimits`](../../src/lib/contracts/limits.ts). Database admission applies defensive bounds. A run uses the persisted deadline for model, tool, and validation work. New investigation stops when the synthesis reserve begins or the tool or step budget is exhausted. One correction can run within the same deadline. Cancellation and the hard deadline abort unfinished operations; terminal persistence has a separate bounded attempt.
 
-Both analysis routes export `maxDuration = 300`. On Vercel, the application anchors its cutoff to handler entry and passes an absolute cutoff to admission. The implementation leaves additional admission and clock headroom inside the configured hosted limit. SQL clamps the persisted deadline to that cutoff and rejects an expired cutoff. Refresh reconciles expired runs. The deployed project settings, clock alignment, stream behavior, and effective host duration have not been verified.
+Both analysis routes export `maxDuration = 300`. The hosted run deadline is `hostedDeadlineMs` in `limits.ts`, shorter than the function ceiling. On Vercel, the application anchors its cutoff to handler entry and passes an absolute cutoff to admission. The implementation leaves additional admission and clock headroom inside the configured hosted limit. SQL clamps the persisted deadline to that cutoff and rejects an expired cutoff. Refresh reconciles expired runs. The deployed project settings, clock alignment, stream behavior, and effective host duration have not been verified.
 
 ## Input and answer formats
 
@@ -38,6 +38,14 @@ The model cannot select a workspace, issue SQL, or write data. Case text and pri
 
 Relation data remains stored for historical use. The text agent does not expose relation expansion as a tool.
 
+## Case drafting
+
+Import turns pasted notes into a form draft with one structured model call. The call has no tools, no retries, no persistence, and the `draftDeadlineMs` deadline from `limits.ts`. Notes and chosen file names are sent as untrusted data; file contents are never read or sent. The draft contains only fields the notes state, an `unknown` outcome unless a result is described, and the list of required sections still missing. A person reviews it and saves through `POST /api/cases`. The route logs request ID, duration, usage, and result kind, not note text.
+
+## Answer shape
+
+When an answer draws on cases the agent read, it uses three short sections: how similar cases went, what is different this time, and a suggested next step. After a successful search with no relevant case, it says so and omits the first section. Clarifications and direct general answers do not use the sections. Answers are in English. The instructions are `textInstructions` in [`agent.ts`](../../src/modules/analysis/agent.ts).
+
 ## Case rules
 
 The two templates are Product/Delivery and CS/Operations. A case requires title, problem, context, approach, and outcome state. The outcome is `achieved`, `not_achieved`, or `unknown`; a known outcome also requires outcome details. Constraints, lessons, template-specific fields, sources, and concepts are optional. [`caseInputSchema`](../../src/modules/cases/schema.ts) owns the field validation and caps.
@@ -60,6 +68,10 @@ A text run saves the final answer, cited source snapshots, usage, and terminal s
 
 The vector migration, stored vectors, and query embedding model use matching model IDs and dimensions. Supported profiles are `gemini-embedding-2` and `text-embedding-3-small`, both at 1536 dimensions. Search filters keyword and semantic candidates by profile. A model change requires indexed replacement revisions through `npm run ai:migrate-embeddings`, with the app stopped until the active corpus is verified.
 
+## Demo workspace
+
+`readDemoConfig` enables the demo button only when `DEMO_EMAIL` and a password of at least 12 characters are both set. Public sign-up stays disabled. `public.reset_demo_workspace(w, keep_case_ids)` removes conversations, runs, briefs, links, and every case not in the keep list, restores archived kept cases, and bumps the knowledge version. Only `service_role` can execute it. `npm run demo:reset` calls it for the workspace `Memory Bank Demo` only, keeps cases whose latest title matches the seed corpus in [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts), then reruns the incremental seed. A visitor edit to a seed case that keeps its title is not reverted.
+
 ## States and HTTP
 
 Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A completed run does not prove semantic support. Logs include operational IDs, counts, timing, errors, and usage, and exclude case text and secrets.
@@ -72,6 +84,8 @@ Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A c
 | `POST /api/conversations/:id/turns` | Saved text turn before model access |
 | `POST /api/conversations/:id/turns/:turnId/analyses` | Attempt through the shared analysis service and UI stream |
 | `POST /api/cases` | Saved IDs and index state |
+| `POST /api/cases/drafts` | Unsaved case draft and missing sections, or `503` when AI is unavailable |
+| `POST /api/auth/demo` | Signs in the shared demo account; `404` unless demo credentials are configured |
 | `PATCH /api/cases/:id` | New revision |
 | `POST /api/cases/:id/revisions/:revisionId/reindex` | Idempotent index state |
 | `POST /api/cases/:id/archive` | Archived case |
