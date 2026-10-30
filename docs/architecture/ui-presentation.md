@@ -1,6 +1,6 @@
 # UI presentation
 
-Memoba uses a Framed sheet layout with shared tokens in `src/app/globals.css`. Next.js loads IBM Plex Sans. The workspace keeps one sidebar, one context header, and a white working sheet. Mobile navigation uses shadcn Sheet.
+Memoba uses a full-bleed workspace layout with shared tokens in `src/app/globals.css`. Next.js loads Geist (Latin and Vietnamese subsets). The workspace keeps one sidebar (`variant="sidebar"`) and a white content area separated from it by a border, with no inset padding, radius, or shadow. Mobile navigation uses shadcn Sheet.
 
 ## Framework patterns
 
@@ -26,7 +26,7 @@ Activity groups real events by stage or tool in first-seen order and writes each
 
 ## Knowledge Hub
 
-The Hub lists cases in a table (Case, Concepts, Template, Outcome, Status, Updated) built from `caseRows`. Status comes from the registry in `src/modules/cases/presentation.ts`: available, updating, preparing, failed, archived. Color sits on data only: outcome pills and status dots use a pale tint with dark text of the same hue. The case page uses a main column with a details rail that stacks below it on small screens.
+The Hub lists cases in a table (Case, Concepts, Template, Outcome, Status, Updated) built from `caseRows`. Status comes from the registry in `src/modules/cases/presentation.ts`: available, updating, preparing, failed, archived. Color sits on data only: outcome pills and status dots use a pale tint with dark text of the same hue. The case page has one 48px header (back, title, Archive, Edit case) and scrolls as one page. A single column of sections follows `sectionOrder`, and a 340px rail on the right holds two bordered layers: details, sources and related cases, then version history. Header and body share `--page-inset`, so the rail's right edge sits on the Edit case button's right edge; the rail stacks below the article at 1280px and under. The UI says "version" for what the code and database call a revision, and `versionRows` in `src/modules/cases/revision-history.ts` computes each version's change summary.
 
 Record, Edit, Import, and Archive open in `Dialog`. `/workspace/knowledge/new` redirects to `/workspace/knowledge?record=1` and `/workspace/knowledge/[id]/edit` redirects to `/workspace/knowledge/[id]?edit=1`; closing a dialog clears the parameter. Import is a state machine (notes, drafting, review or error). Its drafting line shows the real elapsed seconds, and its result summary reports only what the drafting response contains. Choices use the shadcn `Select` with `items`, and boolean or multi-choice options use `Checkbox`.
 

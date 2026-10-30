@@ -37,9 +37,9 @@ test("minimal case stays saved when indexing is unavailable", async ({ page }) =
   await page.getByLabel("Approach and reasoning", { exact: true }).fill("Canary rollout");
   await page.getByRole("button", { name: "Save case", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/knowledge\/[0-9a-f-]+$/);
-  await expect(page.getByText("Preparation failed", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Retry indexing", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("indexing did not complete");
+  await expect(page.getByText("Couldn't prepare this case for questions.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Still couldn't prepare this case");
   await page.getByRole("button", { name: "Archive", exact: true }).click();
   await page.getByRole("button", { name: "Archive case", exact: true }).click();
   await expect(page.getByText("Archived", { exact: true })).toBeVisible();
@@ -92,4 +92,50 @@ test("import shows its own dialog, keeps documents unread, and records by hand w
   await page.getByLabel("Approach and reasoning", { exact: true }).fill("Move sending to a queue.");
   await page.getByRole("button", { name: "Save case", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/knowledge\/[0-9a-f-]+$/);
+});
+
+test("related cases can be added, edited and removed", async ({ page }) => {
+  const env = z.object({ DEMO_EMAIL: z.string(), DEMO_PASSWORD: z.string() }).parse(process.env);
+  expect((await page.request.post("/api/auth/login", { headers: { origin: "http://localhost:3100" }, data: { email: env.DEMO_EMAIL, password: env.DEMO_PASSWORD } })).status()).toBe(200);
+  const stamp = Date.now();
+  async function record(title: string) {
+    await page.goto("/workspace/knowledge?record=1");
+    await page.getByLabel("Title", { exact: true }).fill(title);
+    await page.getByLabel("Problem / objective", { exact: true }).fill("Release risk");
+    await page.getByLabel("Context", { exact: true }).fill("Small team");
+    await page.getByLabel("Approach and reasoning", { exact: true }).fill("Canary rollout");
+    await page.getByRole("button", { name: "Save case", exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/knowledge\/[0-9a-f-]+$/);
+    return new URL(page.url()).pathname;
+  }
+  const older = `Older rollout ${stamp}`; const newer = `Newer rollout ${stamp}`;
+  const olderPath = await record(older); const newerPath = await record(newer);
+  const related = page.locator("aside li").filter({ hasText: older });
+  await expect(page.getByText("No related cases yet.")).toBeVisible();
+  await page.getByRole("button", { name: "Add case", exact: true }).click();
+  const add = page.getByRole("dialog", { name: "Add related case" });
+  await add.getByRole("combobox", { name: "Case" }).click(); await page.getByRole("option", { name: older, exact: true }).click();
+  await add.getByLabel("Reason", { exact: true }).fill("Same rollout");
+  await expect(add.getByLabel("Also archive the selected case")).toHaveCount(0);
+  await add.getByRole("button", { name: "Add case", exact: true }).click();
+  await expect(related).toContainText("Related to · Same rollout");
+  await page.getByRole("button", { name: "Add case", exact: true }).click();
+  await page.getByRole("dialog", { name: "Add related case" }).getByRole("combobox", { name: "Case" }).click();
+  await expect(page.getByRole("option", { name: older, exact: true })).toHaveCount(0);
+  await page.keyboard.press("Escape"); await page.keyboard.press("Escape");
+  await related.hover(); await related.getByRole("button", { name: `Edit link to ${older}` }).click();
+  const edit = page.getByRole("dialog", { name: "Edit related case" });
+  await expect(edit.getByRole("combobox", { name: "Case" })).toBeDisabled();
+  await edit.getByRole("combobox", { name: "Relation" }).click(); await page.getByRole("option", { name: "Supersedes", exact: true }).click();
+  await edit.getByLabel("Reason", { exact: true }).fill("Replaces the old rollout");
+  await edit.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(related).toContainText("Supersedes · Replaces the old rollout");
+  await page.goto(olderPath);
+  await expect(page.locator("aside li").filter({ hasText: newer })).toContainText("Superseded by · Replaces the old rollout");
+  await page.goto(newerPath);
+  await related.hover(); await related.getByRole("button", { name: `Remove link to ${older}` }).click();
+  const remove = page.getByRole("dialog", { name: /Remove link/ });
+  await expect(remove).toContainText("does not restore an archived case");
+  await remove.getByRole("button", { name: "Remove link", exact: true }).click();
+  await expect(page.getByText("No related cases yet.")).toBeVisible();
 });

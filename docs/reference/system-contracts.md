@@ -64,6 +64,8 @@ SQL JSON constraints are generated from the owning Zod schemas with `npm run db:
 
 The main entities are `workspaces`, `workspace_members`, `cases`, `case_revisions`, `case_sections`, `concepts`, `revision_concepts`, `case_links`, `conversations`, `conversation_turns`, `analysis_runs`, and `briefs`.
 
+Case links change only through the RPCs `link_cases`, `update_case_link` (relation and reason, atomically) and `unlink_cases`. Each checks membership, locks the workspace, and bumps `knowledge_version`. Editing to `supersedes` re-runs the cycle check. Removing a `supersedes` link does not restore an archived case.
+
 Membership is established before the demo. Public sign-up does not enroll a member. Runtime operations derive user and workspace from verified server context. RLS and transactional RPCs enforce workspace access. Workspace members can read conversations; only the author can append turns or admit attempts.
 
 A turn is saved before model availability and run admission. Missing model access leaves the question saved without creating a run. Turn creation and attempt admission have separate idempotency keys. Admission checks the latest parent, prevents concurrent runs in one conversation, and enforces the workspace quota. A failed, cancelled, or timed-out attempt can be retried as a new run on the latest turn. Existing independent runs retain a null turn reference.

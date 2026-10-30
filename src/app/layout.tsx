@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { IBM_Plex_Sans } from "next/font/google";
+import { Geist } from "next/font/google";
 import "./globals.css";
 
-const plex = IBM_Plex_Sans({ subsets: ["latin", "vietnamese"], weight: ["400", "500", "600"], variable: "--font-plex" });
-
+const geist = Geist({ subsets: ["latin", "vietnamese"], variable: "--font-geist" });
 
 export const metadata: Metadata = {
   title: "The Memoba",
@@ -12,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="en" className={`${plex.variable} font-sans`}><body className="min-h-screen antialiased">{children}</body></html>;
+  return <html lang="en" className={`${geist.variable} font-sans`}><body className="min-h-screen antialiased">{children}</body></html>;
 }

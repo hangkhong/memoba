@@ -51,7 +51,7 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
     return () => abort.abort();
   }, [waiting, active?.busy, conversationId, watchedRunId, attempt]);
 
-  return <EvidenceLayout key={detail.conversation.id}><div className="flex h-[calc(100svh-3rem)] min-h-0 min-w-0 flex-1 flex-col md:h-[calc(100svh-3rem-10px)]">
+  return <EvidenceLayout key={detail.conversation.id}><div className="flex h-[calc(100svh-3rem)] min-h-0 min-w-0 flex-1 flex-col md:h-svh">
     <h1 className="sr-only">{detail.conversation.title}</h1>
     <ChatConversation key={detail.conversation.id} aria-label="Conversation messages">
       <ChatConversationContent>{detail.turns.map((turn) => {

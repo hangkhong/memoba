@@ -28,7 +28,9 @@ Check that every local version appears remotely:
 npx supabase migration list --db-url "<session-pooler-connection-string>"
 ```
 
-In Authentication → Sign In / Providers, turn off "Allow new users to sign up". Leave Integrations → GitHub → "Deploy to production" off, so a merge never changes the schema before you push it. Then seed the corpus and the demo account:
+In Integrations → GitHub, connect the repository with working directory `.`, turn on "Deploy to production", and set the production branch to `main`. After the first push, merging to `main` applies new migrations, so later releases need no `db push`. Vercel deploys at the same time, so new code can run briefly before its migration finishes. To confirm a merge reached the database, run `npx supabase migration list --project-ref <project-ref>`, which needs only the `supabase login` session.
+
+In Authentication → Sign In / Providers, turn off "Allow new users to sign up". Then seed the corpus and the demo account:
 
 ```bash
 npm run db:seed -- --demo --remote

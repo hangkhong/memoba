@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { WorkspaceContext } from "@/lib/auth/schema";
-import { caseInputSchema, type CaseInput } from "./schema.ts";
+import { caseInputSchema, relationTypeSchema, type CaseInput } from "./schema.ts";
 import type { CaseStore } from "./service";
 
 import { savedCaseSchema } from "./contracts.ts";
@@ -50,5 +50,5 @@ export async function caseDetail(client: SupabaseClient<Database>, context: Work
   if (revisions.error) throw new Error("CASE_DETAIL_FAILED");
   const links = await client.from("case_links").select("source_id,target_id,relation_type,reason").eq("workspace_id", context.workspaceId).or(`source_id.eq.${id},target_id.eq.${id}`);
   if (links.error) throw new Error("CASE_LINKS_FAILED");
-  return { ...record, revisions: z.array(revisionSchema).parse(revisions.data), links: z.array(z.object({ source_id: z.uuid(), target_id: z.uuid(), relation_type: z.string(), reason: z.string() })).parse(links.data) };
+  return { ...record, revisions: z.array(revisionSchema).parse(revisions.data), links: z.array(z.object({ source_id: z.uuid(), target_id: z.uuid(), relation_type: relationTypeSchema, reason: z.string() })).parse(links.data) };
 }
