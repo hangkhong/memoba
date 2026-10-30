@@ -39,9 +39,13 @@ test("authenticated nonmember cannot enter the workspace", async ({ request }) =
   expect((await request.get("/api/workspace")).status()).toBe(401);
 });
 
-test("demo button enters the workspace when demo credentials are configured", async ({ page }) => {
+test("the sign-in form is the only way in and enters the workspace", async ({ page }) => {
+  const env = credentials.parse(process.env);
   await page.goto("/login");
-  await page.getByRole("button", { name: "Enter demo workspace", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Enter demo workspace" })).toHaveCount(0);
+  await page.getByLabel("Email", { exact: true }).fill(env.DEMO_EMAIL);
+  await page.getByLabel("Password", { exact: true }).fill(env.DEMO_PASSWORD);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace/, { timeout: 15000 });
   expect((await page.request.get("/api/workspace")).status()).toBe(200);
 });

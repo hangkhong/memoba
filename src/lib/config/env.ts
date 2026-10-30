@@ -63,11 +63,3 @@ export function readEmbeddingProfile(input: unknown) {
     ? { kind: "configured", value: { embeddingModel: result.data.AI_EMBEDDING_MODEL.modelId, dimensions: result.data.AI_EMBEDDING_DIMENSIONS } } as const
     : { kind: "invalid" } as const;
 }
-
-const demoSchema = z.object({ DEMO_EMAIL: z.email(), DEMO_PASSWORD: z.string().min(12).max(128) });
-export function readDemoConfig(input: unknown) {
-  const result = demoSchema.safeParse(input);
-  return result.success
-    ? { kind: "configured", value: { email: result.data.DEMO_EMAIL, password: result.data.DEMO_PASSWORD } } as const
-    : { kind: "unavailable" } as const;
-}

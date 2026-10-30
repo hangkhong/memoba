@@ -12,7 +12,7 @@ Start the app:
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in with the demo credentials, or choose **Enter demo workspace**. The command starts the native stack, applies migrations, updates local connection settings, seeds the workspace, and prints the App, Studio and API URLs. It never seeds cases; when the Knowledge Hub is empty it says so. It replaces an existing Memoba server on port 3000. If another application owns the port, stop that application first.
+Open http://localhost:3000 and sign in with the `DEMO_EMAIL` and `DEMO_PASSWORD` from `.env.local`. The command starts the native stack, applies migrations, updates local connection settings, seeds the workspace, and prints the App, Studio and API URLs. It never seeds cases; when the Knowledge Hub is empty it says so. It replaces an existing Memoba server on port 3000. If another application owns the port, stop that application first.
 
 The native stack assigns its own ports, so use the printed URLs. The printout never includes keys.
 

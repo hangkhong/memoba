@@ -74,7 +74,7 @@ The vector migration, stored vectors, and query embedding model use matching mod
 
 ## Demo workspace
 
-`readDemoConfig` enables the demo button only when `DEMO_EMAIL` and a password of at least 12 characters are both set. Public sign-up stays disabled. `public.reset_demo_workspace(w, keep_case_ids)` removes conversations, runs, briefs, links, and every case not in the keep list, restores archived kept cases, and bumps the knowledge version. Only `service_role` can execute it. `npm run demo:reset` calls it for the workspace `Memory Bank Demo` only, keeps cases whose latest title matches the seed corpus in [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts), then reruns the incremental seed. The seed compares each fixture with the case's latest revision and saves a new revision only when the content differs, so edited fixtures land in an existing database and a visitor's edit to a seed case is restored; unchanged cases cost no embeddings.
+Reviewers sign in with the provided account on the normal form; there is no separate demo sign-in route. `DEMO_EMAIL` and `DEMO_PASSWORD` are script inputs only, and the seed converges the demo user's password to `DEMO_PASSWORD` on every run. Public sign-up stays disabled. `public.reset_demo_workspace(w, keep_case_ids)` removes conversations, runs, briefs, links, and every case not in the keep list, restores archived kept cases, and bumps the knowledge version. Only `service_role` can execute it. `npm run demo:reset` calls it for the workspace `Memory Bank Demo` only, keeps cases whose latest title matches the seed corpus in [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts), then reruns the incremental seed. The seed compares each fixture with the case's latest revision and saves a new revision only when the content differs, so edited fixtures land in an existing database and a visitor's edit to a seed case is restored; unchanged cases cost no embeddings.
 
 ## States and HTTP
 
@@ -89,7 +89,6 @@ Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A c
 | `POST /api/conversations/:id/turns/:turnId/analyses` | Attempt through the shared analysis service and UI stream |
 | `POST /api/cases` | Saved IDs and index state |
 | `POST /api/cases/drafts` | Unsaved case draft and missing sections, or `503` when AI is unavailable |
-| `POST /api/auth/demo` | Signs in the shared demo account; `404` unless demo credentials are configured |
 | `PATCH /api/cases/:id` | New revision |
 | `POST /api/cases/:id/revisions/:revisionId/reindex` | Idempotent index state |
 | `POST /api/cases/:id/archive` | Archived case |

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readAIConfig, readAppConfig, readDemoConfig, readEmbeddingProfile } from "./env";
+import { readAIConfig, readAppConfig, readEmbeddingProfile } from "./env";
 
 const publicEnv = {
   NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:12345",
@@ -61,18 +61,4 @@ it("accepts Node's actual environment object", () => {
     if (previousKey === undefined) delete process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
     else process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY = previousKey;
   }
-});
-
-describe("demo sign-in configuration", () => {
-  it("reads demo credentials only when both are set", () => {
-    expect(readDemoConfig({ DEMO_EMAIL: "pm@memoba.local", DEMO_PASSWORD: "twelve-chars-ok" })).toEqual({ kind: "configured", value: { email: "pm@memoba.local", password: "twelve-chars-ok" } });
-    expect(readDemoConfig({ DEMO_EMAIL: "pm@memoba.local" })).toEqual({ kind: "unavailable" });
-    expect(readDemoConfig({ DEMO_PASSWORD: "twelve-chars-ok" })).toEqual({ kind: "unavailable" });
-    expect(readDemoConfig({ DEMO_EMAIL: "pm@memoba.local", DEMO_PASSWORD: "short" })).toEqual({ kind: "unavailable" });
-    expect(readDemoConfig({ DEMO_EMAIL: "not-an-email", DEMO_PASSWORD: "twelve-chars-ok" })).toEqual({ kind: "unavailable" });
-    expect(readDemoConfig({})).toEqual({ kind: "unavailable" });
-  });
-  it("does not return the password in an unavailable result", () => {
-    expect(JSON.stringify(readDemoConfig({ DEMO_EMAIL: "bad", DEMO_PASSWORD: "twelve-chars-ok" }))).not.toContain("twelve-chars-ok");
-  });
 });
