@@ -37,9 +37,9 @@ test("minimal case stays saved when indexing is unavailable", async ({ page }) =
   await page.getByLabel("Approach and reasoning", { exact: true }).fill("Canary rollout");
   await page.getByRole("button", { name: "Save case", exact: true }).click();
   await expect(page).toHaveURL(/\/workspace\/knowledge\/[0-9a-f-]+$/);
-  await expect(page.getByText("Preparation failed", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Retry indexing", exact: true }).click();
-  await expect(page.getByRole("status")).toContainText("indexing did not complete");
+  await expect(page.getByText("Couldn't prepare this case for questions.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Try again", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Still couldn't prepare this case");
   await page.getByRole("button", { name: "Archive", exact: true }).click();
   await page.getByRole("button", { name: "Archive case", exact: true }).click();
   await expect(page.getByText("Archived", { exact: true })).toBeVisible();

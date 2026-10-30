@@ -102,7 +102,6 @@
   .workspace-page { @apply mx-auto w-full max-w-5xl px-4 py-6 md:px-8 md:py-8; }
   .page-title { @apply text-[22px] font-semibold tracking-tight; }
   .page-description { @apply mt-2 max-w-2xl text-sm leading-6 text-muted-foreground; }
-  .back-link { @apply mb-6 inline-block text-sm text-muted-foreground hover:text-foreground; }
   .answer-markdown { @apply min-w-0 text-base leading-7 wrap-break-word; }
   .answer-markdown h1, .answer-markdown h2, .answer-markdown h3 { @apply mt-6 mb-3 text-xl font-semibold leading-snug tracking-tight; }
   .answer-markdown p { @apply my-3; }

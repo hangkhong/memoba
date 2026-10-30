@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Archive as ArchiveIcon } from "lucide-react";
 import { savedCaseSchema } from "./contracts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -19,8 +20,8 @@ export function CaseHeaderActions({ caseId, title, initial, concepts, defaultEdi
     catch { setError("Connection unavailable."); } finally { setBusy(false); }
   }
   return <>
-    <div className="flex gap-2"><Button variant="outline" onClick={() => setPanel("archive")}>Archive</Button><Button onClick={() => setPanel("edit")}>Edit case</Button></div>
-    <CaseDialog open={panel === "edit"} onOpenChange={(next) => { if (!next) close(); }} title="Edit case" description="Saving creates a new revision. Earlier revisions and their citations stay as they were.">
+    <div className="flex shrink-0 gap-2"><Button variant="outline" aria-label="Archive" onClick={() => setPanel("archive")}><ArchiveIcon aria-hidden="true" className="md:hidden"/><span className="hidden md:inline">Archive</span></Button><Button onClick={() => setPanel("edit")}>Edit case</Button></div>
+    <CaseDialog open={panel === "edit"} onOpenChange={(next) => { if (!next) close(); }} title="Edit case" description="Saving creates a new version. Earlier versions and their citations stay as they were.">
       <CaseForm initial={initial} caseId={caseId} concepts={concepts} onCancel={close} onSaved={() => { close(); router.refresh(); }}/>
     </CaseDialog>
     <Dialog open={panel === "archive"} onOpenChange={(next) => { if (!next) close(); }}><DialogContent className="sm:max-w-md">
@@ -35,8 +36,8 @@ export function ReindexButton({ caseId, revisionId }: { caseId: string; revision
   const router = useRouter(); const [message, setMessage] = useState(""); const [busy, setBusy] = useState(false);
   async function run() {
     setBusy(true);
-    try { const response = await fetch(`/api/cases/${caseId}/revisions/${revisionId}/reindex`, { method: "POST" }); if (!response.ok) setMessage("Could not update this case."); else { const result = savedCaseSchema.safeParse(await response.json()); setMessage(result.success && result.data.indexState === "ready" ? "Indexed and available to ask." : "Saved, but indexing did not complete. Retry indexing."); } router.refresh(); }
+    try { const response = await fetch(`/api/cases/${caseId}/revisions/${revisionId}/reindex`, { method: "POST" }); if (!response.ok) setMessage("Could not retry. Try again in a moment."); else { const result = savedCaseSchema.safeParse(await response.json()); setMessage(result.success && result.data.indexState === "ready" ? "Ready for questions." : "Still couldn't prepare this case. Try again."); } router.refresh(); }
     catch { setMessage("Connection unavailable."); } finally { setBusy(false); }
   }
-  return <div className="mt-3 space-y-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => { void run(); }}>Retry indexing</Button>{message && <p role="status" className="text-xs text-muted-foreground">{message}</p>}</div>;
+  return <div className="mt-3 space-y-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => { void run(); }}>Try again</Button>{message && <p role="status" className="text-xs text-muted-foreground">{message}</p>}</div>;
 }
