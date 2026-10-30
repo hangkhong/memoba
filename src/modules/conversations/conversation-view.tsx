@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { DraftAnswer } from "@/modules/briefs/draft-answer";
 import { BriefView } from "@/modules/briefs/brief-view";
 import { AnalysisActivity } from "@/modules/analysis/activity";
 import { Message, MessageContent } from "@/components/ui/message";
@@ -60,6 +61,7 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
         const pendingRun = !!live?.runId && !sameRun;
         const savedTerminal = sameRun && run?.status !== "running";
         const liveWorking = !!live?.busy && !savedTerminal;
+        const draftText = live && (liveWorking || (pendingRun && live.outcome?.status === "complete")) ? live.draft : "";
         const events = liveWorking || pendingRun ? live?.events ?? [] : run?.events ?? live?.events ?? [];
         const status = liveWorking ? "running" : pendingRun ? live?.outcome?.status : run?.status;
         return <MessageScrollerItem key={turn.id} messageId={turn.id} scrollAnchor><section aria-label={`Turn ${turn.position}`}>
@@ -70,7 +72,8 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
           <Message className="mt-6"><MessageContent className="gap-5">
             <AnalysisActivity key={run?.id ?? live?.runId ?? "pending"} events={events} status={status}/>
             {run?.brief && !liveWorking && !pendingRun ? <><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
-              {status === "running" || status === "gap_report" ? null : <p className="text-sm text-muted-foreground">{status ? statusNotes[status] : "Question saved. Analysis has not started."}</p>}
+              {draftText ? <DraftAnswer text={draftText} animating={liveWorking}/> : null}
+              {status === "running" || status === "gap_report" || draftText ? null : <p className="text-sm text-muted-foreground">{status ? statusNotes[status] : "Question saved. Analysis has not started."}</p>}
               {status === "gap_report" && <section className="rounded-xl border p-5"><h2 className="font-semibold">No precedent found</h2><p className="mt-3">The search completed successfully without usable evidence. Add cases covering the method, applicability conditions, and failures or exceptions for this request.</p></section>}
               {!liveWorking && !pendingRun && run?.error_code && <p className="text-sm text-muted-foreground">Check the knowledge and model services, then retry.</p>}
               

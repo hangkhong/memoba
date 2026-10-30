@@ -1,7 +1,8 @@
-import { ToolLoopAgent, isStepCount, generateText, APICallError, type LanguageModel } from "ai";
+import { ToolLoopAgent, isStepCount, streamText, APICallError, type LanguageModel } from "ai";
 import { executionLimits } from "@/lib/contracts/limits";
 import type { createRunKnowledge } from "@/modules/knowledge/service";
 import type { AnalysisEvent } from "./events";
+import type { OnDraft } from "./draft";
 import type { ModelUsage } from "./harness";
 import { ModelCallError } from "./errors";
 import { textAnalysisTools } from "./tools";
@@ -73,7 +74,7 @@ const synthesisInputRatio = 0.8;
 
 export function textReasoningAdapter(model: LanguageModel, knowledge: ReturnType<typeof createRunKnowledge>, emit: (event: AnalysisEvent) => Promise<void>, trace?: EvaluationTrace) {
   return {
-    async generate(request: TextRunInput, budget: RunBudget) {
+    async generate(request: TextRunInput, budget: RunBudget, onDraft?: OnDraft) {
       let ceilingReached = false;
       const agent = new ToolLoopAgent({
         model, instructions: textInstructions, tools: textAnalysisTools({ knowledge, budget, emit, trace }),
@@ -102,24 +103,34 @@ export function textReasoningAdapter(model: LanguageModel, knowledge: ReturnType
         },
       });
       try {
-        const result = await agent.generate({ prompt: `<request>\n${JSON.stringify(request)}\n</request>`, abortSignal: budget.signal });
-        if (result.finishReason !== "stop") throw new ModelCallError("MODEL_FAILED");
-        return { text: result.text, usage: usage(result.totalUsage) };
+        const result = await agent.stream({ prompt: `<request>\n${JSON.stringify(request)}\n</request>`, abortSignal: budget.signal });
+        // Text before a tool call belongs to a step that is not the answer, so the draft restarts there.
+        for await (const part of result.fullStream) {
+          if (part.type === "error") throw part.error;
+          if (part.type === "text-delta") onDraft?.({ kind: "delta", text: part.text });
+          else if (part.type === "tool-call") onDraft?.({ kind: "reset" });
+        }
+        if ((await result.finishReason) !== "stop") throw new ModelCallError("MODEL_FAILED");
+        return { text: await result.text, usage: usage(await result.totalUsage) };
       } catch (error) { modelFailure(error); }
     },
-    async repair(request: TextRunInput, draft: string, code: string, budget: RunBudget) {
+    async repair(request: TextRunInput, draft: string, code: string, budget: RunBudget, onDraft?: OnDraft) {
       budget.consume("repair"); budget.consume("reasoning");
       try {
         trace?.({ kind: "model_sources", sources: knowledge.disclosed().map(({ marker, evidence }) => ({ marker, evidenceId: evidence.evidenceId, caseId: evidence.caseId, revisionId: evidence.revisionId, sectionKey: evidence.sectionKey })) });
-        const result = await generateText({ model, system: textInstructions, prompt: [
+        const result = streamText({ model, system: textInstructions, prompt: [
           "Correct the citation markers in the draft and return the complete answer in the required format. Use only the allowed sources. Do not invent evidence.",
           `<request>\n${JSON.stringify(request)}\n</request>`,
           `<draft>\n${draft}\n</draft>`,
           `<validation_error>${code}</validation_error>`,
           `<allowed_sources>\n${JSON.stringify(knowledge.disclosed().map(({ marker, evidence }) => ({ marker, text: evidence.excerpt })))}\n</allowed_sources>`,
         ].join("\n\n"), maxOutputTokens: executionLimits.outputTokens, maxRetries: 0, abortSignal: budget.signal });
-        if (result.finishReason !== "stop") throw new ModelCallError("MODEL_FAILED");
-        return { text: result.text, usage: usage(result.totalUsage) };
+        for await (const part of result.fullStream) {
+          if (part.type === "error") throw part.error;
+          if (part.type === "text-delta") onDraft?.({ kind: "delta", text: part.text });
+        }
+        if ((await result.finishReason) !== "stop") throw new ModelCallError("MODEL_FAILED");
+        return { text: await result.text, usage: usage(await result.totalUsage) };
       } catch (error) { modelFailure(error); }
     },
   };

@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { MockLanguageModelV4 } from "ai/test";
+import { streamedModel } from "./streamed-model";
 import { executionLimits } from "@/lib/contracts/limits";
 import { textInstructions, textReasoningAdapter } from "./agent";
 import { createRunBudget } from "./budget";
@@ -21,7 +21,7 @@ it("lets the model search, read, revise its search and answer using the disclose
   const events: string[] = [];
   const trace: EvaluationTraceEvent[] = [];
   let calls = 0;
-  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => {
+  const model = streamedModel({ doGenerate: async ({ prompt }) => {
     calls++;
     if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
     if (calls === 2) return modelResult([{ type: "tool-call", toolCallId: "r1", toolName: "read_case", input: JSON.stringify({ caseIds: [item.caseId], sectionKeys: ["approach"] }) }], true);
@@ -70,7 +70,7 @@ it("saves only cited source snapshots and rejects loss of source access", async 
 it("sends a failed search to the model as an error and permits an uncited answer", async () => {
   const knowledge = createRunKnowledge({ search: async () => ({ kind: "error", code: "UNAVAILABLE", retryable: false }), read: async () => empty, expand: async () => empty }, runId);
   let calls = 0;
-  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => {
+  const model = streamedModel({ doGenerate: async ({ prompt }) => {
     calls++;
     if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
     expect(JSON.stringify(prompt)).toContain("UNAVAILABLE");
@@ -83,7 +83,7 @@ it("sends a failed search to the model as an error and permits an uncited answer
 it("leaves a model step for a final answer after repeated investigative calls", async () => {
   const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   let calls = 0;
-  const model = new MockLanguageModelV4({ doGenerate: async (options) => {
+  const model = streamedModel({ doGenerate: async (options) => {
     calls++;
     if (calls < 5) return modelResult([{ type: "tool-call", toolCallId: `s${calls}`, toolName: "search_cases", input: JSON.stringify({ query: `query ${calls}` }) }], true);
     expect(options.tools?.length ?? 0).toBe(0);
@@ -158,7 +158,7 @@ it("treats case text, history and tool output as untrusted data", () => {
 it("wraps the request in a delimiter and keeps instructions first", async () => {
   const prompts: string[] = [];
   const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
-  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Done." }], false); } });
+  const model = streamedModel({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Done." }], false); } });
   const budget = createRunBudget();
   try { await textReasoningAdapter(model, knowledge, async () => {}).generate(question, budget); }
   finally { budget.dispose(); }
@@ -172,7 +172,7 @@ async function toolsOverSteps(firstStepInputTokens: number) {
   const events: string[] = [];
   const toolsSeen: number[] = [];
   let calls = 0;
-  const model = new MockLanguageModelV4({ doGenerate: async ({ tools }) => {
+  const model = streamedModel({ doGenerate: async ({ tools }) => {
     calls++; toolsSeen.push(tools?.length ?? 0);
     if (calls === 1) return { ...modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true), usage: { inputTokens: { total: firstStepInputTokens, noCache: firstStepInputTokens, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } } };
     return modelResult([{ type: "text", text: "Answer from what was read." }], false);
@@ -197,7 +197,7 @@ it("keeps tools available while step input stays below the ceiling", async () =>
 it("builds the repair prompt from static instructions followed by tagged blocks", async () => {
   const prompts: string[] = [];
   const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
-  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Fixed." }], false); } });
+  const model = streamedModel({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Fixed." }], false); } });
   const budget = createRunBudget();
   try { await textReasoningAdapter(model, knowledge, async () => {}).repair(question, "Draft [S:x:1]", "INVALID_CITATION", budget); }
   finally { budget.dispose(); }
@@ -211,4 +211,34 @@ it("saves the answer with the coverage computed by the run", async () => {
   const result = await runTextAnalysis(question, { generate: async () => ({ text: "General answer.", usage }), repair: async () => { throw new Error("unexpected repair"); }, disclosed: () => [], canRead: async () => true, emit: async () => {}, coverage: () => coverage, finish: async (_state, answer) => { saved.push(answer); return crypto.randomUUID(); } });
   expect(result.status).toBe("complete");
   expect(saved[0]).toMatchObject({ version: 2, text: "General answer.", coverage });
+});
+
+it("streams answer text as draft chunks and restarts the draft when a step ends in a tool call", async () => {
+  const knowledge = createRunKnowledge({ search: async () => ({ kind: "success", items: [item] }), read: async () => ({ kind: "success", items: [item] }), expand: async () => empty }, runId);
+  let calls = 0;
+  const model = streamedModel({ doGenerate: async () => {
+    calls++;
+    if (calls === 1) return modelResult([{ type: "text", text: "Let me look." }, { type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
+    return modelResult([{ type: "text", text: "A final answer." }], false);
+  } });
+  const budget = createRunBudget();
+  const drafts: string[] = [];
+  try {
+    const result = await textReasoningAdapter(model, knowledge, async () => {}).generate(question, budget, (chunk) => drafts.push(chunk.kind === "reset" ? "<reset>" : chunk.text));
+    expect(drafts).toEqual(["Let me l", "ook.", "<reset>", "A final ", "answer."]);
+    expect(result.text).toBe("A final answer.");
+  } finally { budget.dispose(); }
+});
+it("discards the draft before a citation repair and streams the corrected answer", async () => {
+  const drafts: string[] = [];
+  const saved: string[] = [];
+  const result = await runTextAnalysis(question, {
+    generate: async (_request, _budget, onDraft) => { onDraft?.({ kind: "delta", text: "Bad [S:x:9]" }); return { text: "Bad [S:x:9]", usage }; },
+    repair: async (_request, _draft, _code, _budget, onDraft) => { onDraft?.({ kind: "delta", text: "Fixed." }); return { text: "Fixed.", usage }; },
+    draft: (chunk) => drafts.push(chunk.kind === "reset" ? "<reset>" : chunk.text),
+    disclosed: () => [], canRead: async () => true, emit: async () => {}, finish: async (state, answer) => { saved.push(state, answer?.text ?? ""); return crypto.randomUUID(); },
+  });
+  expect(result.status).toBe("complete");
+  expect(drafts).toEqual(["Bad [S:x:9]", "<reset>", "Fixed."]);
+  expect(saved).toEqual(["complete", "Fixed."]);
 });
