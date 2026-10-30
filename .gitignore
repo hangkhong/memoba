@@ -16,3 +16,4 @@ supabase/.branches/
 supabase/.cache/
 supabase/.local/
 supabase/.supabase.lock.lease
+.vercel
