@@ -360,7 +360,7 @@ isOneToOne: false
 { Args: { "body": string,"conversation": string,"input": Json,"key": string,"parent"?: string }; Returns: string
                            },
 "search_knowledge":
-{ Args: { "concept_ids": (string)[],"max_results": number,"model": string,"purpose": string,"query_embedding": string,"query_text": string,"w": string }; Returns: Json[]
+{ Args: { "concept_ids": (string)[],"max_results": number,"model": string,"per_case": number,"purpose": string,"query_embedding": string,"query_text": string,"w": string }; Returns: Json[]
                            }
           }
           Enums: {
