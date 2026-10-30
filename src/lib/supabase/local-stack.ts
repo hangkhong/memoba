@@ -20,3 +20,11 @@ export function parseNativeStack(input: unknown) {
     endpoints: parsed.data.endpoints,
   };
 }
+
+export function findStudioUrl(endpoints: Record<string, { url: string }>) {
+  return Object.entries(endpoints).find(([name]) => name.toLowerCase().includes("studio"))?.[1].url;
+}
+
+export function formatLocalEndpoints(stack: ReturnType<typeof parseNativeStack>, appUrl: string) {
+  return [`App: ${appUrl}`, `Studio: ${findStudioUrl(stack.endpoints) ?? "unavailable"}`, `API: ${stack.url}`].join("\n");
+}

@@ -1,5 +1,7 @@
 import { execFileSync, spawn } from "node:child_process";
 import { realpathSync } from "node:fs";
+import { createClient } from "@supabase/supabase-js";
+import { formatLocalEndpoints, findStudioUrl, parseNativeStack } from "../src/lib/supabase/local-stack.ts";
 
 const root = realpathSync(process.cwd());
 function run(command, args, options = {}) {
@@ -27,14 +29,23 @@ function replaceOldServer() {
 try {
   replaceOldServer();
   process.stdout.write("Starting local Supabase...\n");
+  let started;
   try {
-    execFileSync("./node_modules/.bin/supabase", ["start", "--runtime", "native", "--output-format", "json"], { stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1024 * 1024 });
+    started = execFileSync("./node_modules/.bin/supabase", ["start", "--runtime", "native", "--output-format", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1024 * 1024 });
   } catch {
     throw new Error("Could not start local Supabase. Run npx supabase start --runtime native for diagnostics.");
   }
   run("./node_modules/.bin/supabase", ["migration", "up", "--local"]);
   run(process.execPath, ["--experimental-strip-types", "scripts/configure-local.ts"]);
   run(process.execPath, ["--env-file-if-exists=.env.local", "--experimental-strip-types", "scripts/seed-demo.ts"]);
+  let stack = parseNativeStack(JSON.parse(started));
+  if (!findStudioUrl(stack.endpoints)) {
+    stack = parseNativeStack(JSON.parse(execFileSync("./node_modules/.bin/supabase", ["status", "--output-format", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })));
+  }
+  process.stdout.write(`${formatLocalEndpoints(stack, "http://localhost:3000")}\n`);
+  const client = createClient(stack.url, stack.secretKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const revisions = await client.from("case_revisions").select("id", { count: "exact", head: true }).eq("workspace_id", "20000000-0000-4000-8000-000000000010");
+  if (!revisions.error && revisions.count === 0) process.stdout.write("Knowledge Hub is empty. Run npm run db:seed -- --demo.\n");
   const child = spawn("./node_modules/.bin/next", ["dev", "--port", "3000"], { stdio: "inherit" });
   for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => child.kill(signal));
   child.on("error", (error) => { process.stderr.write(`${error.message}\n`); process.exitCode = 1; });
