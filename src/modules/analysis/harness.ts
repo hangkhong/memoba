@@ -5,17 +5,19 @@ import { createRunBudget, BudgetError } from "./budget";
 import type { TextRunInput } from "./schema";
 import type { EvaluationTrace } from "./evaluation-trace";
 import type { AnalysisEvent, Terminal } from "./events";
+import type { OnDraft } from "./draft";
 export type RunBudget = ReturnType<typeof createRunBudget>;
 export type ModelUsage = { inputTokens: number | null; outputTokens: number | null; totalTokens: number | null };
 
 type TextDependencies = {
-  generate: (request: TextRunInput, budget: RunBudget) => Promise<{ text: string; usage: ModelUsage }>;
-  repair: (request: TextRunInput, draft: string, code: string, budget: RunBudget) => Promise<{ text: string; usage: ModelUsage }>;
+  generate: (request: TextRunInput, budget: RunBudget, onDraft?: OnDraft) => Promise<{ text: string; usage: ModelUsage }>;
+  repair: (request: TextRunInput, draft: string, code: string, budget: RunBudget, onDraft?: OnDraft) => Promise<{ text: string; usage: ModelUsage }>;
   disclosed: () => DisclosedSource[];
   coverage?: () => AnswerCoverage;
   canRead: (item: EvidenceItem) => Promise<boolean>;
   emit: (event: AnalysisEvent) => Promise<void>;
   finish: (status: Terminal, answer: TextAnswer | null, items: EvidenceItem[], code: string | null, usage: ModelUsage | null) => Promise<string | null>;
+  draft?: OnDraft;
   signal?: AbortSignal; deadlineAt?: number;
   trace?: EvaluationTrace;
 };
@@ -27,7 +29,7 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
   try {
     await event("intake", "completed");
     await event("reasoning", "started");
-    let output = await budget.run(() => deps.generate(request, budget));
+    let output = await budget.run(() => deps.generate(request, budget, deps.draft));
     usage = output.usage;
     await event("reasoning", "completed");
     await event("validation", "started");
@@ -36,7 +38,7 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
     if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA")) {
       const validationCode = checked.code;
       deps.trace?.({ kind: "correction", state: "started" });
-      output = await budget.run(() => deps.repair(request, output.text, validationCode, budget));
+      output = await budget.run(() => { deps.draft?.({ kind: "reset" }); return deps.repair(request, output.text, validationCode, budget, deps.draft); });
       deps.trace?.({ kind: "correction", state: "completed" });
       usage = { inputTokens: usage.inputTokens === null || output.usage.inputTokens === null ? null : usage.inputTokens + output.usage.inputTokens, outputTokens: usage.outputTokens === null || output.usage.outputTokens === null ? null : usage.outputTokens + output.usage.outputTokens, totalTokens: usage.totalTokens === null || output.usage.totalTokens === null ? null : usage.totalTokens + output.usage.totalTokens };
       checked = await budget.run(() => validateTextAnswer({ text: output.text, disclosed: deps.disclosed(), canRead: deps.canRead }));

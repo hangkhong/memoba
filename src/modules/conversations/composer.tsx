@@ -14,19 +14,17 @@ import { useChatSession } from "./chat-session";
 import { textTurnInputSchema } from "./schema";
 const composerSchema = textTurnInputSchema.pick({ message: true });
 type Values = z.infer<typeof composerSchema>;
-const errorSchema = z.object({ error: z.string() });
 export function Composer({ conversationId, parentTurnId = null, disabled = false, prefill }: { conversationId?: string; parentTurnId?: string | null; initial?: NormalizedRequest; concepts: { id: string; label: string }[]; disabled?: boolean; prefill?: { text: string; id: number } }) {
   const router = useRouter(); const session = useChatSession();
   const [error, setError] = useState("");
   const textarea = useRef<HTMLTextAreaElement | null>(null);
   const composing = useRef(false);
-  const sending = useRef(false);
-  const pending = useRef<{ conversationId: string; turnKey: string } | null>(null);
+  const pending = useRef<{ conversationId: string; turnKey: string; message: string } | null>(null);
   const form = useForm<Values>({ resolver: zodResolver(composerSchema), defaultValues: { message: "" } });
   const message = form.register("message");
   const busy = !!session.state?.busy;
   const canStop = busy && session.state?.conversationId === conversationId;
-  const blocked = disabled || busy || form.formState.isSubmitting;
+  const blocked = disabled || busy || session.ask?.status === "saving";
   useEffect(() => {
     if (blocked) return;
     const frame = requestAnimationFrame(() => textarea.current?.focus({ preventScroll: true }));
@@ -37,27 +35,26 @@ export function Composer({ conversationId, parentTurnId = null, disabled = false
     form.setValue("message", prefill.text, { shouldValidate: true });
     textarea.current?.focus({ preventScroll: true });
   }, [prefill, form]);
-  async function submit(values: Values) {
-    if (sending.current || disabled || session.state?.busy) return;
-    sending.current = true;
+  const failed = session.ask?.status === "failed" && (session.ask.isNew ? !conversationId : session.ask.conversationId === conversationId) ? session.ask : null;
+  const [restored, setRestored] = useState<typeof failed>(null);
+  if (failed && restored !== failed) { setRestored(failed); setError(failed.error); }
+  const dismissAsk = session.dismissAsk;
+  useEffect(() => {
+    if (!failed) return;
+    pending.current = { conversationId: failed.conversationId, turnKey: failed.key, message: failed.message };
+    form.setValue("message", failed.message, { shouldValidate: true });
+    dismissAsk();
+  }, [failed, form, dismissAsk]);
+  function submit(values: Values) {
+    if (disabled || session.state?.busy || session.ask?.status === "saving") return;
     setError("");
-    pending.current ??= { conversationId: conversationId ?? crypto.randomUUID(), turnKey: crypto.randomUUID() };
+    // A retry of the same text reuses its keys so a lost response can never save the question twice.
+    if (pending.current?.message !== values.message) pending.current = { conversationId: pending.current?.conversationId ?? conversationId ?? crypto.randomUUID(), turnKey: crypto.randomUUID(), message: values.message };
     const attempt = pending.current;
-    try {
-      if (!conversationId) {
-        const created = await fetch("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: attempt.conversationId }) });
-        if (!created.ok) { const parsed = errorSchema.safeParse(await created.json()); setError(parsed.success ? parsed.data.error : "Could not create conversation."); return; }
-      }
-      const response = await fetch(`/api/conversations/${attempt.conversationId}/turns`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: attempt.turnKey, parentTurnId, message: values.message }) });
-      const raw: unknown = await response.json();
-      if (!response.ok) { const parsed = errorSchema.safeParse(raw); setError(parsed.success ? parsed.data.error : "Could not save your question."); return; }
-      const { turnId } = z.object({ turnId: z.uuid() }).parse(raw);
-      pending.current = null;
-      form.reset({ message: "" });
-      void session.start(attempt.conversationId, turnId, attempt.turnKey);
-      router.push(`/workspace/chat/${attempt.conversationId}`); router.refresh();
-    } catch { setError("Could not send your question. Your input is still here; try again."); }
-    finally { sending.current = false; }
+    pending.current = null;
+    form.reset({ message: "" });
+    session.submitAsk({ conversationId: attempt.conversationId, key: attempt.turnKey, message: values.message, parentTurnId, isNew: !conversationId });
+    if (!conversationId) router.push(`/workspace/chat/${attempt.conversationId}`);
   }
   return <form onSubmit={(event) => { void form.handleSubmit(submit)(event); }} className="space-y-2">
     <Label htmlFor="question" className="sr-only">{parentTurnId ? "Follow-up question" : "What do you want to achieve?"}</Label>

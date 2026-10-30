@@ -1,5 +1,6 @@
 import { parseJsonEventStream, uiMessageChunkSchema } from "ai";
 import { z } from "zod";
+import { draftChunkSchema, type DraftChunk } from "@/modules/analysis/draft";
 import { eventSchema, terminalSchema, type AnalysisEvent } from "@/modules/analysis/events";
 
 const runIdentitySchema = z.object({ runId: z.uuid() });
@@ -11,6 +12,7 @@ export type AnalysisOutcome = z.infer<typeof outcomeSchema>;
 type StreamEvent =
   | { kind: "run"; runId: string }
   | { kind: "activity"; event: AnalysisEvent }
+  | { kind: "draft"; chunk: DraftChunk }
   | { kind: "result"; outcome: AnalysisOutcome };
 
 export async function readAnalysisStream(body: ReadableStream<Uint8Array>, emit: (event: StreamEvent) => void) {
@@ -33,6 +35,10 @@ export async function readAnalysisStream(body: ReadableStream<Uint8Array>, emit:
       if (chunk.type === "data-activity") {
         if (!runId || outcome) throw new Error("Unexpected analysis activity");
         emit({ kind: "activity", event: eventSchema.parse(chunk.data) });
+      }
+      if (chunk.type === "data-draft") {
+        if (!runId || outcome) throw new Error("Unexpected analysis draft");
+        emit({ kind: "draft", chunk: draftChunkSchema.parse(chunk.data) });
       }
       if (chunk.type === "data-result") {
         if (!runId || outcome) throw new Error("Unexpected analysis result");

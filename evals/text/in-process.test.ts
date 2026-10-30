@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { MockLanguageModelV4 } from "ai/test";
+import { streamedModel } from "@/modules/analysis/streamed-model";
 import { z } from "zod";
 import { evidenceSchema } from "@/modules/knowledge/contracts";
 import * as agent from "@/modules/analysis/agent";
@@ -21,7 +21,7 @@ it("refuses to send evaluation credentials to a non-local database", async () =>
 it("records actual tool calls and submitted source identity without recording source text", async () => {
   const source = evidenceSchema.parse({ evidenceId: crypto.randomUUID(), caseId: crypto.randomUUID(), revisionId: crypto.randomUUID(), sectionId: crypto.randomUUID(), sectionKey: "approach", caseTitle: "Synthetic pilot", excerpt: "Private synthetic source text", outcome: "unknown", authorId: crypto.randomUUID(), recordedAt: new Date().toISOString(), sources: [], purpose: "method", retrievalReason: "test" });
   let call = 0;
-  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => {
+  const model = streamedModel({ doGenerate: async ({ prompt }) => {
     call++;
     const usage = { inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } };
     if (call === 1) return { content: [{ type: "tool-call", toolCallId: "search", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], finishReason: { unified: "tool-calls", raw: undefined }, usage, warnings: [] };

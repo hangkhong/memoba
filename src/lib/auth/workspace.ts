@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { workspaceContextSchema } from "./schema";
@@ -9,7 +10,8 @@ export class AccessError extends Error {
 const membershipSchema = z.array(z.object({ workspace_id: z.uuid() })).length(1);
 const workspaceSchema = z.object({ id: z.uuid(), name: z.string(), knowledge_version: z.number().int().nonnegative() });
 
-export async function requireWorkspace() {
+// Cached per request so the layout and the page share one lookup; failures replay as the same AccessError.
+export const requireWorkspace = cache(async function requireWorkspace() {
   const supabase = await createServerSupabase();
   const { data: identity, error: authError } = await supabase.auth.getUser();
   if (authError || !identity.user) throw new AccessError(401);
@@ -23,4 +25,4 @@ export async function requireWorkspace() {
   if (workspaceResult.error) throw new AccessError(404);
   const workspace = workspaceSchema.parse(workspaceResult.data);
   return workspaceContextSchema.parse({ userId: identity.user.id, workspaceId: workspace.id, workspaceName: workspace.name, knowledgeVersion: workspace.knowledge_version });
-}
+});

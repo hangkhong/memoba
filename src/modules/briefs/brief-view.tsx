@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { AnswerMarkdown } from "./answer-markdown";
 import { EvidenceSources, InlineEvidence } from "./evidence-view";
 import { Textarea } from "@/components/ui/textarea";
-import { coverageLine } from "./coverage-presentation";
 export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredBrief; evidencePrefix?: string }) {
  if ("version" in brief.generated) return <TextAnswerView brief={brief} evidencePrefix={evidencePrefix}/>;
  return <LegacyBriefView brief={{ ...brief, generated: brief.generated }} evidencePrefix={evidencePrefix}/>;
@@ -13,13 +12,7 @@ export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredB
 function TextAnswerView({ brief }: { brief: StoredBrief; evidencePrefix: string }) {
  if (!("version" in brief.generated)) return null;
  const answer = brief.generated;
- const line = coverageLine(answer.coverage);
- return <div>{line && <CoverageNote text={line.text} unread={line.unread}/>}<AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
-}
-
-function CoverageNote({ text, unread }: { text: string; unread: string[] }) {
- if (!unread.length) return <p className="mb-3 text-xs text-muted-foreground">{text}</p>;
- return <details className="mb-3 text-xs text-muted-foreground"><summary className="cursor-pointer">{text}</summary><p className="mt-1">Not read:</p><ul className="ml-4 list-disc">{unread.map((title) => <li key={title}>{title}</li>)}</ul></details>;
+ return <div><AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
 }
 
 function LegacyBriefView({ brief }: { brief: SavedBrief; evidencePrefix: string }) {

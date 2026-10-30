@@ -27,6 +27,27 @@ describe("analysis stream boundary", () => {
     expect(events).toEqual(["run", "activity", "result"]);
   });
 
+  it("forwards draft answer chunks between the run and its result", async () => {
+    const chunks: unknown[] = [];
+    await readAnalysisStream(responseBody([
+      { type: "start", messageId: runId },
+      { type: "data-run", data: { runId } },
+      { type: "data-draft", data: { kind: "delta", text: "Hello" }, transient: true },
+      { type: "data-draft", data: { kind: "reset" }, transient: true },
+      { type: "data-result", data: { status: "complete", briefId, code: null } },
+      { type: "finish" },
+    ]), (event) => { if (event.kind === "draft") chunks.push(event.chunk); });
+    expect(chunks).toEqual([{ kind: "delta", text: "Hello" }, { kind: "reset" }]);
+  });
+
+  it("rejects a draft that arrives before the run is admitted", async () => {
+    await expect(readAnalysisStream(responseBody([
+      { type: "start", messageId: runId },
+      { type: "data-draft", data: { kind: "delta", text: "Early" }, transient: true },
+      { type: "finish" },
+    ]), () => {})).rejects.toThrow("Unexpected analysis draft");
+  });
+
   it.each(["gap_report", "cancelled", "timed_out", "failed"])("preserves the authoritative %s result", async (status) => {
     const result = await readAnalysisStream(responseBody([
       { type: "data-run", data: { runId } },
