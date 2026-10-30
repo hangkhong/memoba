@@ -89,6 +89,28 @@ One value was adjusted on this evidence. A first pass of the same seven question
 
 Two observations are not limit problems. The agent read two to six cases even for broad questions, never approaching the "about 8" in the instruction, so the practical ceiling today is model behavior, not budget. And the coverage statement did not always use the "Reviewed N of M" form; some answers said "Reviewed 3 matching cases" or listed unread cases in prose. These are individual runs, not a quality score.
 
+### Restructured instructions on 2026-10-30
+
+`textInstructions` was rewritten following OpenAI's GPT-6 prompting guide: Identity, Instructions and Context sections, an exact answer template with a coverage line, an instruction to keep investigating and read up to 8 relevant cases, and the request wrapped in `<request>` after the static text. The same seven questions ran again in process against the local corpus. "Matching" and "Read" below are the numbers the model states in its coverage line; "Previewed" is the distinct cases the search returned.
+
+Role check: for `gpt-6-luna`, `@ai-sdk/openai` treats the model as a reasoning model, so `systemMessageMode` defaults to `developer`. A request captured at the HTTP boundary showed the instructions sent as a `developer` message, so `models.ts` needed no change.
+
+| Question | Previewed | Read | Coverage line | Peak input | Total tokens | Seconds |
+|---|---|---|---|---|---|---|
+| Launch to all customers | 20 | 3 | "Reviewed 3 of 3 matching cases." | 9,562 | 31,120 | 21 |
+| Price increase with notice | 15 | 2 | "Reviewed 2 of 2 matching cases." | 6,622 | 14,832 | 14 |
+| Singapore data center | 3 | 0 | "No recorded case matched this request." | 1,715 | 5,852 | 11 |
+| All pricing changes | 12 | 2 | "Reviewed 2 of 2 matching cases." | 6,038 | 14,755 | 10 |
+| All launches, rollouts and migrations | 15 | 9 | "Reviewed 9 of 11 matching cases." plus unread titles | 14,091 | 38,087 | 21 |
+| Customer-facing incidents | 10 | 3 | "Reviewed 3 of 3 matching cases." | 8,646 | 16,935 | 9 |
+| Keeping customers who threaten to cancel | 18 | 2 | "Reviewed 2 of 2 matching cases." | 8,479 | 19,248 | 12 |
+
+The coverage line matched the exact format in 7 of 7 answers, up from 3 of 7 before the rewrite. Six answers used the template. In five of them "What's different this time" named a concrete condition that the recorded cases lacked, for example 90 days' notice and a one-year price hold against a Pro case with 10 days and none, or the monthly-billed Starter segment against contracted Pro customers. The sixth, the broad launches question, gave a cross-case pattern rather than a condition specific to a request. The answer to the Singapore question gave only a suggested next step, as instructed.
+
+Two caveats. "Matching" is the model's own count of relevant cases, not the preview count: it said "2 of 2" after previewing 12 to 18 cases, so the line shows how many it judged relevant and read, not how many the search surfaced. And the broadest question read nine cases and hit the read-side `CONTEXT_LIMIT` three times, the first time that limit bound; the answer listed the two cases it did not read. Peak input there was 14,091 of 64,000.
+
+Reasoning effort: the same seven questions with `reasoningEffort: "medium"` (set around the model in the evaluation script only) read 23 cases in total against 21 at low, kept 7 of 7 compliance, used 139,314 tokens against 140,829, and took 19 seconds on average against 14. Medium read slightly more, with the same compliance and token use, for about 35% more latency. `low` stays the default.
+
 Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
 
 ## Deterministic checks and remaining work
