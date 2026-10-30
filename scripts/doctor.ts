@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { readAIConfig, readAppConfig } from "../src/lib/config/env.ts";
+import { cli, pinnedStackId, stackArgs } from "./local-stack.ts";
 
-const cli = "./node_modules/.bin/supabase";
 function command(args: string[]) {
   try { return execFileSync(cli, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 15000 }); }
   catch { return undefined; }
@@ -11,7 +11,7 @@ function command(args: string[]) {
 const config = readAppConfig(process.env);
 const ai = readAIConfig(process.env);
 const cliVersion = command(["--version"])?.trim();
-const statusOutput = command(["status", "--output-format", "json"]);
+const statusOutput = command(["status", ...stackArgs(), "--output-format", "json"]);
 const statusSchema = z.object({ runtime: z.literal("native"), readiness: z.string(), services: z.array(z.object({ service: z.string(), state: z.string() })) });
 let rawStatus: unknown;
 try { rawStatus = statusOutput ? JSON.parse(statusOutput) : null; } catch { rawStatus = null; }
@@ -23,6 +23,7 @@ process.stdout.write(JSON.stringify({
   cliVersion: cliVersion ?? "unavailable",
   cliVersionMatches: cliVersion === "2.122.0",
   experimentalStack: /\[experimental\][\s\S]*?stack\s*=\s*true/.test(toml),
+  pinnedStack: pinnedStackId()?.slice(0, 12) ?? "none",
   nativeStack: status.success ? { readiness: status.data.readiness, services: status.data.services } : "unavailable",
   app: config.kind,
   ai: ai.kind,

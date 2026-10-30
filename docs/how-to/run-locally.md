@@ -16,6 +16,12 @@ Open http://localhost:3000 and sign in with the demo credentials, or choose **En
 
 The native stack assigns its own ports, so use the printed URLs. The printout never includes keys.
 
+## Keep one local database across branches
+
+The native backend derives a separate stack from each git branch, so a new branch would otherwise open an empty database. The first `npm run dev` writes the stack it started to `SUPABASE_STACK_ID` in `.env.local`. After that, `dev`, `db:configure`, `db:types`, `test:db`, `doctor` and the seed scripts open that stack on every branch, and migrations run against it with `--db-url`. Delete the line to start a new stack on the next `npm run dev`.
+
+Run plain `npx supabase` commands with `--stack-id` or `--db-url`. Without them the CLI opens the current branch's stack instead of the shared one.
+
 `db:seed` creates the local workspace, its member, a nonmember test account, and fixed concepts. It preserves existing users and passwords. It does not call a model by default.
 
 To load the demo company's 20 cases, run `npm run db:seed -- --demo`. It calls the embedding provider only for cases that are not already indexed. To remove visitor cases and conversations and restore the seed corpus, run `npm run demo:reset`.
@@ -24,9 +30,9 @@ After sign-in, Chat opens by default. Enter a question and add context in **Requ
 
 Press Enter to send a question or Shift+Enter to add a line. During an active analysis, choose **Stop analysis** in the composer. Scroll upward to read earlier turns, then choose **Scroll to latest message** to follow new content again. Expand **Activity** to inspect actual stage and tool events.
 
-Open **Knowledge Hub** in the sidebar and select **Record a case** to enter a case through either fixed template, or choose **Import from notes** to draft one from pasted text. Review every field before saving; document files in Import are a preview and are not read. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
+Open **Knowledge Hub** in the sidebar and select **Record a case** to open a dialog and enter a case through either fixed template, or choose **Import from notes** to draft one from pasted text in its own dialog. Review every field before saving; document files in Import are a preview and are not read. **Edit case** and **Archive** on a case page also open dialogs. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
 
-If the native project changes, rerun `db:configure` and restart Next.js. Do not run another native Supabase project concurrently.
+If the native project changes, rerun `db:configure` and restart Next.js. Do not run another native Supabase project concurrently. `npx supabase stack list` shows every stack and its branch.
 
 ## Verify without model calls
 
@@ -61,6 +67,6 @@ The live checks need working provider quota and model access for the configured 
 
 ## Stop the services
 
-Stop Next.js with Ctrl+C. Run `npx supabase stop` to stop the native stack and preserve its data.
+Stop Next.js with Ctrl+C. Run `npx supabase stop --stack-id <SUPABASE_STACK_ID>` to stop the shared stack and preserve its data.
 
 `npx supabase db reset --local` deletes local data. Use it only for a disposable database when testing migration replay, then rerun the seed.

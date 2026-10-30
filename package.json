@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "test:db": "supabase test db",
+    "test:db": "node --experimental-strip-types scripts/db-test.ts",
     "test:e2e": "playwright test",
     "doctor": "node --env-file-if-exists=.env.local --experimental-strip-types scripts/doctor.ts",
     "db:types": "node --experimental-strip-types scripts/db-types.ts",

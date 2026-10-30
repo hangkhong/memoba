@@ -2,6 +2,7 @@ import { execFileSync, spawn } from "node:child_process";
 import { realpathSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import { formatLocalEndpoints, findStudioUrl, parseNativeStack } from "../src/lib/supabase/local-stack.ts";
+import { cli, cliDbUrl, stackArgs } from "./local-stack.ts";
 
 const root = realpathSync(process.cwd());
 function run(command, args, options = {}) {
@@ -31,16 +32,16 @@ try {
   process.stdout.write("Starting local Supabase...\n");
   let started;
   try {
-    started = execFileSync("./node_modules/.bin/supabase", ["start", "--runtime", "native", "--output-format", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1024 * 1024 });
+    started = execFileSync(cli, ["start", ...stackArgs(), "--runtime", "native", "--output-format", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 1024 * 1024 });
   } catch {
     throw new Error("Could not start local Supabase. Run npx supabase start --runtime native for diagnostics.");
   }
-  run("./node_modules/.bin/supabase", ["migration", "up", "--local"]);
+  let stack = parseNativeStack(JSON.parse(started));
+  run(cli, ["migration", "up", "--db-url", cliDbUrl(stack)]);
   run(process.execPath, ["--experimental-strip-types", "scripts/configure-local.ts"]);
   run(process.execPath, ["--env-file-if-exists=.env.local", "--experimental-strip-types", "scripts/seed-demo.ts"]);
-  let stack = parseNativeStack(JSON.parse(started));
   if (!findStudioUrl(stack.endpoints)) {
-    stack = parseNativeStack(JSON.parse(execFileSync("./node_modules/.bin/supabase", ["status", "--output-format", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })));
+    stack = parseNativeStack(JSON.parse(execFileSync(cli, ["status", ...stackArgs(), "--output-format", "json"], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] })));
   }
   process.stdout.write(`${formatLocalEndpoints(stack, "http://localhost:3000")}\n`);
   const client = createClient(stack.url, stack.secretKey, { auth: { autoRefreshToken: false, persistSession: false } });

@@ -1,20 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { findStudioUrl, formatLocalEndpoints, parseNativeStack } from "./local-stack";
 
+const stackId = "a".repeat(64);
+
 describe("native CLI boundary", () => {
   it("reads dynamic endpoints and credentials from CLI output", () => {
-    const result = parseNativeStack({ runtime: "native", env: { API_URL: "http://127.0.0.1:19999", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: { "database.sql": { url: "tcp://127.0.0.1:17777" } } });
-    expect(result.url).toBe("http://127.0.0.1:19999");
+    const result = parseNativeStack({ runtime: "native", identity: { id: stackId }, env: { API_URL: "http://127.0.0.1:19999", DB_URL: "postgresql://postgres:postgres@127.0.0.1:17777/postgres", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: { "database.sql": { url: "tcp://127.0.0.1:17777" } } });
+    expect(parseNativeStack({ runtime: "native", id: stackId, env: { API_URL: "http://127.0.0.1:19999", DB_URL: "postgresql://postgres:postgres@127.0.0.1:17777/postgres", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: {} }).id).toBe(stackId);
+    expect(result).toMatchObject({ id: stackId, url: "http://127.0.0.1:19999", dbUrl: "postgresql://postgres:postgres@127.0.0.1:17777/postgres" });
   });
   it("rejects a remote or nonnative stack before local seeding", () => {
     expect(() => parseNativeStack({ runtime: "docker", env: {} })).toThrow();
-    expect(() => parseNativeStack({ runtime: "native", env: { API_URL: "https://production.supabase.co", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: {} })).toThrow();
+    expect(() => parseNativeStack({ runtime: "native", identity: { id: stackId }, env: { API_URL: "https://production.supabase.co", DB_URL: "postgresql://postgres:postgres@127.0.0.1:17777/postgres", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: {} })).toThrow();
+    expect(() => parseNativeStack({ runtime: "native", env: { API_URL: "http://127.0.0.1:19999", DB_URL: "postgresql://postgres:postgres@127.0.0.1:17777/postgres", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: {} })).toThrow();
+    expect(() => parseNativeStack({ runtime: "native", identity: { id: stackId }, env: { API_URL: "http://127.0.0.1:19999", DB_URL: "postgresql://postgres:postgres@db.example.com:5432/postgres", PUBLISHABLE_KEY: "public", SECRET_KEY: "private" }, endpoints: {} })).toThrow();
   });
 });
 
 describe("local endpoint summary", () => {
   const stackWith = (endpoints: Record<string, { url: string }>) =>
-    parseNativeStack({ runtime: "native", env: { API_URL: "http://127.0.0.1:19999", PUBLISHABLE_KEY: "public-key-value", SECRET_KEY: "secret-key-value" }, endpoints });
+    parseNativeStack({ runtime: "native", identity: { id: stackId }, env: { API_URL: "http://127.0.0.1:19999", DB_URL: "postgresql://postgres:postgres@127.0.0.1:17777/postgres", PUBLISHABLE_KEY: "public-key-value", SECRET_KEY: "secret-key-value" }, endpoints });
   it("prints app, studio and API URLs without keys", () => {
     const output = formatLocalEndpoints(stackWith({ "studio.http": { url: "http://127.0.0.1:30801" }, "database.sql": { url: "tcp://127.0.0.1:17777" } }), "http://localhost:3000");
     expect(output).toContain("App: http://localhost:3000");
