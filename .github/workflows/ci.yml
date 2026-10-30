@@ -25,12 +25,13 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build
       - name: Start native Supabase
         run: npx supabase start --runtime native --output-format json > "$RUNNER_TEMP/supabase-start.json"
       - run: npx supabase migration up --local
       - run: npm run test:db
       - run: npm run db:configure
+      # Build after configure so the client bundle carries the local Supabase URL; e2e runs against this build.
+      - run: npm run build
       - name: Generate local-only demo password
         run: node -e 'require("node:fs").appendFileSync(process.env.GITHUB_ENV,"DEMO_PASSWORD="+require("node:crypto").randomBytes(24).toString("hex")+"\n")'
       - run: npm run db:seed
