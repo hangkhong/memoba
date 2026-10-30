@@ -178,7 +178,6 @@ it("derives the saved coverage and caps unread titles", () => {
   expect(saved).toMatchObject({ searched: true, previewed: 14, read: 2, searchFailed: false });
   expect(saved.unreadTitles).toHaveLength(10);
   expect(saved.unreadTitles[0]).toBe("Case 2");
-  expect(saved.unreadCaseIds).toEqual(ids.slice(2, 12));
-  expect(answerCoverage({ searchState: "none", previewed: [], readCaseIds: [] })).toEqual({ searched: false, previewed: 0, read: 0, searchFailed: false, unreadTitles: [], unreadCaseIds: [] });
+  expect(answerCoverage({ searchState: "none", previewed: [], readCaseIds: [] })).toEqual({ searched: false, previewed: 0, read: 0, searchFailed: false, unreadTitles: [] });
   expect(answerCoverage({ searchState: "failed_or_partial", previewed: [], readCaseIds: [] })).toMatchObject({ searched: true, searchFailed: true });
 });

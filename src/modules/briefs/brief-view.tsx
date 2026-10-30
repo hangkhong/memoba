@@ -5,17 +5,14 @@ import { Button } from "@/components/ui/button";
 import { AnswerMarkdown } from "./answer-markdown";
 import { EvidenceSources, InlineEvidence } from "./evidence-view";
 import { Textarea } from "@/components/ui/textarea";
-import { coverageLine } from "./coverage-presentation";
-import { CoverageTrace } from "./coverage-trace";
-export function BriefView({ brief, evidencePrefix = brief.id, showCoverage = true }: { brief: StoredBrief; evidencePrefix?: string; showCoverage?: boolean }) {
- if ("version" in brief.generated) return <TextAnswerView brief={brief} evidencePrefix={evidencePrefix} showCoverage={showCoverage}/>;
+export function BriefView({ brief, evidencePrefix = brief.id }: { brief: StoredBrief; evidencePrefix?: string }) {
+ if ("version" in brief.generated) return <TextAnswerView brief={brief} evidencePrefix={evidencePrefix}/>;
  return <LegacyBriefView brief={{ ...brief, generated: brief.generated }} evidencePrefix={evidencePrefix}/>;
 }
-function TextAnswerView({ brief, showCoverage }: { brief: StoredBrief; evidencePrefix: string; showCoverage: boolean }) {
+function TextAnswerView({ brief }: { brief: StoredBrief; evidencePrefix: string }) {
  if (!("version" in brief.generated)) return null;
  const answer = brief.generated;
- const line = showCoverage ? coverageLine(answer.coverage) : null;
- return <div>{line && <CoverageTrace line={line}/>}<AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
+ return <div><AnswerMarkdown answer={answer} evidence={brief.evidence}/><EvidenceSources evidence={brief.evidence}/></div>;
 }
 
 function LegacyBriefView({ brief }: { brief: SavedBrief; evidencePrefix: string }) {

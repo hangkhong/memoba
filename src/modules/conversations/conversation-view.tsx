@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BriefView } from "@/modules/briefs/brief-view";
-import { coverageLine } from "@/modules/briefs/coverage-presentation";
 import { AnalysisActivity } from "@/modules/analysis/activity";
 import { Message, MessageContent } from "@/components/ui/message";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
@@ -61,7 +60,6 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
         const pendingRun = !!live?.runId && !sameRun;
         const savedTerminal = sameRun && run?.status !== "running";
         const liveWorking = !!live?.busy && !savedTerminal;
-        const shownBrief = run?.brief && !liveWorking && !pendingRun ? run.brief : null;
         const events = liveWorking || pendingRun ? live?.events ?? [] : run?.events ?? live?.events ?? [];
         const status = liveWorking ? "running" : pendingRun ? live?.outcome?.status : run?.status;
         return <MessageScrollerItem key={turn.id} messageId={turn.id} scrollAnchor><section aria-label={`Turn ${turn.position}`}>
@@ -70,8 +68,8 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
             {turn.request.version === 1 && <details className="mt-3 text-sm text-muted-foreground"><summary className="cursor-pointer">Request snapshot</summary><p className="mt-2 whitespace-pre-wrap">{turn.request.context}</p>{turn.request.hardConstraints.map((constraint, index) => <p key={index}>{constraint.kind}: {constraint.text}</p>)}</details>}
           </BubbleContent></Bubble></MessageContent></Message>
           <Message className="mt-6"><MessageContent className="gap-5">
-            <AnalysisActivity key={run?.id ?? live?.runId ?? "pending"} events={events} status={status} coverage={shownBrief && "version" in shownBrief.generated ? coverageLine(shownBrief.generated.coverage) : null}/>
-            {run?.brief && !liveWorking && !pendingRun ? <><BriefView showCoverage={!events.length} brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
+            <AnalysisActivity key={run?.id ?? live?.runId ?? "pending"} events={events} status={status}/>
+            {run?.brief && !liveWorking && !pendingRun ? <><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
               {status === "running" || status === "gap_report" ? null : <p className="text-sm text-muted-foreground">{status ? statusNotes[status] : "Question saved. Analysis has not started."}</p>}
               {status === "gap_report" && <section className="rounded-xl border p-5"><h2 className="font-semibold">No precedent found</h2><p className="mt-3">The search completed successfully without usable evidence. Add cases covering the method, applicability conditions, and failures or exceptions for this request.</p></section>}
               {!liveWorking && !pendingRun && run?.error_code && <p className="text-sm text-muted-foreground">Check the knowledge and model services, then retry.</p>}

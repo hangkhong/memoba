@@ -24,8 +24,6 @@ export const answerCoverageSchema = z.object({
   read: z.number().int().nonnegative(),
   searchFailed: z.boolean(),
   unreadTitles: z.array(z.string().max(200)).max(10),
-  // Same order as unreadTitles; absent on answers saved before cases were linked.
-  unreadCaseIds: z.array(z.uuid()).max(10).optional(),
 }).strict();
 export type AnswerCoverage = z.infer<typeof answerCoverageSchema>;
 export const textAnswerSchema = z.object({

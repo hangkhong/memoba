@@ -15,14 +15,12 @@ export type RunCoverage = { searchState: "none" | "succeeded" | "failed_or_parti
 export function answerCoverage(coverage: RunCoverage): AnswerCoverage {
   const read = new Set(coverage.readCaseIds);
   const previewedIds = new Set(coverage.previewed.map((item) => item.caseId));
-  const unread = coverage.previewed.filter((item) => !read.has(item.caseId)).slice(0, 10);
   return {
     searched: coverage.searchState !== "none",
     previewed: new Set([...previewedIds, ...read]).size,
     read: read.size,
     searchFailed: coverage.searchState === "failed_or_partial",
-    unreadTitles: unread.map((item) => item.title),
-    unreadCaseIds: unread.map((item) => item.caseId),
+    unreadTitles: coverage.previewed.filter((item) => !read.has(item.caseId)).map((item) => item.title).slice(0, 10),
   };
 }
 
