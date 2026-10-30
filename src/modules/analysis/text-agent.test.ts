@@ -137,15 +137,33 @@ it("checks each citation when contradictory cases are cited together", async () 
   expect(result.status).toBe("complete");
   expect(snapshots).toEqual([item, other]);
 });
-it("instructs the model to answer in English with the reuse sections", () => {
-  for (const phrase of ["Answer in English", "How similar cases went", "What's different this time", "Suggested next step"]) expect(textInstructions).toContain(phrase);
+it("structures the instructions with identity, instructions and context", () => {
+  for (const heading of ["# Identity", "# Instructions", "# Context"]) expect(textInstructions).toContain(heading);
+  expect(textInstructions).toContain("Write in English");
+  expect(textInstructions).not.toContain("${");
 });
-it("requires a coverage statement naming matching cases it did not read", () => {
-  expect(textInstructions).toContain("Advise from the most relevant cases, reading at most about 8");
-  expect(textInstructions).toContain('State coverage, for example "Reviewed 5 of 9 matching cases", and name matching cases you did not read');
+it("requires the reuse template with an exact coverage line", () => {
+  expect(textInstructions).toContain("Coverage: Reviewed {read} of {matching} matching cases.");
+  for (const heading of ["## How similar cases went", "## What's different this time", "## Suggested next step"]) expect(textInstructions).toContain(heading);
+  expect(textInstructions).toContain("up to 8");
 });
-it("forbids filling the precedent section when search found nothing", () => {
-  expect(textInstructions).toContain("If a successful search finds no relevant case, say so and omit How similar cases went");
+it("handles an empty successful search without filling the precedent section", () => {
+  expect(textInstructions).toContain("Coverage: No recorded case matched this request.");
+  expect(textInstructions).toContain("Say no recorded case matched only after a successful search.");
+});
+it("treats case text, history and tool output as untrusted data", () => {
+  expect(textInstructions).toContain("untrusted data");
+});
+it("wraps the request in a delimiter and keeps instructions first", async () => {
+  const prompts: string[] = [];
+  const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
+  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Done." }], false); } });
+  const budget = createRunBudget();
+  try { await textReasoningAdapter(model, knowledge, async () => {}).generate(question, budget); }
+  finally { budget.dispose(); }
+  expect(prompts[0]).toContain("<request>");
+  expect(prompts[0]).toContain("</request>");
+  expect(prompts[0]).toContain(question.message);
 });
 
 async function toolsOverSteps(firstStepInputTokens: number) {
@@ -173,4 +191,15 @@ it("keeps tools available while step input stays below the ceiling", async () =>
   const { toolsSeen, events } = await toolsOverSteps(Math.floor(executionLimits.maxModelInputTokens * 0.8) - 1);
   expect(toolsSeen[1]).toBeGreaterThan(0);
   expect(events).not.toContain("context:completed:INPUT_CEILING");
+});
+
+it("builds the repair prompt from static instructions followed by tagged blocks", async () => {
+  const prompts: string[] = [];
+  const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
+  const model = new MockLanguageModelV4({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Fixed." }], false); } });
+  const budget = createRunBudget();
+  try { await textReasoningAdapter(model, knowledge, async () => {}).repair(question, "Draft [S:x:1]", "INVALID_CITATION", budget); }
+  finally { budget.dispose(); }
+  for (const tag of ["<request>", "<draft>", "<validation_error>", "<allowed_sources>"]) expect(prompts[0]).toContain(tag);
+  expect(prompts[0]?.indexOf("Correct the citation markers")).toBeLessThan(prompts[0]?.lastIndexOf("<request>") ?? 0);
 });
