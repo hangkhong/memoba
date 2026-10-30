@@ -111,6 +111,22 @@ Two caveats. "Matching" is the model's own count of relevant cases, not the prev
 
 Reasoning effort: the same seven questions with `reasoningEffort: "medium"` (set around the model in the evaluation script only) read 23 cases in total against 21 at low, kept 7 of 7 compliance, used 139,314 tokens against 140,829, and took 19 seconds on average against 14. Medium read slightly more, with the same compliance and token use, for about 35% more latency. `low` stays the default.
 
+### Computed coverage on 2026-10-30
+
+The coverage line is now derived by the app from tool results and saved with the answer, and the prompt no longer asks the model to write it. The same seven questions ran again in process. For each run the saved coverage was compared with the cases that appear in the trace's `search_cases` and `read_case` results: all seven agreed on cases previewed and cases read. A browser run of the price-change prompt showed "Read 2 of 14 cases found by search" with the unread titles in a collapsible list, both when the answer finished streaming and after a refresh.
+
+| Question | Before: model-written | After: computed from tool events | Unread titles shown |
+|---|---|---|---|
+| Launch to all customers | "Reviewed 3 of 3" | Read 3 of 20 | 10 of 17 |
+| Price increase with notice | "Reviewed 2 of 2" | Read 2 of 14 | 10 of 12 |
+| Singapore data center | "No recorded case matched" | Found 2 cases, none read | 2 of 2 |
+| All pricing changes | "Reviewed 2 of 2" | Read 3 of 13 | 10 of 10 |
+| All launches, rollouts and migrations | "Reviewed 9 of 11" | Read 5 of 15 | 10 of 10 |
+| Customer-facing incidents | "Reviewed 3 of 3" | Read 4 of 11 | 7 of 7 |
+| Keeping customers who threaten to cancel | "Reviewed 2 of 2" | Read 2 of 15 | 10 of 13 |
+
+The "before" column is the previous restructured-instructions run and the "after" column is a new run, so cases read differ between runs as well as the counts. The computed denominators are the real preview counts, which the model's own "matching" count understated in six of seven questions. Two things to know: the list is capped at 10 titles, so it can be shorter than the unread count; and the Singapore question previews two nearest-neighbour cases that the model judged irrelevant, so the line says "Found 2 cases, none read" next to prose saying no recorded case matched. Search returns the nearest cases under a similarity threshold, so a "found" count is not a relevance judgment.
+
 Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
 
 ## Deterministic checks and remaining work
