@@ -40,6 +40,8 @@ Expected: the seed reports the case count with index state ready (20 for the dem
 
 Create the project from the GitHub repository on the Hobby plan with Fluid Compute and Node.js 24. Connecting it through the Supabase Vercel integration sets `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The integration also syncs server keys and `POSTGRES_*` variables that the app never reads; leave them, because it re-syncs them.
 
+[`vercel.json`](../../vercel.json) pins functions to `hnd1` (Tokyo), next to the Supabase project in `ap-northeast-1`. Keep the two regions equal. A page makes 5 to 20 database round trips, so a function in another region pays the cross-ocean latency on each one; with functions in `iad1`, a conversation render took about 3.4 seconds. If you create the Supabase project in another region, change `regions` to the nearest Vercel region.
+
 Set `OPENAI_API_KEY` in the dashboard. Add the model variables with the CLI after `vercel link`:
 
 ```bash
