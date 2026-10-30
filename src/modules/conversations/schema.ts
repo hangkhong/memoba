@@ -8,6 +8,8 @@ export const textTurnInputSchema = z.object({
   message: rawMessageSchema,
 }).strict();
 export type TextTurnInput = z.infer<typeof textTurnInputSchema>;
+// A first question may create its conversation in the same call; both writes are idempotent.
+export const textTurnRequestSchema = textTurnInputSchema.extend({ newConversation: z.boolean().default(false) });
 export const conversationSchema = z.object({
   id: z.uuid(), author_id: z.uuid(), title: z.string(),
   created_at: z.iso.datetime({ offset: true }), updated_at: z.iso.datetime({ offset: true }),

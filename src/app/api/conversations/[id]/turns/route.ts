@@ -3,18 +3,20 @@ import { requireWorkspace } from "@/lib/auth/workspace";
 import { isSameOrigin, privateJson } from "@/lib/auth/http";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { textRunInputSchema } from "@/modules/analysis/schema";
-import { textTurnInputSchema } from "@/modules/conversations/schema";
+import { textTurnRequestSchema } from "@/modules/conversations/schema";
 import { historyForConversation } from "@/modules/conversations/service";
-import { readConversation, saveTurn } from "@/modules/conversations/repository";
+import { createConversation, readConversation, saveTurn } from "@/modules/conversations/repository";
 import { conversationErrorResponse } from "@/modules/conversations/http";
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   if (!isSameOrigin(request)) return privateJson({ error: "Invalid request origin." }, 400);
   try {
     const context = await requireWorkspace(); const id = z.uuid().safeParse((await params).id);
-    const input = textTurnInputSchema.safeParse(await request.json().catch(() => null));
+    const input = textTurnRequestSchema.safeParse(await request.json().catch(() => null));
     if (!id.success || !input.success) return privateJson({ error: "Review your question." }, 400);
     const client = await createServerSupabase();
-    const detail = await readConversation(client, context, id.data);
+    if (input.data.newConversation && input.data.parentTurnId) return privateJson({ error: "Review your question." }, 400);
+    if (input.data.newConversation) await createConversation(client, context, id.data);
+    const detail = input.data.newConversation ? { conversation: { author_id: context.userId }, turns: [] } : await readConversation(client, context, id.data);
     if (!detail || detail.conversation.author_id !== context.userId) return privateJson({ error: "Conversation unavailable." }, 404);
     const prior = await client.from("conversation_turns").select("id,message,parent_turn_id").eq("workspace_id", context.workspaceId).eq("conversation_id", id.data).eq("request_key", input.data.key).maybeSingle();
     if (prior.error) throw new Error("CONVERSATION_UNAVAILABLE");

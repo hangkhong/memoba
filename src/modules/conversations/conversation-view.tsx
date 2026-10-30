@@ -8,6 +8,7 @@ import { Message, MessageContent } from "@/components/ui/message";
 import { Bubble, BubbleContent } from "@/components/ui/bubble";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { EvidenceLayout } from "@/modules/briefs/evidence-view";
+import { PendingQuestion } from "./pending-ask";
 import { Composer } from "./composer";
 import { ChatConversation, ChatConversationContent } from "./conversation";
 import { useChatSession } from "./chat-session";
@@ -29,6 +30,11 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
   const running = hasRunningRun(detail);
   const awaitingSaved = !active?.busy && isAwaitingSaved(detail, active?.runId);
   const waiting = running || awaitingSaved;
+  const ask = session.ask?.conversationId === detail.conversation.id ? session.ask : null;
+  const pendingAsk = ask && ask.status !== "failed" && !detail.turns.some((turn) => turn.id === ask.turnId) ? ask : null;
+  const savedAskId = ask?.turnId && detail.turns.some((turn) => turn.id === ask.turnId) ? ask.turnId : null;
+  const dismissAsk = session.dismissAsk;
+  useEffect(() => { if (savedAskId) dismissAsk(); }, [savedAskId, dismissAsk]);
   const watchedRunId = active?.runId;
   const conversationId = detail.conversation.id;
 
@@ -72,13 +78,13 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
             {turn.runs.length > 1 && <details><summary className="cursor-pointer text-sm text-muted-foreground">Previous attempts</summary>{turn.runs.slice(0, -1).map((attempt) => <p key={attempt.id}><Link className="underline" href={`/workspace/analyses/${attempt.id}`}>{attempt.status.replaceAll("_", " ")}</Link></p>)}</details>}
             {loadFailed && waiting && turn.id === latest?.id && <p role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border p-4 text-sm">Could not load the saved answer.<Button variant="outline" size="sm" onClick={() => { setLoadFailed(false); setAttempt((count) => count + 1); }}>Try again</Button></p>}
             {live?.message && !savedTerminal && <p role="status" className="rounded-lg border p-4 text-sm">{live.message}</p>}
-            {owner && turn.id === latest?.id && !running && !awaitingSaved && !session.state?.busy && (!run || ["failed", "cancelled", "timed_out"].includes(run.status)) && <Button variant="outline" onClick={() => { void session.start(detail.conversation.id, turn.id, run ? crypto.randomUUID() : turn.id); }}>{run ? "Retry analysis" : "Run analysis"}</Button>}
+            {owner && !pendingAsk && turn.id === latest?.id && !running && !awaitingSaved && !session.state?.busy && (!run || ["failed", "cancelled", "timed_out"].includes(run.status)) && <Button variant="outline" onClick={() => { void session.start(detail.conversation.id, turn.id, run ? crypto.randomUUID() : turn.id); }}>{run ? "Retry analysis" : "Run analysis"}</Button>}
           </MessageContent></Message>
         </section></MessageScrollerItem>;
-      })}</ChatConversationContent>
+      })}{pendingAsk && <MessageScrollerItem key="pending-ask" messageId="pending-ask" scrollAnchor><PendingQuestion ask={pendingAsk}/></MessageScrollerItem>}</ChatConversationContent>
     </ChatConversation>
     <div className="mx-auto w-full max-w-[var(--transcript-width)] shrink-0 bg-background px-4 pt-2 pb-4 md:px-8">
-      {owner ? <Composer key={latest?.id ?? "empty"} conversationId={detail.conversation.id} parentTurnId={latest?.id} concepts={concepts} disabled={running || awaitingSaved}/> : <p className="text-sm text-muted-foreground">You can read this conversation. Start a new chat to ask your own question.</p>}
+      {owner ? <Composer key={latest?.id ?? "empty"} conversationId={detail.conversation.id} parentTurnId={latest?.id} concepts={concepts} disabled={running || awaitingSaved || !!pendingAsk}/> : <p className="text-sm text-muted-foreground">You can read this conversation. Start a new chat to ask your own question.</p>}
     </div>
   </div></EvidenceLayout>;
 }

@@ -1,15 +1,21 @@
 "use client";
-import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { z } from "zod";
 import type { AnalysisEvent } from "@/modules/analysis/events";
 import { readAnalysisStream, type AnalysisOutcome } from "./stream";
 
 type SessionState = { conversationId: string; turnId: string; runId: string | null; outcome: AnalysisOutcome | null; events: AnalysisEvent[]; busy: boolean; message: string };
-type Session = { state: SessionState | null; start: (conversationId: string, turnId: string, key: string) => Promise<void>; cancel: () => void };
+export type Ask = { conversationId: string; key: string; message: string; parentTurnId: string | null; isNew: boolean; status: "saving" | "saved" | "failed"; turnId: string | null; error: string };
+type Session = { state: SessionState | null; ask: Ask | null; start: (conversationId: string, turnId: string, key: string) => Promise<void>; submitAsk: (ask: Pick<Ask, "conversationId" | "key" | "message" | "parentTurnId" | "isNew">) => void; dismissAsk: () => void; cancel: () => void };
 const ChatContext = createContext<Session | null>(null);
 const errorSchema = z.object({ error: z.string() });
 
+const savedTurnSchema = z.object({ turnId: z.uuid() });
 export function ChatSession({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const [ask, setAsk] = useState<Ask | null>(null);
+  const dismissAsk = useCallback(() => setAsk(null), []);
   const controller = useRef<AbortController | null>(null);
   const [state, setState] = useState<SessionState | null>(null);
   useEffect(() => () => controller.current?.abort(), []);
@@ -47,7 +53,27 @@ export function ChatSession({ children }: { children: ReactNode }) {
       }
     }
   }
-  return <ChatContext.Provider value={{ state, start, cancel: () => controller.current?.abort() }}>{children}</ChatContext.Provider>;
+  // The question shows at once; the save runs in the background and the analysis starts once it is stored.
+  function submitAsk(input: Pick<Ask, "conversationId" | "key" | "message" | "parentTurnId" | "isNew">) {
+    const base = { ...input, turnId: null, error: "" };
+    setAsk({ ...base, status: "saving" });
+    const fail = (error: string) => {
+      setAsk({ ...base, status: "failed", error });
+      if (input.isNew) router.replace("/workspace/chat");
+    };
+    void (async () => {
+      try {
+        const response = await fetch(`/api/conversations/${input.conversationId}/turns`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key: input.key, parentTurnId: input.parentTurnId, message: input.message, newConversation: input.isNew }) });
+        const raw: unknown = await response.json();
+        if (!response.ok) { const parsed = errorSchema.safeParse(raw); return fail(parsed.success ? parsed.data.error : "Could not save your question."); }
+        const { turnId } = savedTurnSchema.parse(raw);
+        setAsk({ ...base, status: "saved", turnId });
+        void start(input.conversationId, turnId, input.key);
+        router.refresh();
+      } catch { fail("Could not send your question. Your input is still here; try again."); }
+    })();
+  }
+  return <ChatContext.Provider value={{ state, ask, start, submitAsk, dismissAsk, cancel: () => controller.current?.abort() }}>{children}</ChatContext.Provider>;
 }
 export function useChatSession() {
   const value = useContext(ChatContext);
