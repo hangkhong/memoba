@@ -69,6 +69,26 @@ Import: unaccented Vietnamese-style notes produced an English draft with an `unk
 
 After the corpus was rewritten with detailed retrospectives (3,000 characters per case on average, 2,200 to 3,900, about 760 tokens), the same three prompts were rerun locally. They completed in 16, 16 and 6 seconds (runs `3c18f7f1-a4d2-42df-9420-cf9bbb5bd826`, `789da253-7f55-4828-b0e7-d5b5d418e922`, `40eb0bc8-9333-4828-b860-ab11ed490f12`; 8,585, 11,285 and 1,619 tokens). The first prompt now read and cited both the all-at-once launch and the staged rollout, where the thinner corpus produced only one cited case. The second still cited the failed Pro increase and the Starter increase, and now named the contract-notice condition from the failed case. The third still said no relevant case was found. No answer reported omitted content. `contextSections` (24) binds before `contextTokens` (8,000) because a full case is under 1,000 tokens, so an answer that reads more than about three cases in full would hit the section cap; this was not observed and no limit was changed.
 
+### Context stress run on 2026-10-30
+
+After `read_case` was reworked (outcome headers, priority order, up to three cases per call), search was capped at two sections per case, and the limits in [`limits.ts`](../../src/lib/contracts/limits.ts) were raised, seven questions ran in process against the local 20-case corpus, with `gpt-6-luna`. The three suggested prompts come first; the other four need many cases. Each row is one run. "Previewed" counts distinct cases in search previews, "read" counts distinct cases passed to `read_case`, and "peak input" is the largest `inputTokens` reported for any single model step.
+
+| Question | Previewed | Read | Read-side `CONTEXT_LIMIT` | Peak input | Total tokens | Seconds | Coverage statement |
+|---|---|---|---|---|---|---|---|
+| Launch to all customers | 20 | 3 | 0 | 8,348 | 14,471 | 13 | "Reviewed 3 of 18" |
+| Price increase with notice | 4 | 2 | 0 | 4,583 | 7,642 | 10 | none |
+| Singapore data center | 0 | 0 | 0 | 842 | 1,706 | 3 | none (no relevant case) |
+| All pricing changes | 8 | 3 | 0 | 5,154 | 11,291 | 12 | none |
+| All launches, rollouts and migrations | 18 | 6 | 0 | 10,077 | 27,435 | 23 | none |
+| Customer-facing incidents and outages | 10 | 3 | 0 | 5,711 | 10,178 | 14 | "Reviewed 3 of 9" |
+| Keeping customers who threaten to cancel | 7 | 4 | 0 | 6,737 | 13,362 | 16 | "Reviewed 4 of 7" |
+
+No run hit a read-side `CONTEXT_LIMIT`, and no run came close to the model input ceiling (peak 10,077 of 64,000). The widest question read six cases and used 27,435 tokens in total across five steps, so total usage grew faster than peak input because each step re-sends the transcript.
+
+One value was adjusted on this evidence. A first pass of the same seven questions with `previewTokens` at 4,000 hit the search-side `CONTEXT_LIMIT` in two runs, which then previewed only 13 or 14 cases, so a broad question could not list every matching case. At 8,000 no run hit it and the first prompt previewed 20 cases. The other starting values were kept.
+
+Two observations are not limit problems. The agent read two to six cases even for broad questions, never approaching the "about 8" in the instruction, so the practical ceiling today is model behavior, not budget. And the coverage statement did not always use the "Reviewed N of M" form; some answers said "Reviewed 3 matching cases" or listed unread cases in prose. These are individual runs, not a quality score.
+
 Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
 
 ## Deterministic checks and remaining work

@@ -30,9 +30,13 @@ Version 2 exposes two model-facing tools:
 | Tool | Input | Result |
 |---|---|---|
 | `search_cases` | Natural-language query | Grouped case previews and explicit empty, partial, no-progress, or error states |
-| `read_case` | Case ID and section keys | Requested sections and surrounding case context, with markers for content delivered in this run |
+| `read_case` | Up to three case IDs and optional section keys | A header per case (title, template, outcome state, observed outcome) followed by the requested sections, with markers for content delivered in this run |
 
-Search uses the knowledge service's hybrid keyword and vector retrieval. It returns previews, not citeable evidence. The run pins one revision per case. Repeated reads report when they add no content. Candidate and context limits can omit content; the tool reports that state. An embedding provider failure is an error, not an empty search or a keyword-only fallback. Archived cases and unpublished revisions are excluded from new retrieval.
+Search uses the knowledge service's hybrid keyword and vector retrieval. It returns previews, not citeable evidence, with at most `searchSectionsPerCase` sections per case so previews spread across cases. The run pins one revision per case. Repeated reads report when they add no content. Candidate and context limits can omit content; the tool reports that state. An embedding provider failure is an error, not an empty search or a keyword-only fallback. Archived cases and unpublished revisions are excluded from new retrieval.
+
+A read no longer adds unrequested sections. Every read returns each case's observed outcome in a header; that text counts against the context budget and gets a marker like any other section. Requested sections follow in priority order (approach, observed outcome, problem, context, constraints, lessons, then template fields) across the cases in the call, so the lowest-priority sections are omitted first when a limit applies, and the result reports `CONTEXT_LIMIT`. Revision pinning, markers and repeated-read handling are unchanged.
+
+The answer states coverage: how many matching cases it reviewed and which matching cases it did not read. The agent reads the most relevant cases rather than all of them. When the last model step's input reaches 80% of `maxModelInputTokens`, the run removes the tools, records a `context` activity event with code `INPUT_CEILING`, and the model must answer from what it has read.
 
 The model cannot select a workspace, issue SQL, or write data. Case text and prior assistant text are treated as data. Validation checks each citation marker against disclosed read content and current access. It can request one correction for invalid output. Marker validation does not establish that a source supports a claim.
 

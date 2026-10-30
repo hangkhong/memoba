@@ -23,6 +23,10 @@ Answers are model output grounded in the recorded cases. A valid citation shows 
 - Preview: choosing document files in Import only lists their names. Document parsing is coming soon; files stay in your browser.
 - Deferred: connectors, document upload, multiple agents, per-visitor workspaces, and in-app rate limits. Hosted cost is bounded by a provider spending limit.
 
+## Known limit and next step
+
+An answer is built from the few most relevant cases one run can read, and it states how many matching cases it reviewed. Questions that need many cases at once ("everything we learned about pricing") get a partial view. The next step is batch reading with cited per-group notes and a cross-group synthesis, or precomputed case cards; it is deferred for this demo.
+
 ## Run it and read more
 
 Use Node.js 24 and npm. [Run locally](docs/how-to/run-locally.md) starts the pinned native Supabase stack and prints the App, Studio and API URLs. [Deploy the demo](docs/how-to/deploy-demo.md) covers Supabase Cloud and Vercel.

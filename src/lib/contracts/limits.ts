@@ -9,7 +9,7 @@ export const executionLimits = Object.freeze({
   candidateSections: 60,
   contextSections: 48,
   contextTokens: 24_000,
-  previewTokens: 4_000,
+  previewTokens: 8_000,
   previewExcerptChars: 240,
   searchSectionsPerCase: 2,
   outputTokens: 2_000,

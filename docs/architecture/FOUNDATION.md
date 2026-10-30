@@ -30,6 +30,10 @@ Hosted, the app runs on Vercel with Supabase Cloud and a shared demo workspace; 
 
 Local development uses the project-pinned Supabase CLI `2.122.0` with the native experimental stack. Endpoint configuration comes from CLI JSON output. Docker and fixed local ports are not prerequisites.
 
+## Next architecture step
+
+One run reads a handful of cases in full, which is enough for the demo corpus but not for a question that must compare many cases. The planned next step is batch reading with cited per-group notes followed by a cross-group synthesis, and possibly precomputed case cards that the search returns instead of raw sections. It is deferred for the MVP; the answer states how many matching cases it reviewed so the gap is visible.
+
 ## Verification and prior decisions
 
 Vitest checks domain behavior, pgTAP checks SQL and access, and Playwright checks user journeys. Live-model evaluation and reviewed examples are needed to assess whether answers use evidence correctly. See [evaluation status](../reference/evaluation.md) for the recorded results.
