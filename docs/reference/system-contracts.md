@@ -70,7 +70,7 @@ The vector migration, stored vectors, and query embedding model use matching mod
 
 ## Demo workspace
 
-`readDemoConfig` enables the demo button only when `DEMO_EMAIL` and a password of at least 12 characters are both set. Public sign-up stays disabled. `public.reset_demo_workspace(w, keep_case_ids)` removes conversations, runs, briefs, links, and every case not in the keep list, restores archived kept cases, and bumps the knowledge version. Only `service_role` can execute it. `npm run demo:reset` calls it for the workspace `Memory Bank Demo` only, keeps cases whose latest title matches the seed corpus in [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts), then reruns the incremental seed. A visitor edit to a seed case that keeps its title is not reverted.
+`readDemoConfig` enables the demo button only when `DEMO_EMAIL` and a password of at least 12 characters are both set. Public sign-up stays disabled. `public.reset_demo_workspace(w, keep_case_ids)` removes conversations, runs, briefs, links, and every case not in the keep list, restores archived kept cases, and bumps the knowledge version. Only `service_role` can execute it. `npm run demo:reset` calls it for the workspace `Memory Bank Demo` only, keeps cases whose latest title matches the seed corpus in [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts), then reruns the incremental seed. The seed compares each fixture with the case's latest revision and saves a new revision only when the content differs, so edited fixtures land in an existing database and a visitor's edit to a seed case is restored; unchanged cases cost no embeddings.
 
 ## States and HTTP
 

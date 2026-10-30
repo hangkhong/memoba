@@ -7,6 +7,7 @@ import { workspaceContextSchema } from "../src/lib/auth/schema.ts";
 import { caseRepository } from "../src/modules/cases/repository.ts";
 import { createCaseService } from "../src/modules/cases/service.ts";
 import { savedCaseSchema } from "../src/modules/cases/contracts.ts";
+import { caseInputSchema } from "../src/modules/cases/schema.ts";
 import { localCases, challengeCases, corpusConceptId, rolloutConceptId, reconciliationConceptId } from "../evals/local-v0/corpus.ts";
 import { demoCases, demoConcepts } from "../evals/demo/corpus.ts";
 import { resolveTarget } from "./target.ts";
@@ -14,6 +15,11 @@ import type { Database } from "../src/lib/supabase/database.types.ts";
 
 const seedConfig = z.object({ DEMO_EMAIL: z.email(), DEMO_PASSWORD: z.string().min(12).max(128) });
 const userSchema = z.object({ id: z.uuid(), email: z.email() });
+function sortKeys(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, item]) => [key, sortKeys(item)]));
+  return value;
+}
 async function seed() {
   const config = seedConfig.safeParse(process.env);
   if (!config.success) throw new Error("Set DEMO_EMAIL and DEMO_PASSWORD (12+ characters) in .env.local.");
@@ -56,9 +62,9 @@ async function seed() {
   const fixtures = demo ? demoCases : process.argv.includes("--challenge") ? challengeCases : localCases;
   const manifest: { slug: string; caseId: string; revisionId: string; archived: boolean }[] = [];
   for (const fixture of fixtures) {
-    const listed = await client.from("case_revisions").select("id,case_id,index_state,embedding_model,embedding_dimensions").eq("workspace_id", workspaceId).contains("content", { title: fixture.input.title }).order("created_at", { ascending: false }).limit(1);
+    const listed = await client.from("case_revisions").select("id,case_id,index_state,embedding_model,embedding_dimensions,content").eq("workspace_id", workspaceId).contains("content", { title: fixture.input.title }).order("created_at", { ascending: false }).limit(1);
     if (listed.error) throw new Error("Cannot inspect seed revisions.");
-    const existing = z.array(z.object({ id: z.uuid(), case_id: z.uuid(), index_state: z.enum(["pending", "ready", "failed"]), embedding_model: z.string(), embedding_dimensions: z.number() })).parse(listed.data)[0];
+    const existing = z.array(z.object({ id: z.uuid(), case_id: z.uuid(), index_state: z.enum(["pending", "ready", "failed"]), embedding_model: z.string(), embedding_dimensions: z.number(), content: z.unknown() })).parse(listed.data)[0];
     const service = createCaseService(caseRepository(client, context, models, existing?.case_id), models.embed);
     let saved;
     if (existing) {
@@ -69,7 +75,9 @@ async function seed() {
         manifest.push({ slug: fixture.slug, caseId: existing.case_id, revisionId: existing.id, archived: true });
         continue;
       }
-      if (existing.embedding_model === models.embeddingModel && existing.embedding_dimensions === models.dimensions) saved = await service.reindex(existing.id);
+      // Changed fixture content becomes a new immutable revision; unchanged content is never re-embedded.
+      if (!fixture.archived && JSON.stringify(sortKeys(existing.content)) !== JSON.stringify(sortKeys(caseInputSchema.parse(fixture.input)))) saved = await service.save(fixture.input);
+      else if (existing.embedding_model === models.embeddingModel && existing.embedding_dimensions === models.dimensions) saved = await service.reindex(existing.id);
       else {
         const source = record.data.published_revision_id ?? record.data.latest_revision_id;
         if (!source) throw new Error("Seed case has no source revision.");

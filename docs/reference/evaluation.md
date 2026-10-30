@@ -67,6 +67,8 @@ These are individual local observations with `gpt-6-luna` and `text-embedding-3-
 
 Import: unaccented Vietnamese-style notes produced an English draft with an `unknown` outcome and an empty observed outcome in about 9.6 seconds. English notes that described a result produced a draft with an `achieved` outcome. After Save, the case reached index state ready and a chat run (`e2641e38-fa84-4227-81ce-f4650a3a3427`, 9 s, 6,165 tokens) found and cited it. One other save attempt did not navigate; the cause was not investigated and is likely a missing required field in the draft, which the form marks.
 
+After the corpus was rewritten with detailed retrospectives (3,000 characters per case on average, 2,200 to 3,900, about 760 tokens), the same three prompts were rerun locally. They completed in 16, 16 and 6 seconds (runs `3c18f7f1-a4d2-42df-9420-cf9bbb5bd826`, `789da253-7f55-4828-b0e7-d5b5d418e922`, `40eb0bc8-9333-4828-b860-ab11ed490f12`; 8,585, 11,285 and 1,619 tokens). The first prompt now read and cited both the all-at-once launch and the staged rollout, where the thinner corpus produced only one cited case. The second still cited the failed Pro increase and the Starter increase, and now named the contract-notice condition from the failed case. The third still said no relevant case was found. No answer reported omitted content. `contextSections` (24) binds before `contextTokens` (8,000) because a full case is under 1,000 tokens, so an answer that reads more than about three cases in full would hit the section cap; this was not observed and no limit was changed.
+
 Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
 
 ## Deterministic checks and remaining work

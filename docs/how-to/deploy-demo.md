@@ -49,4 +49,4 @@ Deploy, then on the deployed URL check that:
 npm run demo:reset -- --remote
 ```
 
-This removes visitor cases, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay; a seed case whose title was edited is replaced.
+This removes visitor cases, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay. The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.

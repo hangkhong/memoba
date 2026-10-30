@@ -17,6 +17,15 @@ describe("demo corpus", () => {
     for (const outcome of ["achieved", "not_achieved", "unknown"] as const) expect(inputs.filter((input) => input.outcome === outcome).length).toBeGreaterThanOrEqual(3);
     expect(inputs.filter((input) => /owner left the company/i.test(input.context)).length).toBeGreaterThanOrEqual(2);
   });
+  it("reads like a real retrospective", () => {
+    for (const input of inputs) {
+      for (const key of ["problem", "context", "approach"] as const) expect(input[key].length, `${input.title}: ${key}`).toBeGreaterThanOrEqual(300);
+      if (input.outcome !== "unknown") expect(input.observedOutcome.length, `${input.title}: observedOutcome`).toBeGreaterThanOrEqual(300);
+      expect(input.lessons.length, `${input.title}: lessons`).toBeGreaterThanOrEqual(150);
+      expect(input.sources.length, `${input.title}: sources`).toBeGreaterThanOrEqual(1);
+      for (const source of input.sources) expect(source.url).toMatch(/^https:\/\/[a-z.-]+\.example\//);
+    }
+  });
   it("offers three English prompts under 400 characters", () => {
     expect(demoPrompts).toHaveLength(3);
     for (const prompt of demoPrompts) expect(prompt.message.length).toBeLessThan(400);
