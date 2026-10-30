@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { MockLanguageModelV4 } from "ai/test";
-import { textReasoningAdapter } from "./agent";
+import { textInstructions, textReasoningAdapter } from "./agent";
 import { createRunBudget } from "./budget";
 import { createRunKnowledge } from "@/modules/knowledge/service";
 import { evidenceSchema } from "@/modules/knowledge/contracts";
@@ -135,4 +135,10 @@ it("checks each citation when contradictory cases are cited together", async () 
   const result = await runTextAnalysis(question, { generate: async () => ({ text: `A pilot succeeded ${first}, but another rollout was halted ${second}.`, usage }), repair: async () => { throw Error("unexpected repair"); }, disclosed: () => [{ marker: first, evidence: item }, { marker: second, evidence: other }], canRead: async () => true, emit: async () => {}, finish: async (_state, _answer, sources) => { snapshots = sources; return crypto.randomUUID(); } });
   expect(result.status).toBe("complete");
   expect(snapshots).toEqual([item, other]);
+});
+it("instructs the model to answer in English with the reuse sections", () => {
+  for (const phrase of ["Answer in English", "How similar cases went", "What's different this time", "Suggested next step"]) expect(textInstructions).toContain(phrase);
+});
+it("forbids filling the precedent section when search found nothing", () => {
+  expect(textInstructions).toContain("If a successful search finds no relevant case, say so and omit How similar cases went");
 });
