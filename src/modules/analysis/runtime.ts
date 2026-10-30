@@ -1,7 +1,7 @@
 import { createServerSupabase } from "@/lib/supabase/server";
 import { configuredModels } from "@/lib/ai/models";
 import type { WorkspaceContext } from "@/lib/auth/schema";
-import { createRunKnowledge } from "@/modules/knowledge/service";
+import { answerCoverage, createRunKnowledge } from "@/modules/knowledge/service";
 import { knowledgeRepository } from "@/modules/knowledge/repository";
 import { analysisRepository } from "./repository";
 import { textReasoningAdapter } from "./agent";
@@ -28,7 +28,7 @@ export async function prepareAnalysis(context: WorkspaceContext, request: Stored
     const deadlineAt = new Date(admitted.deadlineAt).getTime();
     const knowledge = createRunKnowledge(repository, admitted.runId);
     const agent = textReasoningAdapter(models.reasoning, knowledge, emit);
-    const result = await runTextAnalysis(admitted.input, { ...agent, disclosed: knowledge.disclosed, emit, canRead: store.canRead, finish: (...args) => store.finish(admitted.runId, ...args), signal: externalSignal, deadlineAt });
+    const result = await runTextAnalysis(admitted.input, { ...agent, disclosed: knowledge.disclosed, coverage: () => answerCoverage(knowledge.coverage()), emit, canRead: store.canRead, finish: (...args) => store.finish(admitted.runId, ...args), signal: externalSignal, deadlineAt });
     const candidates = knowledge.disclosed().length;
     process.stdout.write(JSON.stringify({ requestId: admitted.runId, status: result.status, code: result.code, candidates, durationMs: Date.now() - started }) + "\n");
     return result;

@@ -17,6 +17,15 @@ export const draftBriefSchema = z.object({
   nextSteps: z.array(claimSchema).min(1),
 }).strict();
 export type DraftBrief = z.infer<typeof draftBriefSchema>;
+// Computed by the app from the run's tool results; the model does not write it.
+export const answerCoverageSchema = z.object({
+  searched: z.boolean(),
+  previewed: z.number().int().nonnegative(),
+  read: z.number().int().nonnegative(),
+  searchFailed: z.boolean(),
+  unreadTitles: z.array(z.string().max(200)).max(10),
+}).strict();
+export type AnswerCoverage = z.infer<typeof answerCoverageSchema>;
 export const textAnswerSchema = z.object({
   version: z.literal(2),
   text: z.string().regex(/\S/).max(20_000),
@@ -24,6 +33,7 @@ export const textAnswerSchema = z.object({
     marker: z.string().regex(/^\[S:[0-9a-f-]{36}:[1-9][0-9]*\]$/),
     evidenceId: z.uuid(),
   }).strict()).max(executionLimits.contextSections),
+  coverage: answerCoverageSchema.optional(),
 }).strict();
 export const storedAnswerSchema = z.union([draftBriefSchema, textAnswerSchema]);
 export type TextAnswer = z.infer<typeof textAnswerSchema>;

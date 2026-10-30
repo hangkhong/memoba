@@ -1,5 +1,5 @@
 import { validateTextAnswer } from "@/modules/briefs/validation";
-import type { TextAnswer } from "@/modules/briefs/schema";
+import type { AnswerCoverage, TextAnswer } from "@/modules/briefs/schema";
 import type { DisclosedSource, EvidenceItem } from "@/modules/knowledge/contracts";
 import { createRunBudget, BudgetError } from "./budget";
 import type { TextRunInput } from "./schema";
@@ -12,6 +12,7 @@ type TextDependencies = {
   generate: (request: TextRunInput, budget: RunBudget) => Promise<{ text: string; usage: ModelUsage }>;
   repair: (request: TextRunInput, draft: string, code: string, budget: RunBudget) => Promise<{ text: string; usage: ModelUsage }>;
   disclosed: () => DisclosedSource[];
+  coverage?: () => AnswerCoverage;
   canRead: (item: EvidenceItem) => Promise<boolean>;
   emit: (event: AnalysisEvent) => Promise<void>;
   finish: (status: Terminal, answer: TextAnswer | null, items: EvidenceItem[], code: string | null, usage: ModelUsage | null) => Promise<string | null>;
@@ -43,7 +44,7 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
     }
     if (checked.kind === "invalid") throw new Error(checked.code);
     await event("validation", "completed");
-    const briefId = await budget.run(() => deps.finish("complete", checked.value, checked.snapshots, null, usage));
+    const briefId = await budget.run(() => deps.finish("complete", deps.coverage ? { ...checked.value, coverage: deps.coverage() } : checked.value, checked.snapshots, null, usage));
     if (!briefId) return { status: "timed_out", briefId: null, code: "TIMED_OUT" } as const;
     return { status: "complete", briefId, code: null } as const;
   } catch (error) {

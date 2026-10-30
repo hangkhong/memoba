@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { createRunKnowledge, type KnowledgeStore, type ReadInput } from "./service";
+import { answerCoverage, createRunKnowledge, type KnowledgeStore, type ReadInput } from "./service";
 import { evidenceSchema } from "./contracts";
 import type { SectionKey } from "@/modules/cases/schema";
 
@@ -122,4 +122,62 @@ it("adds the template to the case header when the store can supply it", async ()
   const result = await knowledge.readCases([item.id], ["approach"]);
   if (result.kind !== "success") throw new Error("Expected read");
   expect(result.cases[0]).toMatchObject({ template: "cs_operations" });
+});
+
+function titled(sectionKey: SectionKey, id: string, title: string) { return source(sectionKey, { caseId: id, revisionId: crypto.randomUUID(), caseTitle: title }); }
+
+it("tracks coverage from tool results, not model text", async () => {
+  const none = createRunKnowledge(store({}), runId);
+  expect(none.coverage()).toEqual({ searchState: "none", previewed: [], readCaseIds: [] });
+  const a = crypto.randomUUID(); const b = crypto.randomUUID();
+  const found = [titled("problem", a, "Case A"), titled("approach", a, "Case A"), titled("problem", b, "Case B")];
+  const knowledge = createRunKnowledge(store({ search: async () => ({ kind: "success", items: found }) }), runId);
+  await knowledge.searchCases("one");
+  await knowledge.searchCases("two");
+  expect(knowledge.coverage()).toEqual({ searchState: "succeeded", previewed: [{ caseId: a, title: "Case A" }, { caseId: b, title: "Case B" }], readCaseIds: [] });
+});
+
+it("counts a successful empty search as a search with nothing found", async () => {
+  const knowledge = createRunKnowledge(store({ search: async () => ({ kind: "empty", items: [] }) }), runId);
+  await knowledge.searchCases("nothing");
+  expect(knowledge.coverage()).toEqual({ searchState: "succeeded", previewed: [], readCaseIds: [] });
+});
+
+it("marks a failed or partial search as incomplete and keeps it that way", async () => {
+  const a = crypto.randomUUID();
+  const ok = titled("problem", a, "Case A");
+  let mode: "error" | "partial" | "success" = "error";
+  const knowledge = createRunKnowledge(store({ search: async () => mode === "error" ? { kind: "error", code: "UNAVAILABLE", retryable: true } : mode === "partial" ? { kind: "partial", items: [ok], code: "CANDIDATE_LIMIT", retryable: false } : { kind: "success", items: [ok] } }), runId);
+  await knowledge.searchCases("one");
+  expect(knowledge.coverage().searchState).toBe("failed_or_partial");
+  mode = "success"; await knowledge.searchCases("two");
+  expect(knowledge.coverage().searchState).toBe("failed_or_partial");
+  mode = "partial";
+  const again = createRunKnowledge(store({ search: async () => ({ kind: "partial", items: [ok], code: "CANDIDATE_LIMIT", retryable: false }) }), runId);
+  await again.searchCases("partial");
+  expect(again.coverage()).toMatchObject({ searchState: "failed_or_partial", previewed: [{ caseId: a }] });
+});
+
+it("counts a case as read once and only when a section was disclosed", async () => {
+  const keys: SectionKey[] = ["approach", "observedOutcome"];
+  const item = caseWith(keys);
+  const knowledge = createRunKnowledge(store(readsFrom([item])), runId);
+  await knowledge.readCases([item.id], keys);
+  await knowledge.readCases([item.id], keys);
+  expect(knowledge.coverage().readCaseIds).toEqual([item.id]);
+  const huge = source("context", { excerpt: "漢".repeat(120000) });
+  const blocked = createRunKnowledge(store({ read: async () => ({ kind: "success", items: [huge] }) }), runId);
+  await blocked.readCases([caseId], []);
+  expect(blocked.coverage().readCaseIds).toEqual([]);
+});
+
+it("derives the saved coverage and caps unread titles", () => {
+  const ids = Array.from({ length: 14 }, () => crypto.randomUUID());
+  const previewed = ids.map((id, index) => ({ caseId: id, title: `Case ${index}` }));
+  const saved = answerCoverage({ searchState: "succeeded", previewed, readCaseIds: [ids[0] ?? "", ids[1] ?? ""] });
+  expect(saved).toMatchObject({ searched: true, previewed: 14, read: 2, searchFailed: false });
+  expect(saved.unreadTitles).toHaveLength(10);
+  expect(saved.unreadTitles[0]).toBe("Case 2");
+  expect(answerCoverage({ searchState: "none", previewed: [], readCaseIds: [] })).toEqual({ searched: false, previewed: 0, read: 0, searchFailed: false, unreadTitles: [] });
+  expect(answerCoverage({ searchState: "failed_or_partial", previewed: [], readCaseIds: [] })).toMatchObject({ searched: true, searchFailed: true });
 });

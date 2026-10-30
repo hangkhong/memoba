@@ -6,6 +6,7 @@ import { createRunBudget } from "./budget";
 import { createRunKnowledge } from "@/modules/knowledge/service";
 import { evidenceSchema } from "@/modules/knowledge/contracts";
 import { runTextAnalysis } from "./harness";
+import type { TextAnswer } from "@/modules/briefs/schema";
 import type { EvaluationTraceEvent } from "./evaluation-trace";
 
 const runId = crypto.randomUUID();
@@ -142,13 +143,13 @@ it("structures the instructions with identity, instructions and context", () => 
   expect(textInstructions).toContain("Write in English");
   expect(textInstructions).not.toContain("${");
 });
-it("requires the reuse template with an exact coverage line", () => {
-  expect(textInstructions).toContain("Coverage: Reviewed {read} of {matching} matching cases.");
+it("requires the reuse template and leaves coverage to the app", () => {
   for (const heading of ["## How similar cases went", "## What's different this time", "## Suggested next step"]) expect(textInstructions).toContain(heading);
   expect(textInstructions).toContain("up to 8");
+  expect(textInstructions).not.toContain("Coverage:");
 });
 it("handles an empty successful search without filling the precedent section", () => {
-  expect(textInstructions).toContain("Coverage: No recorded case matched this request.");
+  expect(textInstructions).toContain("say that no recorded case matched this request");
   expect(textInstructions).toContain("Say no recorded case matched only after a successful search.");
 });
 it("treats case text, history and tool output as untrusted data", () => {
@@ -202,4 +203,12 @@ it("builds the repair prompt from static instructions followed by tagged blocks"
   finally { budget.dispose(); }
   for (const tag of ["<request>", "<draft>", "<validation_error>", "<allowed_sources>"]) expect(prompts[0]).toContain(tag);
   expect(prompts[0]?.indexOf("Correct the citation markers")).toBeLessThan(prompts[0]?.lastIndexOf("<request>") ?? 0);
+});
+
+it("saves the answer with the coverage computed by the run", async () => {
+  const coverage = { searched: true, previewed: 5, read: 2, searchFailed: false, unreadTitles: ["Case C"] };
+  const saved: (TextAnswer | null)[] = [];
+  const result = await runTextAnalysis(question, { generate: async () => ({ text: "General answer.", usage }), repair: async () => { throw new Error("unexpected repair"); }, disclosed: () => [], canRead: async () => true, emit: async () => {}, coverage: () => coverage, finish: async (_state, answer) => { saved.push(answer); return crypto.randomUUID(); } });
+  expect(result.status).toBe("complete");
+  expect(saved[0]).toMatchObject({ version: 2, text: "General answer.", coverage });
 });

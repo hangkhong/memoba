@@ -3,15 +3,34 @@ import type { NormalizedRequest } from "@/modules/analysis/schema";
 import type { SectionKey } from "@/modules/cases/schema";
 import type { CaseHeader, CasePreview, DisclosedSource, EvidenceItem, ReadResult, ReadSection, RunToolResult, ToolResult } from "./contracts";
 import { estimateEvidenceTokens } from "./context";
+import type { AnswerCoverage } from "@/modules/briefs/schema";
 export type SearchInput = { query: string; purpose: "method" | "conditions" | "exceptions"; conceptIds: NormalizedRequest["conceptIds"] };
 export type ReadInput = { caseId: string; sectionKeys: SectionKey[]; revisionId?: string };
 export type ExpandInput = { seedIds: string[]; relationTypes: ("related_to" | "contrasts_with" | "supersedes")[] };
 export type KnowledgeStore = { search: (input: SearchInput) => Promise<ToolResult>; read: (input: ReadInput) => Promise<ToolResult>; expand: (input: ExpandInput) => Promise<ToolResult>; template?: (revisionId: string) => Promise<CaseHeader["template"]> };
 
+export type RunCoverage = { searchState: "none" | "succeeded" | "failed_or_partial"; previewed: { caseId: string; title: string }[]; readCaseIds: string[] };
+
+// Saved with the answer. Read counts include any case read, even one search did not preview.
+export function answerCoverage(coverage: RunCoverage): AnswerCoverage {
+  const read = new Set(coverage.readCaseIds);
+  const previewedIds = new Set(coverage.previewed.map((item) => item.caseId));
+  return {
+    searched: coverage.searchState !== "none",
+    previewed: new Set([...previewedIds, ...read]).size,
+    read: read.size,
+    searchFailed: coverage.searchState === "failed_or_partial",
+    unreadTitles: coverage.previewed.filter((item) => !read.has(item.caseId)).map((item) => item.title).slice(0, 10),
+  };
+}
+
 // Candidate previews and disclosed sources have different citation privileges.
 export function createRunKnowledge(store: KnowledgeStore, runId: string) {
   const pinned = new Map<string, string>();
   const previews = new Set<string>();
+  const previewedCases = new Map<string, string>();
+  const readIds = new Set<string>();
+  let searchState: RunCoverage["searchState"] = "none";
   const disclosed = new Map<string, DisclosedSource>();
   let previewTokens = 0;
   const sectionPriority: SectionKey[] = ["approach", "observedOutcome", "problem", "context", "constraints", "lessons", "deliverable", "changeScope", "deploymentConditions", "customerImpact", "handlingConditions", "escalationNotes"];
@@ -19,7 +38,10 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
 
   async function searchCases(query: string): Promise<RunToolResult<CasePreview>> {
     const result = await store.search({ query, purpose: "method", conceptIds: [] });
+    if (result.kind === "error" || result.kind === "partial") searchState = "failed_or_partial";
+    else if (searchState === "none") searchState = "succeeded";
     if (result.kind === "error" || result.kind === "empty") return result;
+    for (const item of result.items) if (!previewedCases.has(item.caseId)) previewedCases.set(item.caseId, item.caseTitle);
     const groups = new Map<string, CasePreview>();
     const previous: string[] = [];
     let reason: Extract<RunToolResult<CasePreview>, { kind: "partial" }>["reason"] | undefined = result.kind === "partial" ? result.code : undefined;
@@ -88,14 +110,14 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
       const itemKey = key(item);
       const previous = disclosed.get(itemKey);
       let marker: string; let fresh = false;
-      if (previous) { alreadyRead.push(previous.marker); marker = previous.marker; }
+      if (previous) { alreadyRead.push(previous.marker); marker = previous.marker; readIds.add(caseId); }
       else {
         const all = [...disclosed.values()].map((entry) => entry.evidence);
         if (all.length >= executionLimits.contextSections || previewTokens + estimateEvidenceTokens([...all, item]) > executionLimits.contextTokens) { reason = "CONTEXT_LIMIT"; break; }
         pinned.set(caseId, item.revisionId);
         marker = `[S:${runId}:${disclosed.size + 1}]`;
         disclosed.set(itemKey, { marker, evidence: item });
-        fresh = true; added += 1;
+        fresh = true; added += 1; readIds.add(caseId);
       }
       const header = headers.get(caseId);
       if (item.sectionKey === "observedOutcome" && header) header.observedOutcome = fresh ? { marker, text: item.excerpt } : { marker };
@@ -108,5 +130,6 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
     return { kind: "success", items, cases };
   }
 
-  return { searchCases, readCases, disclosed: () => [...disclosed.values()] };
+  const coverage = (): RunCoverage => ({ searchState, previewed: [...previewedCases].map(([caseId, title]) => ({ caseId, title })), readCaseIds: [...readIds] });
+  return { searchCases, readCases, coverage, disclosed: () => [...disclosed.values()] };
 }
