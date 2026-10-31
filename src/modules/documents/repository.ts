@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { WorkspaceContext } from "@/lib/auth/schema";
-import { documentContentSchema, savedDocumentSchema } from "./schema";
+import { documentContentSchema, savedDocumentSchema } from "./schema.ts";
 import type { DocumentStore } from "./service";
 
 export const documentRecordSchema = z.object({ id: z.uuid(), lifecycle: z.enum(["active", "archived"]), published_revision_id: z.uuid().nullable(), created_at: z.iso.datetime({ offset: true }) });

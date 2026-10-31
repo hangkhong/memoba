@@ -9,7 +9,7 @@ import { z } from "zod";
 // The synthetic question and tool arguments stay in a private local artifact.
 export async function runObservedScenario({ scenario, models, client, context, modules, onUpdate = () => {} }) {
   const { executionLimits } = modules.limits;
-  const report = { version: 2, mode: "in-process-nonpersistent", scenario: scenario.id, fixtureReview: "pending", expectations: { expectedSources: scenario.expectedSources, reviewFor: scenario.reviewFor }, turns: [], note: "Source IDs are recorded when submitted to a model step. The observer does not prove provider receipt if that step fails. No analysis or brief is persisted." };
+  const report = { version: 2, mode: "in-process-nonpersistent", scenario: scenario.id, fixtureReview: "pending", expectations: { expectedSources: scenario.expectedSources, expectedDocuments: scenario.expectedDocuments ?? [], reviewFor: scenario.reviewFor }, turns: [], note: "Source IDs are recorded when submitted to a model step. The observer does not prove provider receipt if that step fails. No analysis or brief is persisted." };
   const history = [];
   for (const question of scenario.messages) {
     const runId = randomUUID();

@@ -8,6 +8,9 @@ import { caseRepository } from "../src/modules/cases/repository.ts";
 import { createCaseService } from "../src/modules/cases/service.ts";
 import { savedCaseSchema } from "../src/modules/cases/contracts.ts";
 import { caseInputSchema } from "../src/modules/cases/schema.ts";
+import { documentRepository } from "../src/modules/documents/repository.ts";
+import { createDocumentService } from "../src/modules/documents/service.ts";
+import { demoDocuments } from "../evals/demo/documents.ts";
 import { localCases, challengeCases, corpusConceptId, rolloutConceptId, reconciliationConceptId } from "../evals/local-v0/corpus.ts";
 import { demoCases, demoConcepts } from "../evals/demo/corpus.ts";
 import { resolveTarget } from "./target.ts";
@@ -60,6 +63,8 @@ async function seed() {
   if (concepts.error) throw new Error("Cannot seed concepts.");
   if (!demo && !process.argv.includes("--cases") && !process.argv.includes("--challenge")) { process.stdout.write("Seeded local accounts and fixed concepts. Pass --demo, --cases or --challenge explicitly to index a corpus with the real model.\n"); return; }
   const ai = readAIConfig(process.env);
+  // The demo needs process documents too, and the reset removes them, so a demo seed without embeddings must not look like success.
+  if (ai.kind !== "configured" && demo) throw new Error("The demo seed needs a configured embedding model for cases and documents. Set AI_EMBEDDING_MODEL and its API key in .env.local.");
   if (ai.kind !== "configured") { process.stdout.write("Seeded workspace and accounts. AI is unavailable; case seeding requires real embeddings.\n"); return; }
   const models = configuredModels();
   const context = { workspaceId: workspaceContextSchema.shape.workspaceId.parse(workspaceId) };
@@ -96,7 +101,25 @@ async function seed() {
   const canary=manifest.find((item)=>item.slug==="rollout-canary"); const legacy=manifest.find((item)=>item.slug==="rollout-legacy"); const onboarding=manifest.find((item)=>item.slug==="onboarding-checklist");
   if(canary && legacy) { const result=await client.rpc("link_cases",{source:canary.caseId,target:legacy.caseId,relation:"supersedes",reason:"Controlled release replaced the old manual procedure.",archive_target:true});if(result.error)throw new Error("Cannot seed supersedes relation."); }
   if(canary && onboarding) { const result=await client.rpc("link_cases",{source:canary.caseId,target:onboarding.caseId,relation:"related_to",reason:"Both use pilots and explicit review checkpoints; domain applicability must be checked.",archive_target:false});if(result.error)throw new Error("Cannot seed cross-domain relation."); }
+  const documentIds: string[] = [];
+  if (demo) {
+    const documents = createDocumentService(documentRepository(client, context, models), models.embed, models);
+    for (const fixture of demoDocuments) {
+      const listed = await client.from("document_revisions").select("document_id,content").eq("workspace_id", workspaceId).contains("content", { title: fixture.input.title }).order("created_at", { ascending: false }).limit(1);
+      if (listed.error) throw new Error("Cannot inspect seed documents.");
+      const existing = z.array(z.object({ document_id: z.uuid() })).parse(listed.data)[0];
+      if (existing) {
+        const record = await client.from("documents").select("lifecycle").eq("id", existing.document_id).eq("workspace_id", workspaceId).single();
+        if (record.error) throw new Error("Cannot inspect seed document.");
+        if (record.data.lifecycle === "archived") throw new Error("A seed document was archived. Run npm run demo:reset to restore the demo documents.");
+      }
+      // Unchanged content returns the current revision without an embedding call; changed content becomes a new revision.
+      const result = await documents.save(fixture.input, existing?.document_id ?? null);
+      if (result.kind !== "saved") throw new Error(`Seed document "${fixture.input.title}" was not saved: ${result.kind === "invalid" ? result.errors.join(" ") : "unavailable"}`);
+      documentIds.push(result.saved.documentId);
+    }
+  }
   mkdirSync(".superpowers/evals",{recursive:true});writeFileSync(".superpowers/evals/seed.json",JSON.stringify(manifest,null,2)+"\n");
-  process.stdout.write(`Seeded ${manifest.length} cases with index state ready on the configured embedding profile. Archived history was preserved and the demo user password now matches DEMO_PASSWORD.\n`);
+  process.stdout.write(`Seeded ${manifest.length} cases${demo ? ` and ${documentIds.length} process documents` : ""} with index state ready on the configured embedding profile. Archived history was preserved and the demo user password now matches DEMO_PASSWORD.\n`);
 }
 seed().catch((error: unknown) => { process.stderr.write(error instanceof Error ? error.message + "\n" : "Seed failed.\n"); process.exitCode = 1; });

@@ -5,10 +5,10 @@ import { resolve } from "node:path";
 import { request as playwrightRequest } from "@playwright/test";
 import { z } from "zod";
 
-const scenarioSchema = z.object({ id: z.string().min(1), messages: z.array(z.string().min(1)).min(1), expectedSources: z.array(z.string()), reviewFor: z.array(z.string()).min(1) }).strict();
+const scenarioSchema = z.object({ id: z.string().min(1), corpus: z.enum(["challenge", "demo"]).default("challenge"), messages: z.array(z.string().min(1)).min(1), expectedSources: z.array(z.string()), expectedDocuments: z.array(z.string()).default([]), reviewFor: z.array(z.string()).min(1) }).strict();
 const idSchema = z.uuid();
 const runSchema = z.object({ status: z.string(), error_code: z.string().nullable(), usage: z.unknown().nullable(), briefId: z.uuid().nullable() });
-const answerSchema = z.object({ generated: z.object({ version: z.literal(2), text: z.string(), citations: z.array(z.object({ marker: z.string(), evidenceId: z.uuid() })) }), evidence: z.array(z.object({ evidenceId: z.uuid(), caseId: z.uuid(), revisionId: z.uuid(), sectionKey: z.string() })) });
+const answerSchema = z.object({ generated: z.object({ version: z.literal(2), text: z.string(), citations: z.array(z.object({ marker: z.string(), evidenceId: z.uuid() })) }), evidence: z.array(z.object({ evidenceId: z.uuid(), revisionId: z.uuid() }).passthrough()) });
 
 // The stream is authoritative for tool activity. An absent event is not a zero-result search.
 export function parseEventBlock(block) {
@@ -56,7 +56,7 @@ async function main() {
   const directory = resolve(".superpowers/evals/text");
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const file = resolve(directory, `${new Date().toISOString().replaceAll(":", "-")}-${randomUUID()}.json`);
-  const report = { version: 1, scenario: scenario.id, fixtureReview: "pending", expectations: { expectedSources: scenario.expectedSources, reviewFor: scenario.reviewFor }, conversationId: null, turns: [], note: "Tool inputs, all delivered source IDs, and correction attempts are not exposed by the current API. Citation validity does not establish semantic support." };
+  const report = { version: 1, scenario: scenario.id, fixtureReview: "pending", expectations: { expectedSources: scenario.expectedSources, expectedDocuments: scenario.expectedDocuments, reviewFor: scenario.reviewFor }, conversationId: null, turns: [], note: "Tool inputs, all delivered source IDs, and correction attempts are not exposed by the current API. Citation validity does not establish semantic support." };
   const save = async () => writeFile(file, JSON.stringify(report, null, 2) + "\n", { mode: 0o600 });
   const post = async (path, data, extraHeaders = {}) => {
     const response = await api.post(path, { data, headers: extraHeaders });

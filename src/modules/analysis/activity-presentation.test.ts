@@ -30,4 +30,14 @@ describe("activity presentation", () => {
     expect(activitySteps([event("started", "search_cases"), event("failed", "search_cases", { code: "TIMEOUT" })], "complete")[0]).toMatchObject({ text: "Couldn't search your knowledge", state: "error" });
     expect(activitySteps([event("started")], "cancelled")[0]).toMatchObject({ text: "Stopped while reading cases", state: "pending" });
   });
+  it("states what each source returned from the recorded tool code, not from model text", () => {
+    const text = (code?: string) => activitySteps([event("started", "search_knowledge"), event("completed", "search_knowledge", code ? { code } : {})], "complete")[0]?.text;
+    expect(text("cases:found:3;documents:none:0")).toBe("Searched cases and documents · 3 cases found · no documents matched");
+    expect(text("cases:found:1;documents:failed:0")).toBe("Searched cases and documents · 1 case found · documents could not be searched");
+    expect(text("cases:none:0;documents:partial:2")).toBe("Searched cases and documents · no cases matched · 2 documents found, search incomplete");
+    expect(text()).toBe("Searched your knowledge");
+    expect(text("garbage")).toBe("Searched your knowledge");
+    expect(activitySteps([event("started", "read_document"), event("completed", "read_document")], "complete")[0]?.text).toBe("Read process document details");
+    expect(activitySteps([event("started", "read_document")], "running")[0]).toMatchObject({ text: "Reading process documents", state: "running" });
+  });
 });

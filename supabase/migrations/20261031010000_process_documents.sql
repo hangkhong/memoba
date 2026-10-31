@@ -30,8 +30,8 @@ create index document_sections_embedding on public.document_sections using hnsw(
 
 create function private.immutable_document() returns trigger language plpgsql set search_path='' as $$
 begin
- if tg_table_name='document_revisions' and (new.content is distinct from old.content or new.document_id<>old.document_id or new.workspace_id<>old.workspace_id or new.author_id<>old.author_id or new.created_at<>old.created_at or new.embedding_model<>old.embedding_model or new.embedding_dimensions<>old.embedding_dimensions) then raise exception 'Immutable revision'; end if;
  if tg_table_name='document_sections' then raise exception 'Immutable section'; end if;
+ if new.content is distinct from old.content or new.document_id<>old.document_id or new.workspace_id<>old.workspace_id or new.author_id<>old.author_id or new.created_at<>old.created_at or new.embedding_model<>old.embedding_model or new.embedding_dimensions<>old.embedding_dimensions then raise exception 'Immutable revision'; end if;
  return new;
 end $$;
 create trigger immutable_document_revision before update on public.document_revisions for each row execute function private.immutable_document();
