@@ -12,7 +12,7 @@ Start the app:
 npm run dev
 ```
 
-Open http://localhost:3000 and sign in with the `DEMO_EMAIL` and `DEMO_PASSWORD` from `.env.local`. The command starts the native stack, applies migrations, updates local connection settings, seeds the workspace, and prints the App, Studio and API URLs. It never seeds cases; when the Knowledge Hub is empty it says so. It stops whatever process is listening on port 3000 (SIGTERM, then SIGKILL if it does not exit) so the app always starts there.
+Open http://localhost:3000. Visitors see the landing page, whose **Open the demo** button goes to `/login`, and a signed-in user is sent straight to Chat. Sign in with the `DEMO_EMAIL` and `DEMO_PASSWORD` from `.env.local`. The command starts the native stack, applies migrations, updates local connection settings, seeds the workspace, and prints the App, Studio and API URLs. It never seeds cases; when the Knowledge Hub is empty it says so. It stops whatever process is listening on port 3000 (SIGTERM, then SIGKILL if it does not exit) so the app always starts there.
 
 The native stack assigns its own ports, so use the printed URLs. The printout never includes keys.
 
@@ -49,7 +49,7 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser suite uses its own Next.js server on port 3100 with model credentials disabled. It covers Auth, structured chat, saved follow-ups, unavailable analysis, reload, mobile navigation, case save, immutable revisions, indexing retry, and archive. Unit tests use the official AI SDK test providers. No runtime mock supplies evidence or model output.
+The browser suite uses its own Next.js server on port 3100 with model credentials disabled. It covers the landing page, Auth, structured chat, saved follow-ups, unavailable analysis, reload, mobile navigation, case save, immutable revisions, indexing retry, and archive. Unit tests use the official AI SDK test providers. No runtime mock supplies evidence or model output.
 
 The CI workflow runs the same foundation checks against a fresh native database. Production build checks can run without AI or Supabase environment values. Regenerate `src/lib/supabase/database.types.ts` after migrations. If a case or request schema changes, create a new migration with `npx supabase migration new input_contracts`, then generate its checks with `npm run db:contracts -- <new-migration.sql>` before applying it.
 

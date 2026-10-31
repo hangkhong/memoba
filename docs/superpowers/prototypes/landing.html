@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memoba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Workspace tokens from src/app/globals.css, plus --doc. Light only. Circle = case, square = document. */
+:root{color-scheme:light;--bg:#fff;--ink:#131416;--doc:#20282c;--case:#1b6c80;--case-soft:#e3f0f3;--doc-soft:#e7e9ea;--muted:#f4f6f8;--sub:#5d5f60;--line:#dfe2e5;--fail:#b42318;--fail-soft:#fdecea;--m:clamp(16px,3vw,40px)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.55 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3,p,ol,ul,figure{margin:0;padding:0}ol,ul{list-style:none}a{color:inherit}button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--case);outline-offset:2px}
+code{font:13px ui-monospace,monospace}
+.wrap{max-width:1360px;margin:0 auto;padding:0 var(--m)}
+.btn{display:inline-flex;align-items:center;height:40px;padding:0 16px;background:var(--doc);color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px;white-space:nowrap;transition:background .15s,transform .1s}
+.btn:hover{background:var(--case)}.btn:active{transform:translateY(1px)}
+
+.top{position:sticky;top:0;z-index:30;background:#fff}
+.top .wrap{height:60px;display:flex;align-items:center;gap:28px}
+.mark{display:flex;align-items:center;gap:7px;font-weight:700;font-size:19px;letter-spacing:-.02em;text-decoration:none}
+.mark i{width:11px;height:11px;background:var(--case);border-radius:50%}.mark i+i{background:var(--doc);border-radius:0;margin-left:-5px}.mark b{font-weight:700;margin-left:3px}
+.top nav{display:flex;gap:24px;margin-left:auto;font-size:15px;font-weight:500}.top nav a{text-decoration:none}.top nav a:hover{color:var(--case)}
+
+.hero{padding:clamp(40px,6vw,80px) 0 clamp(64px,8vw,112px)}
+h1{font-size:clamp(38px,6.6vw,100px);line-height:1.02;letter-spacing:-.04em;font-weight:600;max-width:15.5em}
+.lede{font-size:clamp(18px,1.6vw,22px);line-height:1.45;max-width:36em;margin-top:28px}
+.hero .btn{height:48px;padding:0 22px;font-size:16px;margin-top:24px}
+
+.spec{margin-top:clamp(40px,5vw,72px);display:grid;grid-template-columns:minmax(0,1fr) 340px;background:var(--muted)}
+.ans{padding:clamp(20px,3vw,40px);min-width:0;background:var(--muted)}
+.ask{background:var(--doc);color:#fff;padding:12px 16px;border-radius:8px;max-width:44em;margin-left:auto;font-size:15px}
+.ans h3{font-size:15px;font-weight:700;margin:22px 0 4px}.ans .lead{font-size:clamp(19px,1.8vw,23px);line-height:1.35;font-weight:600;letter-spacing:-.015em;margin-top:22px;max-width:30em}
+.ans p.b{max-width:42em;font-size:16px}
+.cite{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px;vertical-align:1px;padding:0 7px;height:22px;font-size:12.5px;font-weight:600;background:var(--case-soft);color:var(--case);border-radius:11px;transition:transform .1s}
+.cite::before{content:"";width:8px;height:8px;background:currentColor;border-radius:50%}
+.cite.d{background:var(--doc-soft);color:var(--doc);border-radius:2px}.cite.d::before{border-radius:0}
+.cite[aria-pressed=true]{background:var(--case);color:#fff}.cite.d[aria-pressed=true]{background:var(--doc)}
+.src{background:var(--case);color:#fff;padding:clamp(20px,2.5vw,32px);display:flex;flex-direction:column;gap:10px;font-size:15.5px}
+.src.d{background:var(--doc)}.src b{font-size:19px;line-height:1.25;letter-spacing:-.01em}.src span{opacity:.85;font-size:14px}.src small{margin-top:auto;font-size:13px;opacity:.85}
+
+.lost{padding:clamp(72px,10vw,160px) 0}
+h2{font-size:clamp(32px,4.6vw,68px);line-height:1.04;letter-spacing:-.035em;font-weight:600}
+
+.engine{background:var(--muted);padding:clamp(72px,9vw,136px) 0}
+.engine .intro{display:grid;grid-template-columns:7fr 5fr;gap:32px;align-items:end;margin-bottom:32px}
+.runs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.runs button{height:44px;padding:0 14px;border:0;background:#fff;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+.runs button[aria-pressed=true]{background:var(--doc);color:#fff}.runs button[data-r=failed][aria-pressed=true]{background:var(--fail)}
+.board{background:#fff;padding:clamp(8px,1.5vw,20px)}
+.q{font-size:15px;padding:6px 8px 10px}.q b{font-weight:600}
+svg.map{display:block;width:100%;height:auto}svg.map text{font-family:Manrope,Arial,sans-serif}
+.lk{fill:none;stroke:#c3c8cc;stroke-width:2;transition:opacity .4s,stroke .3s}.lk.on{stroke:var(--doc)}.lk.gone{opacity:.15}.lk.bad{stroke:var(--fail);stroke-dasharray:3 6}
+.lk.tr{stroke-dasharray:7 7;stroke:#c3c8cc}.lk.tr.on{stroke:var(--case)}
+.nd rect,.nd circle{fill:#fff;stroke:#c3c8cc;stroke-width:2;transition:fill .25s,stroke .25s}
+.nd{transition:opacity .4s}.nd text{fill:var(--ink);font-size:15px;font-weight:600;text-anchor:middle;transition:fill .25s}.nd text.s{font-size:12.5px;font-weight:500;fill:var(--sub)}
+.nd.gone{opacity:.25}.nd.seen rect,.nd.seen circle{stroke:var(--doc)}
+.nd.case.seen rect,.nd.case.seen circle{stroke:var(--case)}
+.nd.now rect,.nd.now circle{fill:var(--doc);stroke:var(--doc)}.nd.case.now rect,.nd.case.now circle{fill:var(--case);stroke:var(--case)}.nd.now text,.nd.now text.s{fill:#fff}
+.nd.none rect{stroke-dasharray:5 5;stroke:var(--sub)}.nd.fail rect{stroke:var(--fail);fill:var(--fail-soft)}.nd.fail text{fill:var(--fail)}
+.tok{fill:var(--case);stroke:#fff;stroke-width:3}
+.ins{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;margin-top:12px;min-height:188px}
+.note{background:#fff;padding:20px;min-width:0}.note h3{font-size:clamp(20px,2vw,26px);letter-spacing:-.02em;line-height:1.2;font-weight:600}.note p{margin-top:8px;max-width:36em}.note code{display:block;margin-top:10px;color:var(--sub);overflow-wrap:anywhere}
+.out{background:var(--doc);color:#fff;padding:20px;min-width:0;font-size:15.5px}.out.fail{background:var(--fail)}.out h3{font-size:15px;font-weight:700}.out p{margin-top:4px}
+.prog{display:flex;align-items:center;gap:4px;margin-top:12px}
+.prog i{height:6px;flex:1;background:#d7dbde;transition:background .2s}.prog i.d{background:var(--case)}.prog i.n{background:var(--doc)}
+.ctl{display:flex;gap:6px;margin-top:10px;align-items:center;font-size:14px;color:var(--sub)}
+.ctl button{height:44px;min-width:44px;padding:0 12px;background:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:600;color:var(--ink)}.ctl span{margin-left:auto}
+.all{margin-top:32px;display:none;grid-template-columns:repeat(3,1fr);gap:16px}.all>div{background:#fff;padding:16px}.all h3{font-size:17px}.all ol{list-style:decimal;padding-left:20px;font-size:15px;margin-top:8px}
+.static .all,.nojs .all{display:grid}.static .prog,.static .ctl{display:none}
+
+.honest{padding:clamp(72px,10vw,160px) 0}
+.honest h2{max-width:13em;margin-bottom:clamp(32px,5vw,64px)}
+.hon{display:grid;grid-template-columns:7fr 5fr;gap:clamp(24px,5vw,72px)}
+.diff{background:var(--muted);padding:clamp(20px,3vw,36px)}.diff h3{font-size:clamp(20px,2vw,26px);letter-spacing:-.02em;line-height:1.2}.diff p{margin-top:12px;max-width:36em}
+.rules li{padding-bottom:24px}.rules h3{font-size:19px;line-height:1.3;letter-spacing:-.01em}
+
+.end{background:var(--case);color:#fff;padding:clamp(56px,8vw,112px) 0 24px;overflow:hidden}
+.end h2{max-width:13em}.end .btn{background:#fff;color:var(--ink);height:48px;padding:0 22px;font-size:16px;margin-top:28px}.end .btn:hover{background:var(--doc-soft)}
+.end p{margin-top:16px;max-width:36em}.big{font-size:clamp(72px,21vw,340px);font-weight:700;letter-spacing:-.05em;line-height:.9;margin-top:clamp(40px,6vw,88px)}
+
+@media (max-width:900px){
+ .top nav{display:none}.top .btn{margin-left:auto}.top .wrap{height:56px}
+ .spec{grid-template-columns:1fr}.lost .wrap,.engine .intro,.hon{grid-template-columns:1fr}
+ .ins{grid-template-columns:1fr}.note{min-height:172px}
+ .engine>.wrap{display:flex;flex-direction:column}.ins{display:contents}.note{order:1;position:sticky;top:56px;z-index:5;height:180px;overflow:hidden;padding:12px 14px;margin-top:6px}.note p{font-size:15px;line-height:1.4;margin-top:4px}.note code{font-size:12px;margin-top:4px}.board{order:2}.prog{order:3}.out{order:4;margin-top:12px}.ctl{order:5}.all{order:6}.static .note{position:static;height:auto}.all{grid-template-columns:1fr}.runs button{flex:1 1 auto;padding:0 10px;font-size:14px}.ctl span{display:none}
+ .board{padding:8px 4px}.nd text{font-size:13px}.nd text.s{font-size:11.5px}
+}
+
+/* Revision: product frames */
+.hero{text-align:center}.hero h1{margin:0 auto;max-width:13.5em;font-size:clamp(38px,5.6vw,84px)}.hero .lede{margin:24px auto 0}
+.stage{background:#e9f1f3;border-radius:20px;padding:clamp(12px,3.5vw,56px) clamp(12px,3.5vw,56px) 0;overflow:hidden;position:relative}
+.shot{display:block;width:100%;height:auto;border-radius:12px 12px 0 0;box-shadow:0 0 0 1px rgb(19 20 22/.07),0 24px 56px -28px rgb(19 20 22/.28)}
+.hero-stage{margin-top:clamp(40px,5vw,72px);overflow:visible}.hero-stage .main{max-height:680px;object-fit:cover;object-position:top}
+.hero-stage picture{display:block;overflow:hidden;border-radius:12px 12px 0 0}
+.shot.float{position:absolute;right:clamp(-12px,1vw,24px);bottom:28px;width:clamp(220px,24vw,340px);border-radius:12px}
+.cap{margin-top:14px;font-size:15px;color:var(--sub)}
+.lost,.honest,.work{padding:clamp(80px,10vw,152px) 0}.lost{padding-bottom:clamp(48px,6vw,80px)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding-bottom:clamp(80px,10vw,152px)}
+.mem{background:var(--muted);border-radius:20px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.memt{padding:clamp(24px,3vw,44px) clamp(24px,3vw,44px) 28px}.memt h2{font-size:clamp(28px,3.1vw,46px)}.memt p{margin-top:12px;max-width:30em}
+.sh{display:block;width:28px;height:28px;margin-bottom:24px}.sh.c{background:var(--case);border-radius:50%}.sh.k{background:var(--doc)}
+.mem .stage{background:none;padding:0 0 0 clamp(24px,3vw,44px);border-radius:0;margin-top:auto}.mem .shot{border-radius:12px 0 0 0}
+.crop .shot{aspect-ratio:16/10;object-fit:cover;object-position:top left}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:clamp(32px,4vw,56px)}.pair h3{font-size:21px;letter-spacing:-.015em;margin-top:20px}.pair p{max-width:34em}.pair>div{min-width:0}
+.work h2,.honest h2{max-width:16em}.engine{border-radius:0}.board,.note,.out{border-radius:12px}.ins{gap:12px}.runs button,.ctl button{border-radius:999px}.btn{border-radius:999px;padding:0 20px}
+.top{box-shadow:0 1px 0 var(--line)}
+.tall .shot{aspect-ratio:auto;max-height:520px;object-position:top}
+.end{margin:0 var(--m) var(--m);border-radius:20px;background:var(--doc)}.end .wrap{padding:0 clamp(8px,3vw,40px)}.big{color:#fff;opacity:.95}
+.lk{transition:opacity .5s ease,stroke .35s ease}.fill{fill:none;stroke:var(--doc);stroke-width:2.5;stroke-dasharray:1;stroke-dashoffset:1;transition:opacity .5s ease}.fill.gone{opacity:0}
+.nd rect{transition:fill .35s ease,stroke .35s ease}.nd text{transition:fill .35s ease}.nd{transition:opacity .5s ease}
+.tok{will-change:transform;transition:opacity .3s}
+@media (max-width:900px){.hero{text-align:left}.hero h1,.hero .lede{margin-left:0}.stage{border-radius:14px}.two,.pair{grid-template-columns:1fr}.shot.float{display:none}.hero-stage .main{max-height:none}.top nav{display:none}.top .btn{margin-left:auto}.end{margin:0}.end{border-radius:0}}
+.lost-stage{margin-top:clamp(32px,4vw,56px);overflow:visible}.lost-stage picture{display:block;overflow:hidden;border-radius:12px 12px 0 0}.lost-stage .main{max-height:640px;object-fit:cover;object-position:top}
+.tick{position:absolute;left:clamp(12px,1.5vw,28px);bottom:28px;display:flex;gap:12px;align-items:center;background:#fff;padding:16px 28px 16px 18px;border-radius:12px;box-shadow:0 0 0 1px rgb(19 20 22/.07),0 24px 56px -24px rgb(19 20 22/.4)}
+.tick i{width:12px;height:12px;background:var(--doc);flex:none}.tick b{display:block;font-size:17px;line-height:1.25;letter-spacing:-.01em}.tick span{font-size:15px;color:var(--sub)}
+.lostl{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(20px,3vw,44px);margin-top:clamp(40px,5vw,64px)}.lostl h3{font-size:21px;line-height:1.25;letter-spacing:-.015em;font-weight:600}.lostl p{margin-top:6px}
+@media (max-width:900px){.lostl{grid-template-columns:1fr 1fr}.lost-stage .main{max-height:560px}.tick{left:auto;right:10px;bottom:10px;padding:10px 16px 10px 12px}}
+@media (max-width:560px){.lostl{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.tok{display:none}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body class="nojs">
+<header class="top"><div class="wrap">
+  <a class="mark" href="#top" aria-label="Memoba home"><i></i><i></i><b>Memoba</b></a>
+  <nav aria-label="Page"><a href="#memories">Two memories</a><a href="#engine">How it answers</a><a href="#honest">What it won't say</a></nav>
+  <a class="btn" href="/login">Open the demo</a>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="wrap">
+  <h1>Your team already solved this. Nobody remembers where.</h1>
+  <p class="lede">Memoba answers questions from your team's recorded cases and process documents, and cites the sources it read.</p>
+  <a class="btn" href="/login">Open the demo</a>
+  <figure class="stage hero-stage">
+    <picture><source media="(max-width:900px)" srcset="../../../public/landing/chat-answer-phone.png"><img class="shot main" src="../../../public/landing/chat-answer.png" alt="A Memoba conversation: a release question answered from the production release procedure, with numbered citations." fetchpriority="high"></picture>
+    <img class="shot float" src="../../../public/landing/evidence-panel.png" alt="The source evidence panel showing the approach section of the staged rollout case.">
+  </figure>
+  <p class="cap">A saved answer from the demo workspace. Open any citation to read the section behind it.</p>
+</div></section>
+
+<section class="lost"><div class="wrap">
+  <h2>The ticket survives. The reasoning doesn't.</h2>
+  <figure class="stage lost-stage">
+    <picture><source media="(max-width:900px)" srcset="../../../public/landing/recurring-case-phone.png"><img class="shot main" src="../../../public/landing/recurring-case.png" alt="The Memoba case page for the all-at-once launch of recurring invoices, showing outcome Not achieved, the observed outcome, and lessons."></picture>
+    <div class="tick" role="img" aria-label="An illustrative ticket reading Recurring invoices, status Done"><i></i><div><b>Recurring invoices</b><span>Done</span></div></div>
+  </figure>
+  <p class="cap">The small ticket is an illustration of what usually remains. Behind it is the case as recorded in the demo workspace.</p>
+  <ul class="lostl">
+    <li><h3>The conditions</h3><p>No feature flag, no rollback rehearsal, no weekend on-call owner, and a Friday afternoon release.</p></li>
+    <li><h3>The road not taken</h3><p>A 5% start was discussed and rejected, because the feature had to be visible during a keynote.</p></li>
+    <li><h3>What really happened</h3><p>About 900 duplicate invoices for roughly 70 customers, found through a customer email on Saturday evening.</p></li>
+    <li><h3>What to do next time</h3><p>A fixed date is a reason to cut scope, not to skip a staged rollout.</p></li>
+  </ul>
+</div></section>
+
+<section class="two wrap" id="memories">
+  <div class="mem"><div class="memt"><i class="sh c"></i><h2>Cases say what happened.</h2><p>A case records the problem, conditions, approach, and the outcome someone actually observed.</p></div><div class="stage crop"><img class="shot " src="../../../public/landing/case-page.png" alt="The case page for the staged rollout of the invoice approval workflow."></div></div>
+  <div class="mem"><div class="memt"><i class="sh k"></i><h2>Documents say what is required.</h2><p>A document is the versioned rule in force today, with its owner and effective date.</p></div><div class="stage crop"><img class="shot " src="../../../public/landing/document-page.png" alt="The document page for the production release procedure, version 3."></div></div>
+</section>
+
+<section class="engine" id="engine"><div class="wrap">
+  <div class="intro"><h2>Follow one question through the engine.</h2><p>The model chooses what to search and read. The application holds the limits, and records what each source really returned.</p></div>
+  <div class="runs" role="group" aria-label="Choose an outcome">
+    <button data-r="found" aria-pressed="true">Document found</button><button data-r="none" aria-pressed="false">Searched, nothing found</button><button data-r="failed" aria-pressed="false">Could not search</button>
+  </div>
+  <div class="board">
+    <p class="q"><b>Question:</b> <span>What does our release process require, and how have our past launches gone?</span></p>
+    <svg class="map" id="map" role="img" aria-label="Diagram of a question passing through admission and search, into a case lane and a document lane, then to a written answer, a citation check, and a saved record, with a dashed line back to the start."></svg>
+  </div>
+  <div class="prog" id="prog" aria-hidden="true"></div>
+  <div class="ins"><div class="note" id="note"></div><div class="out" id="out"></div></div>
+  <div class="ctl"><button id="prev" aria-label="Previous step">Back</button><button id="play">Pause</button><button id="next" aria-label="Next step">Next</button><button id="replay">Replay</button><span id="cnt"></span></div>
+  <div class="all" id="all"></div>
+</div></section>
+
+<section class="work"><div class="wrap">
+  <h2>See what the team knows, and where it's thin.</h2>
+  <div class="pair">
+    <div><div class="stage crop"><img class="shot " src="../../../public/landing/knowledge-hub.png" alt="Knowledge Hub listing recorded cases with their template, outcome, and status."></div><h3>Knowledge Hub</h3><p>Every case and process document in one place, with its outcome and status.</p></div>
+    <div><div class="stage crop"><img class="shot " src="../../../public/landing/dashboard.png" alt="The Dashboard, labelled Sample data, showing evidence-backed answers and a needs-attention queue."></div><h3>Dashboard</h3><p>Shows which answers lean on evidence and which cases need an outcome. The figures in this demo are labelled sample data.</p></div>
+  </div>
+</div></section>
+
+<section class="honest" id="honest"><div class="wrap">
+  <h2>When they differ, you get both sides.</h2>
+  <div class="hon">
+    <div class="stage crop tall"><img class="shot " src="../../../public/landing/answer-differ.png" alt="The answer section Where practice and process differ, followed by what is different this time and a suggested next step."></div>
+    <ul class="rules">
+      <li><h3>A case is never called a violation.</h3><p>Memoba reports the difference and cites both sides.</p></li>
+      <li><h3>Advice stays advice.</h3><p>A generated brief never becomes an observed outcome.</p></li>
+      <li><h3>A failed search is never "no precedent".</h3><p>A source that could not be searched is reported as unchecked.</p></li>
+      <li><h3>A citation shows where a claim came from.</h3><p>It proves the agent read that section. It doesn't prove the section supports the claim, so open it and judge.</p></li>
+    </ul>
+  </div>
+</div></section>
+</main>
+
+<footer class="end"><div class="wrap">
+  <h2>Ask the demo workspace a real question.</h2>
+  <p>It holds 20 cases and five process documents from Northwind Ledger, a fictional invoicing company.</p>
+  <a class="btn" href="/login">Open the demo</a>
+  <div class="big" aria-hidden="true">Memoba</div>
+</div></footer>
+
+<script>
+/* Engine. LAYOUT is geometry only; RUNS is the timeline the build keeps as data. */
+const LAYOUT={
+ wide:{vb:[1120,430],w:176,h:64,n:{q:[120,110],admit:[120,290],search:[345,200],cp:[565,80],dp:[565,320],rc:[780,80],rd:[780,320],write:[1000,80],check:[1000,200],save:[1000,320]},axis:"x"},
+ tall:{vb:[358,484],w:140,h:44,n:{q:[190,24],admit:[190,80],search:[190,136],cp:[96,206],dp:[270,206],rc:[96,276],rd:[270,276],write:[190,346],check:[190,402],save:[190,458]},axis:"y"}};
+const NODES={q:["Question",""],admit:["Admission","membership, deadline"],search:["search_knowledge","two searches"],cp:["Cases",""],dp:["Documents",""],rc:["read_case","outcome first"],rd:["read_document","whole blocks"],write:["Write","own headings"],check:["Check citations","in this run"],save:["Save","answer, sources"]};
+const LINKS=[["q","admit"],["admit","search"],["search","cp"],["search","dp"],["cp","rc"],["dp","rd"],["rc","write"],["rc","rd"],["rd","write"],["write","check"],["check","save"]];
+const COMMON={
+ q:{t:"A person asks in plain language.",b:"The request carries no workspace choice. The server derives the user and workspace from the session."},
+ admit:{t:"The server admits the run.",b:"It checks membership and quota, then writes one deadline that every model call, tool, and correction shares.",c:"stage: intake"},
+ rc:{t:"It reads cases, outcome first.",b:"Each read is pinned to one revision. If the budget runs out, background drops before the outcome does.",c:"read_case · Read case details"},
+ write:{t:"The model writes. Tools are gone.",b:"Process and cases go under separate headings, and any gap in practice is named on its own."},
+ check:{t:"Every citation is checked.",b:"Each one must match a section read in this run, and access is rechecked. One correction is allowed inside the same deadline.",c:"stage: validation"},
+ save:{t:"The run leaves a record.",b:"Answer, source snapshots, and coverage are saved. The record returns to the conversation, not to your cases: refresh reads it and never restarts the model."}};
+const VAR={
+ found:{code:"cases:found:19;documents:found:5",act:"19 cases found · 5 documents found",sb:"Each source settles on its own. Search results are only candidates, and can't be cited.",
+  path:["q","admit","search","cp","rc","rd","write","check","save"],gone:["rc>write"],dp:"5 found",ds:"",
+  out:["What the process says","Production release procedure, version 3, effective 2026-02-01, owner Platform Engineering."],
+  extra:{rd:{t:"It reads the document.",b:"A block arrives whole or is listed as omitted, so a requirement is never cut in half. Documents have their own budget.",c:"read_document · Read process document details"}}},
+ none:{code:"cases:found:19;documents:none:0",act:"19 cases found · no documents matched",sb:"The document search worked and returned nothing relevant. That is a real result, so the system takes the short path.",
+  path:["q","admit","search","cp","rc","write","check","save"],gone:["rc>rd","rd>write","dp>rd"],goneN:["rd"],dp:"none matched",ds:"none",
+  out:["What the process says","The answer says no matching process document was found, and goes on from the cases."],extra:{}},
+ failed:{code:"cases:found:19;documents:failed:0",act:"19 cases found · documents could not be searched",sb:"The document search broke. The case results stand, and the failed source is recorded as failed rather than empty.",
+  path:["q","admit","search","cp","rc","write","check","save"],gone:["rc>rd","rd>write","dp>rd"],goneN:["rd"],dp:"not searched",ds:"fail",bad:["search>dp"],
+  out:["What the process says","Unchecked. The answer states that documents could not be searched. It does not say no rule exists."],extra:{}}};
+const NOTE=(r,id)=>{const v=VAR[r];if(id==="search")return{t:r==="failed"?"One search failed. The other stands.":r==="none"?"Both searches finished. One came back empty.":"One embedding, two searches.",b:v.sb,c:"code: "+v.code};if(id==="cp")return{t:"The system chooses a path.",b:v.act+".",c:"search_knowledge · "+v.act};return v.extra[id]||COMMON[id]};
+
+const $=i=>document.getElementById(i),svg=$("map"),NS="http://www.w3.org/2000/svg";
+const reduced=matchMedia("(prefers-reduced-motion: reduce)"),narrow=matchMedia("(max-width:900px)");
+document.body.classList.remove("nojs");
+const R=["found","none","failed"],MOVE=1000,HOLD=1250,TRACE=1700,REST=450,ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
+let L,paths={},fills={},nodes={},tok,trace,run="found",i=0,user=false,visible=false,started=false;
+/* The single timeline: one clock drives token, edge fill, and arrival. Everything else is CSS transitions off render(). */
+let clock={playing:false,phase:"hold",t:0,last:0,dur:HOLD,pts:null,fill:null};
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e};
+function curve(a,b){const[x1,y1]=L.n[a],[x2,y2]=L.n[b];if(x1===x2||y1===y2)return`M${x1} ${y1}L${x2} ${y2}`;
+ if(L.axis==="x"){const m=(x1+x2)/2;return`M${x1} ${y1}C${m} ${y1} ${m} ${y2} ${x2} ${y2}`}const m=(y1+y2)/2;return`M${x1} ${y1}C${x1} ${m} ${x2} ${m} ${x2} ${y2}`}
+const inside=(p,id,pad)=>{const[x,y]=L.n[id];return Math.abs(p.x-x)<=L.w/2+pad&&Math.abs(p.y-y)<=L.h/2+pad};
+function sample(p,n=120){const l=p.getTotalLength(),o=[];for(let j=0;j<=n;j++)o.push(p.getPointAtLength(l*j/n));return o}
+/* Token parks just outside the next node so it never covers a label, and passes under boxes between legs. */
+const PAD=12;function legPts(from,to){const s=sample(paths[from+">"+to]).filter((p,j,a)=>!inside(p,to,PAD));return s}
+function park(id){const P=VAR[run].path,j=P.indexOf(id);if(j===0)return{x:L.n.q[0]-L.w/2-PAD,y:L.n.q[1]};const s=legPts(P[j-1],id);return s[s.length-1]}
+function incoming(id){const P=VAR[run].path,j=P.indexOf(id),pk=park(id);if(j===0)return[pk,{x:L.n.q[0],y:L.n.q[1]}];const whole=sample(paths[P[j-1]+">"+id]);const k=whole.findIndex(p=>inside(p,id,PAD));return whole.slice(Math.max(0,k-1))}
+function setTok(p){tok.style.transform=`translate(${p.x}px,${p.y}px)`}
+function along(pts,u){const f=u*(pts.length-1),j=Math.min(pts.length-2,Math.floor(f)),a=pts[j],b=pts[j+1],k=f-j;return{x:a.x+(b.x-a.x)*k,y:a.y+(b.y-a.y)*k}}
+function build(){L=narrow.matches?LAYOUT.tall:LAYOUT.wide;svg.innerHTML="";svg.setAttribute("viewBox",`0 0 ${L.vb[0]} ${L.vb[1]}`);svg.style.maxWidth=narrow.matches?"520px":"";svg.style.margin="0 auto";paths={};fills={};nodes={};
+ for(const[a,b]of LINKS){const d=curve(a,b);paths[a+">"+b]=el("path",{d,class:"lk"},svg);fills[a+">"+b]=el("path",{d,class:"fill",pathLength:1},svg)}
+ const[sx,sy]=L.n.save,[qx,qy]=L.n.q,bx=L.axis==="x"?L.vb[1]-14:0;
+ const d=L.axis==="x"?`M${sx} ${sy+L.h/2}V${bx}H14V${qy}H${qx-L.w/2-PAD}`:`M${sx-L.w/2} ${sy}H10V${qy}H${qx-L.w/2-PAD}`;
+ trace=el("path",{d,class:"lk tr"},svg);
+ if(L.axis==="x"){const lb=el("text",{x:560,y:bx-10,"text-anchor":"middle","font-size":15,"font-weight":600,fill:"#5d5f60"},svg);lb.textContent="Every run leaves a record you can reopen"}
+ tok=el("circle",{r:8,class:"tok"},svg);
+ for(const id in L.n){const[x,y]=L.n[id],g=el("g",{class:"nd","data-n":id},svg),w=L.w,h=L.h,rd=id==="cp"||id==="rc"?h/2:id==="dp"||id==="rd"?0:10;
+  el("rect",{x:x-w/2,y:y-h/2,width:w,height:h,rx:rd},g);const[a,b]=NODES[id],t=el("text",{x,y:y-2},g);t.textContent=a;const s=el("text",{x,y:y+15,class:"s"},g);s.textContent=b;nodes[id]={g,s,t}}
+ render();setTok(park(VAR[run].path[i]))}
+function render(){const v=VAR[run],P=v.path,stat=reduced.matches,at=stat?P.length-1:i;
+ for(const k in paths){paths[k].setAttribute("class","lk"+(at>=2&&v.bad&&v.bad.includes(k)?" bad":""));fills[k].classList.remove("gone");if(clock.fill!==fills[k])fills[k].style.strokeDashoffset=1}
+ for(let j=0;j<at;j++){const k=P[j]+">"+P[j+1];if(fills[k])fills[k].style.strokeDashoffset=0}
+ const rcAt=P.indexOf("rc"),dec=stat||at>=rcAt,reachedSearch=at>=2;
+ if(dec){for(const k of v.gone){paths[k].classList.add("gone");fills[k].classList.add("gone")}}
+ if(dec&&reachedSearch&&v.ds){paths["dp>rd"].classList.add("gone")}
+ if(reachedSearch&&v.bad)fills["search>dp"].classList.add("gone");
+ for(const id in nodes){let c="nd"+(id==="cp"||id==="rc"?" case":"");const j=P.indexOf(id);
+  if(j>=0&&j<at)c+=" seen";if(j===at&&!stat)c+=" now";if(stat&&j>=0)c+=" seen";
+  if(id==="dp"&&reachedSearch)c+=v.ds?" "+v.ds:" seen";
+  if(id==="cp"&&reachedSearch&&!c.includes("now")&&!c.includes("seen"))c+=" seen";
+  if((v.goneN||[]).includes(id)&&dec)c+=" gone";nodes[id].g.setAttribute("class",c)}
+ nodes.cp.s.textContent=reachedSearch?"19 found":"waiting";nodes.dp.s.textContent=reachedSearch?v.dp:"waiting";
+ trace.setAttribute("class","lk tr"+(at>=P.length-1?" on":""));
+ tok.style.opacity=stat?0:1;
+ const n=NOTE(run,P[at]);$("note").innerHTML=`<h3>${n.t}</h3><p>${n.b}</p>${n.c?`<code>${n.c}</code>`:""}`;
+ const shown=stat||at>=rcAt;$("out").className="out"+(run==="failed"&&shown?" fail":"");
+ $("out").innerHTML=shown?`<h3>${v.out[0]}</h3><p>${v.out[1]}</p><h3 style="margin-top:12px">How similar cases went</h3><p>Staged rollout, all-at-once launch, and dark launch, each cited.</p>`:`<h3>The answer so far</h3><p>Nothing yet. Progress here comes from tool events, not a story written by the model.</p>`;
+ $("prog").innerHTML=P.map((_,j)=>`<i class="${j<at?"d":j===at?"n":""}"></i>`).join("");
+ $("cnt").textContent=`Step ${at+1} of ${P.length}`;$("play").textContent=clock.playing?"Pause":"Play";
+ document.querySelectorAll(".runs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.r===run))}
+function enter(phase,dur,pts,fill){clock.phase=phase;clock.t=0;clock.dur=dur;clock.pts=pts;clock.fill=fill}
+function leg(){const P=VAR[run].path;
+ if(i>=P.length-1){enter("trace",TRACE,sample(trace,200),null);return}
+ const k=P[i]+">"+P[i+1],out=legPts(P[i],P[i+1]),inn=incoming(P[i]);const skip=i===0?[]:inn;
+ enter("move",MOVE,[...skip,...out],fills[k])}
+function arrive(){i++;clock.fill=null;render();enter("hold",HOLD,null,null)}
+function tick(now){const dt=Math.min(50,now-clock.last);clock.last=now;if(clock.playing&&visible&&!document.hidden){clock.t+=dt;const u=Math.min(1,clock.t/clock.dur);
+  if(clock.pts&&clock.phase!=="rest"){const e=ease(u);setTok(along(clock.pts,e));if(clock.fill)clock.fill.style.strokeDashoffset=1-e}
+  if(u>=1){if(clock.phase==="move")arrive();else if(clock.phase==="hold")leg();
+   else if(clock.phase==="trace"){if(user){halt();}else enter("rest",REST,null,null)}
+   else if(clock.phase==="rest"){run=R[(R.indexOf(run)+1)%3];i=0;render();setTok(park(run==="x"?"q":"q"));enter("hold",HOLD,null,null)}}}
+ requestAnimationFrame(tick)}
+function start(){if(reduced.matches)return;clock.playing=true;if(clock.phase!=="move"&&clock.phase!=="trace")enter("hold",clock.phase==="hold"?HOLD:HOLD,null,null);render()}
+function halt(){clock.playing=false;render()}
+function reset(){clock.fill=null;enter("hold",HOLD,null,null);render();setTok(park(VAR[run].path[i]))}
+document.querySelectorAll(".runs button").forEach(b=>b.onclick=()=>{run=b.dataset.r;i=0;user=true;reset();start()});
+$("play").onclick=()=>{clock.playing?halt():start()};
+$("replay").onclick=()=>{i=0;reset();start()};
+$("prev").onclick=()=>{halt();i=Math.max(0,i-1);reset()};
+$("next").onclick=()=>{halt();i=Math.min(VAR[run].path.length-1,i+1);reset()};
+function allRuns(){$("all").innerHTML=R.map(r=>{const v=VAR[r];return`<div><h3>${{found:"Document found",none:"Searched, nothing found",failed:"Could not search"}[r]}</h3><ol>${v.path.map(id=>`<li>${NOTE(r,id).t}</li>`).join("")}</ol><p style="margin-top:8px;font-size:15px">${v.out[1]}</p></div>`}).join("")}
+function mode(){document.body.classList.toggle("static",reduced.matches);if(reduced.matches)clock.playing=false;render()}
+allRuns();build();mode();requestAnimationFrame(t=>{clock.last=t;tick(t)});
+narrow.addEventListener("change",build);reduced.addEventListener("change",mode);
+new IntersectionObserver(([e])=>{visible=e.isIntersecting;if(visible&&!started){started=true;start()}},{threshold:.35}).observe(document.querySelector(".board"));
+window.__engine={get run(){return run},get i(){return i},get phase(){return clock.phase}};
+</script>
+</body>
+</html>

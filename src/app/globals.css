@@ -8,7 +8,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist), Arial, sans-serif;
+  --font-sans: var(--font-system);
   --font-mono: ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -50,6 +50,8 @@
 }
 
 :root {
+  /* SF Pro is licensed for Apple platforms only, so it is requested from the system rather than served. */
+  --font-system: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --background: #ffffff;
   --foreground: #131416;
   --card: #ffffff;
@@ -108,18 +110,12 @@
   .answer-markdown ul { @apply my-4 list-disc space-y-3 pl-6; }
   .answer-markdown ol { @apply my-4 list-decimal space-y-3 pl-6; }
   .answer-markdown blockquote { @apply my-4 border-l-2 border-ring pl-4 text-muted-foreground; }
-  .answer-markdown pre { @apply max-w-full overflow-x-auto rounded-lg bg-muted p-4 text-sm; }
   .answer-markdown a { @apply text-[var(--evidence-accent)] underline underline-offset-4; }
-  .answer-markdown table { @apply block max-w-full overflow-x-auto; }
-  .answer-markdown th, .answer-markdown td { @apply border-b px-3 py-2 text-left text-sm; }
   /* The same Markdown at the scale of the 360px evidence panel. */
   .evidence-markdown { @apply min-w-0 text-sm leading-6 wrap-break-word; }
-  .evidence-markdown table { @apply block max-w-full overflow-x-auto; }
   .evidence-markdown a { @apply text-[var(--evidence-accent)] underline underline-offset-4; }
   .evidence-markdown h1, .evidence-markdown h2, .evidence-markdown h3, .evidence-markdown h4 { @apply mt-4 mb-2 text-sm font-semibold leading-snug first:mt-0; }
   .evidence-markdown p { @apply my-2 first:mt-0 last:mb-0; }
   .evidence-markdown ul { @apply my-2 list-disc space-y-1.5 pl-5; }
   .evidence-markdown ol { @apply my-2 list-decimal space-y-1.5 pl-5; }
-  .evidence-markdown pre { @apply my-2 text-xs; }
-  .evidence-markdown th, .evidence-markdown td { @apply px-2 py-1.5 text-xs; }
 }

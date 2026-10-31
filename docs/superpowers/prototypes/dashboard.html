@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memoba Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Tokens copied from src/app/globals.css. The product is light only. */
+:root{color-scheme:light;--background:#fff;--foreground:#131416;--primary:#20282c;--muted:#f4f6f8;--muted-foreground:#5d5f60;--accent:#ebedee;--border:#e8eaec;--input:#cdced1;--ring:#1b6c80;--chart-1:#1b6c80;--sidebar:#f4f7f8;--sidebar-accent:#e7edef;--radius:.5rem;--unknown-bar:#a9adb0;--page-inset:1.5rem}
+*{box-sizing:border-box}
+html,body{margin:0;background:#dfe3e6;color:var(--foreground);font:14px/1.45 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3,p,dl,dd,ul{margin:0;padding:0}ul{list-style:none}
+button{font:inherit;color:inherit}a{color:inherit}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--ring) 50%,transparent);outline-offset:1px}
+
+/* Review controls: prototype only, not part of the build. */
+.review{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px;font-size:13px;background:#dfe3e6}
+.review strong{font-weight:600}.seg{display:inline-flex;background:#fff;border-radius:6px;padding:2px}
+.seg button{border:0;background:none;padding:4px 10px;border-radius:4px;cursor:pointer}.seg button[aria-pressed=true]{background:var(--primary);color:#fff}
+.stage{margin:0 auto;background:#fff;transition:none}
+.stage.phone{width:390px;max-width:100%;margin-bottom:32px}
+
+.app{container:app/inline-size;display:flex;min-height:100vh;background:var(--background)}
+.side{width:228px;flex:none;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;padding:12px 8px}
+.brand{padding:0 8px 12px}.brand b{display:block;font-size:15px;font-weight:600;letter-spacing:-.01em}.brand span{font-size:12px;color:var(--muted-foreground)}
+.nav a,.nav span.item{display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;border-radius:6px;text-decoration:none}
+.nav a:hover{background:var(--sidebar-accent)}.nav a[aria-current]{background:var(--sidebar-accent);font-weight:500}
+.nav svg{width:16px;height:16px;flex:none}
+.group{margin-top:16px;padding:0 8px;font-size:12px;color:var(--muted-foreground)}
+.conv{padding:4px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.foot{margin-top:auto}.soon{color:var(--muted-foreground);cursor:not-allowed}.soon em{margin-left:auto;font-style:normal;font-size:11px;background:var(--accent);border-radius:4px;padding:0 5px}
+
+.main{container:main/inline-size;flex:1;min-width:0;display:flex;flex-direction:column}
+.bar{position:sticky;top:0;z-index:5;height:48px;flex:none;display:flex;align-items:center;gap:8px;padding:0 var(--page-inset);background:#fff;border-bottom:1px solid var(--border)}
+.bar b{font-weight:600}.bar .window{margin-left:auto;font-size:12px;color:var(--muted-foreground);white-space:nowrap}
+.sample{display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#78400a;font-size:12px;font-weight:500;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.menu{display:none;border:0;background:none;width:32px;height:32px;margin-left:-8px;padding:8px}.menu svg{width:16px;height:16px;display:block}
+
+.page{width:100%;max-width:76rem;margin:0 auto;padding:24px var(--page-inset) 96px;display:flex;flex-direction:column;gap:24px}
+.finding{font-size:22px;font-weight:600;letter-spacing:-.015em;line-height:1.3;max-width:44rem}
+.jump{display:none;margin-top:8px;font-weight:500;color:var(--chart-1)}
+
+.panel{border:1px solid var(--border);border-radius:var(--radius);min-width:0}
+.kpis{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr}
+.kpi{padding:16px;min-width:0;display:flex;flex-direction:column}
+.kpi+.kpi{border-left:1px solid var(--border)}
+.kpi h2{font-size:13px;font-weight:600}
+.value{margin-top:10px;font-size:24px;line-height:1.15;font-weight:500;letter-spacing:-.02em}
+.value small{font-size:14px;letter-spacing:0;color:var(--muted-foreground);font-weight:400}
+.kpi.lead .value{font-size:34px;font-weight:600}
+.lab{display:flex;align-items:center;gap:4px;margin-top:2px;font-size:13px;color:var(--muted-foreground)}
+.delta{font-size:12px;color:#065f46;margin-top:2px}.delta.flat{color:var(--muted-foreground)}
+.meter{display:flex;gap:2px;height:6px;margin-top:10px}.meter i{display:block;height:100%}.meter i:first-child{background:var(--chart-1);border-radius:3px 0 0 3px}.meter i:last-child{background:var(--accent);border-radius:0 3px 3px 0}
+.subs{margin-top:auto;padding-top:12px}.subs div{display:flex;gap:6px;align-items:center;padding:5px 0;border-top:1px solid var(--border);font-size:13px}
+.subs dt{display:flex;align-items:center;gap:4px;color:var(--muted-foreground);min-width:0;flex:1}.subs dd{font-weight:500;white-space:nowrap}
+.info{flex:none;border:0;background:none;width:16px;height:16px;padding:0;color:var(--muted-foreground);cursor:pointer;border-radius:50%;position:relative}
+.info::after{content:"";position:absolute;inset:-10px}.info svg{width:14px;height:14px;display:block}.info:hover{color:var(--foreground)}
+
+.pop{position:fixed;z-index:20;width:280px;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--border);border-radius:var(--radius);box-shadow:0 6px 20px rgb(0 0 0/.1);padding:12px;font-size:13px}
+.pop b{display:block;font-weight:600;margin-bottom:6px}.pop p+p{margin-top:6px}.pop span{color:var(--muted-foreground)}
+
+.head{display:flex;align-items:baseline;gap:8px;padding:12px 16px}.head h2{font-size:14px;font-weight:600}.head .count{font-size:13px;color:var(--muted-foreground)}
+.head .link{margin-left:auto}
+.link{border:0;background:none;padding:0;font-size:13px;font-weight:500;color:var(--chart-1);cursor:pointer;text-decoration:none;white-space:nowrap}.link:hover{text-decoration:underline}
+.q{display:grid;grid-template-columns:128px minmax(0,1fr) 148px auto;gap:12px;align-items:center;padding:9px 16px;border-top:1px solid var(--border)}
+.q:hover{background:var(--muted)}
+.kind{font-size:12px;color:var(--muted-foreground)}.q b{display:block;font-weight:500;overflow-wrap:anywhere}.q .ev{font-size:12px;color:var(--muted-foreground)}
+.owner{font-size:12px;color:var(--muted-foreground)}
+.btn{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 10px;border:1px solid var(--input);border-radius:6px;background:#fff;font-size:13px;font-weight:500;text-decoration:none;white-space:nowrap;cursor:pointer}.btn:hover{background:var(--accent)}
+.q .btn{min-width:124px}
+
+.lower{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr);gap:16px}
+.row{padding:9px 16px;border-top:1px solid var(--border)}
+.casehead{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}.casehead span:first-child{font-weight:500;min-width:0}
+.pill{flex:none;font-size:12px;padding:1px 8px;border-radius:999px;white-space:nowrap}.pill.achieved{background:#ecfdf5;color:#065f46}.pill.not_achieved{background:#fef2f2;color:#991b1b}.pill.unknown{background:var(--muted);color:var(--muted-foreground)}
+.cite{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;color:var(--muted-foreground)}.cite i{height:8px;border-radius:0 4px 4px 0;background:var(--chart-1);display:block}.cite i.unknown{background:var(--unknown-bar)}.track{flex:1;min-width:0}
+.person{display:flex;align-items:center;gap:8px}.av{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:600}
+.person div{min-width:0;flex:1}.person b{display:block;font-weight:500}.person small{font-size:12px;color:var(--muted-foreground)}.person strong{font-weight:500}
+.gap{display:flex;gap:8px;align-items:center;justify-content:space-between}.gap b{display:block;font-weight:500}.gap small{font-size:12px;color:var(--muted-foreground)}
+.empty{padding:12px 16px;border-top:1px solid var(--border);color:var(--muted-foreground);font-size:13px}
+
+@container main (max-width:1000px){.lower{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cases{grid-column:1/-1}.kpis{grid-template-columns:1fr 1fr}.kpi:nth-child(3){border-left:0}.kpi:nth-child(n+3){border-top:1px solid var(--border)}.q{grid-template-columns:minmax(0,1fr) auto}.q .kind,.q .owner{display:none}.q .ev::before{content:attr(data-kind) " · "}}
+@container main (max-width:640px){.page{padding:16px 16px 64px;gap:16px}.bar{padding:0 16px}.bar .window{display:none}.sample{margin-left:auto}.finding{font-size:20px}.jump{display:inline-block}.kpis,.lower{grid-template-columns:minmax(0,1fr)}.kpi+.kpi{border-left:0;border-top:1px solid var(--border)}.q{grid-template-columns:minmax(0,1fr)}.q .btn{justify-self:start;height:44px;border:0;padding:0;min-width:0;color:var(--chart-1);background:none}.subs div{padding:7px 0}.row{padding:10px 16px}}
+@container app (max-width:767px){.side{display:none}.menu{display:block}}
+</style>
+</head>
+<body>
+<div class="review" role="group" aria-label="Prototype controls">
+  <strong>Prototype</strong>
+  <span class="seg"><button data-w="desktop" aria-pressed="true">Desktop</button><button data-w="phone" aria-pressed="false">Phone 390</button></span>
+  <span class="seg"><button data-s="sample" aria-pressed="true">With data</button><button data-s="empty" aria-pressed="false">Empty</button></span>
+</div>
+<div class="stage" id="stage">
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>The Memoba</b><span>Memory Bank Demo</span></div>
+    <nav class="nav" aria-label="Workspace">
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.4 2.6a2 2 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>New chat</a>
+      <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18M8 17v-5M13 17V7M18 17v-8"/></svg>Dashboard</a>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3Z"/></svg>Knowledge Hub</a>
+    </nav>
+    <div class="group">Conversations</div>
+    <div class="conv">Should we stage the Pro price rise?</div>
+    <div class="conv">Refund for a duplicate charge</div>
+    <div class="foot nav">
+      <span class="item soon" aria-disabled="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 3 6 3 6-3v15l-6 3-6-3-6 3V6zM9 3v15M15 6v15"/></svg>Roadmap<em>Soon</em></span>
+      <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>
+    </div>
+  </aside>
+  <div class="main">
+    <header class="bar">
+      <button class="menu" aria-label="Open navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg></button>
+      <b>Dashboard</b><span class="window">Last 30 days</span><span class="sample" title="These figures are illustrative, not workspace usage">Sample data</span>
+    </header>
+    <main class="page" id="page"></main>
+  </div>
+</div>
+</div>
+<div class="pop" id="pop" role="tooltip" hidden></div>
+<script>
+// Sample rows. Every figure on the page is computed from these, as the build must do.
+const C=(title,author,outcome,citations,ageDays)=>({title,author,outcome,citations,ageDays});
+const rows={
+ answers:{total:214,cited:187,priorRatePct:83,unsearched:{cases:4,documents:9}},
+ members:{total:12,weeklyActive:9,askedLastPeriod:11,returned:8},
+ p90Seconds:38,
+ cases:[
+  C("Staged rollout of invoice approval workflow","Priya Nair","achieved",64,210),
+  C("Payment gateway outage with a status page and fixed update cadence","Priya Nair","achieved",52,180),
+  C("Xero integration rebuilt in one sprint","Daniel Osei","unknown",47,64),
+  C("Starter plan price increase with grandfathering","Mai Tran","achieved",41,240),
+  C("All-at-once launch of recurring invoices","Tomás Rivera","not_achieved",33,300),
+  C("Dark launch of the new tax engine","Daniel Osei","achieved",30,150),
+  C("API v1 sunset announcement","Daniel Osei","unknown",26,52),
+  C("Duplicate-charge complaints with finance review","Hana Sato","achieved",26,120),
+  C("Pro plan price increase with short notice","Mai Tran","not_achieved",22,260),
+  C("Support queue migration to a new helpdesk tool","Hana Sato","unknown",19,12),
+  C("Churn save for an enterprise customer with an executive sponsor call","Mai Tran","achieved",18,170),
+  C("Mobile invoice capture beta","Tomás Rivera","unknown",12,47),
+  C("Self-serve onboarding checklist for small customers","Tomás Rivera","unknown",11,41),
+  C("Online migration of ledger entries to a new schema","Daniel Osei","achieved",0,200),
+  C("Tax engine cutover during quarter close","Daniel Osei","not_achieved",0,190),
+  C("QuickBooks sync migration with parallel run","Daniel Osei","achieved",0,280),
+  C("Mid-market onboarding with an implementation manager","Tomás Rivera","achieved",0,160),
+  C("Payment gateway outage handled by individual replies","Hana Sato","not_achieved",0,320),
+  C("Churn save by discount alone","Hana Sato","not_achieved",0,230),
+  C("Weekend on-call rotation for billing incidents","Hana Sato","achieved",0,140)],
+ staleDocuments:[
+  {title:"Price change policy",owner:"Finance and Legal",citations:38,effectiveFrom:"2026-01-01",days:303},
+  {title:"Incident communication procedure",owner:"Customer Support",citations:31,effectiveFrom:"2026-04-01",days:213}],
+ gaps:[{topic:"Contract renewals during a price change",asks:11},{topic:"Enterprise SSO rollout",asks:7},{topic:"EU VAT on annual plans",asks:6},{topic:"Refunds for reseller customers",asks:4}]
+};
+const hues={"Priya Nair":"#e6f1f4","Daniel Osei":"#f4ecdd","Mai Tran":"#e9e8f6","Tomás Rivera":"#e6f3e6","Hana Sato":"#f6e7ea"};
+const pct=(a,b)=>Math.round(a/b*100), outcomeLabel={achieved:"Achieved",not_achieved:"Not achieved",unknown:"Unknown"};
+
+function snapshot(r){
+ const totalCites=r.cases.reduce((n,c)=>n+c.citations,0);
+ const unknownCites=r.cases.filter(c=>c.outcome==="unknown").reduce((n,c)=>n+c.citations,0);
+ const uncited=r.cases.filter(c=>!c.citations).length;
+ const overdue=r.cases.filter(c=>c.outcome==="unknown"&&c.ageDays>30).sort((a,b)=>b.citations-a.citations);
+ const contributors=Object.values(r.cases.reduce((m,c)=>{(m[c.author]??={name:c.author,citations:0,cases:0}).citations+=c.citations;m[c.author].cases++;return m},{})).sort((a,b)=>b.citations-a.citations);
+ const unsearched=r.answers.unsearched.cases+r.answers.unsearched.documents;
+ const q=[
+  ...overdue.map(c=>({kind:"Outcome missing",score:c.citations,title:c.title,ev:`Cited ${c.citations} times, recorded ${c.ageDays} days ago`,owner:c.author,action:"Record outcome"})),
+  ...r.gaps.map(g=>({kind:"No matching case",score:g.asks*3,title:g.topic,ev:`Asked ${g.asks} times, no case matched`,owner:"Unassigned",action:"Record case"})),
+  ...r.staleDocuments.map(d=>({kind:"Review due",score:d.citations,title:d.title,ev:`Cited ${d.citations} times, in force for ${d.days} days`,owner:d.owner,action:"Open document"})),
+  ...(unsearched?[{kind:"Search failed",score:unsearched*3,title:"Sources could not be searched",ev:`${unsearched} answers: documents ${r.answers.unsearched.documents}, cases ${r.answers.unsearched.cases}`,owner:"Workspace admin",action:"View answers"}]:[])
+ ].sort((a,b)=>b.score-a.score);
+ console.assert(contributors.reduce((n,c)=>n+c.citations,0)===totalCites,"contributors sum to citations");
+ console.assert(contributors.reduce((n,c)=>n+c.cases,0)===r.cases.length,"contributors sum to cases");
+ return {r,totalCites,unknownCites,uncited,overdue,contributors,unsearched,q,top:r.cases.filter(c=>c.citations).sort((a,b)=>b.citations-a.citations).slice(0,5)};
+}
+const info={
+ evidence:["Evidence-backed answers","Completed answers with at least one citation, divided by all completed answers.","Below 80%, read the uncited answers and record what they lacked."],
+ unsearched:["Source not searched","Answers where the case or document search failed or stopped partway.","Any rise is a reliability fault. Those answers may have missed evidence."],
+ p90:["p90 time to answer","Nine in ten answers finished within this time, from send to final word.","Above 60 s, check the slowest runs before people stop waiting."],
+ wam:["Weekly active members","Members who sent at least one question in the last 7 days, over all members.","Ask the inactive members what they use instead."],
+ ret:["Returned within 7 days","Members who asked in the previous period and asked again within 7 days.","A fall means the first answer did not earn a second question."],
+ unknown:["Citations on unknown outcomes","Case citations landing on cases whose outcome is Unknown, over all case citations.","Above 20%, advice rests on results nobody confirmed. Record those outcomes first."],
+ uncited:["Cases not cited in 30 days","Available cases with no citation in the window, over all available cases.","Check whether each is findable or out of date. Archive what no longer applies."],
+ stale:["Cited documents due for review","Documents with 20 or more citations whose current version took effect over 180 days ago.","The owner confirms the document or publishes a new version."],
+ gaps:["Topics with no matching case","Question topics where the case search succeeded and returned nothing. Failed searches do not count.","Record a case for the most-asked topic."],
+ overdue:["Cases past 30 days with no outcome","Available cases older than 30 days whose outcome is still Unknown.","The case author records what happened."],
+ contrib:["Contributors","Ranked by citations earned by their cases in the window, not by cases written.","Ask top earners what makes their cases reusable."],
+ top:["Most-cited cases","Case citations in the window. The outcome shows whether the advice has a proven result.","Check that heavily cited cases deserve their weight."]
+};
+const i=k=>`<button class="info" data-info="${k}" aria-label="About ${info[k][0]}" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg></button>`;
+const sub=(l,k,v)=>`<div><dt>${l}${i(k)}</dt><dd>${v}</dd></div>`;
+const qrow=x=>`<li class="q"><span class="kind">${x.kind}</span><div><b>${x.title}</b><span class="ev" data-kind="${x.kind}">${x.ev}</span></div><span class="owner">${x.owner}</span><a class="btn" href="#">${x.action}</a></li>`;
+let expanded=false;
+function render(mode){
+ const page=document.getElementById("page"), empty=mode==="empty";
+ if(empty){page.innerHTML=`<h1 class="finding">No answers in the last 30 days yet.</h1>
+ <section class="panel kpis" aria-label="Key measures">
+ <div class="kpi lead"><h2>Can answers be trusted?</h2><p class="value" style="color:var(--muted-foreground)">—</p><p class="lab">Evidence-backed answers${i("evidence")}</p></div>
+ <div class="kpi"><h2>Is the team using it?</h2><p class="value">0 <small>of 12</small></p><p class="lab">Weekly active members${i("wam")}</p></div>
+ <div class="kpi"><h2>Is the knowledge alive?</h2><p class="value" style="color:var(--muted-foreground)">—</p><p class="lab">Cited, outcome unknown${i("unknown")}</p></div>
+ <div class="kpi"><h2>Is knowledge growing?</h2><p class="value">0</p><p class="lab">Topics with no matching case${i("gaps")}</p></div></section>
+ <section class="panel"><div class="head"><h2>Needs attention</h2><span class="count">0</span></div><p class="empty">Nothing needs attention. Ask a question to start measuring. <a class="link" href="#">New chat</a></p></section>
+ <div class="lower"><section class="panel cases"><div class="head"><h2>Most-cited cases</h2></div><p class="empty">Cited cases appear here after the first answers.</p></section><section class="panel"><div class="head"><h2>Contributors</h2></div><p class="empty">No citations earned yet.</p></section><section class="panel"><div class="head"><h2>Knowledge gaps</h2></div><p class="empty">No unmatched topics yet.</p></section></div>`;return}
+ const s=snapshot(rows),r=s.r,rate=pct(r.answers.cited,r.answers.total),max=s.top[0].citations,show=expanded?s.q:s.q.slice(0,5);
+ page.innerHTML=`<div><h1 class="finding">${rate}% of answers cite evidence, but the third most-cited case has no recorded outcome.</h1><a class="jump" href="#attention">${s.q.length} items need attention</a></div>
+ <section class="panel kpis" aria-label="Key measures">
+ <div class="kpi lead"><h2>Can answers be trusted?</h2><p class="value">${rate}%</p><p class="lab">Evidence-backed answers${i("evidence")}</p><p class="delta">+${rate-r.answers.priorRatePct} pts vs prior 30 days</p>
+  <div class="meter" role="img" aria-label="${r.answers.cited} of ${r.answers.total} answers cited evidence"><i style="width:${r.answers.cited/r.answers.total*100}%"></i><i style="flex:1"></i></div>
+  <dl class="subs">${sub("Source not searched","unsearched",`${pct(s.unsearched,r.answers.total)}%`)}${sub("p90 time to answer","p90",`${r.p90Seconds} s`)}</dl></div>
+ <div class="kpi"><h2>Is the team using it?</h2><p class="value">${r.members.weeklyActive} <small>of ${r.members.total}</small></p><p class="lab">Weekly active members${i("wam")}</p>
+  <dl class="subs">${sub("Returned within 7 days","ret",`${pct(r.members.returned,r.members.askedLastPeriod)}%`)}</dl></div>
+ <div class="kpi"><h2>Is the knowledge alive?</h2><p class="value">${pct(s.unknownCites,s.totalCites)}%</p><p class="lab">Cited, outcome unknown${i("unknown")}</p>
+  <dl class="subs">${sub("Not cited in 30 days","uncited",`${pct(s.uncited,r.cases.length)}%`)}${sub("Documents due for review","stale",r.staleDocuments.length)}</dl></div>
+ <div class="kpi"><h2>Is knowledge growing?</h2><p class="value">${r.gaps.length}</p><p class="lab">Topics with no matching case${i("gaps")}</p>
+  <dl class="subs">${sub("No outcome after 30 days","overdue",s.overdue.length)}</dl></div></section>
+ <section class="panel" id="attention"><div class="head"><h2>Needs attention</h2><span class="count">${s.q.length}</span>${s.q.length>5?`<button class="link" id="more" aria-expanded="${expanded}">${expanded?"Show fewer":`View all ${s.q.length}`}</button>`:""}</div><ul>${show.map(qrow).join("")}</ul></section>
+ <div class="lower">
+ <section class="panel cases"><div class="head"><h2>Most-cited cases</h2>${i("top")}</div>${s.top.map(c=>`<div class="row"><div class="casehead"><span>${c.title}</span><span class="pill ${c.outcome}">${outcomeLabel[c.outcome]}</span></div><div class="cite"><span class="track"><i class="${c.outcome==="unknown"?"unknown":""}" style="width:${c.citations/max*100}%"></i></span><span>${c.citations}</span></div></div>`).join("")}</section>
+ <section class="panel"><div class="head"><h2>Contributors</h2>${i("contrib")}</div>${s.contributors.map(c=>`<div class="row person"><span class="av" style="background:${hues[c.name]}" aria-hidden="true">${c.name.split(" ").map(w=>w[0]).join("")}</span><div><b>${c.name}</b><small>${c.cases} ${c.cases===1?"case":"cases"}</small></div><strong>${c.citations}</strong></div>`).join("")}</section>
+ <section class="panel"><div class="head"><h2>Knowledge gaps</h2>${i("gaps")}</div>${r.gaps.map(g=>`<div class="row gap"><div><b>${g.topic}</b><small>Asked ${g.asks} times</small></div><a class="link" href="#">Record</a></div>`).join("")}</section>
+ </div>`;
+ const more=document.getElementById("more");if(more)more.onclick=()=>{expanded=!expanded;render(mode)};
+}
+let mode="sample";render(mode);
+const pop=document.getElementById("pop");let open=null;
+const close=()=>{pop.hidden=true;if(open)open.setAttribute("aria-expanded","false");open=null};
+document.addEventListener("click",e=>{const b=e.target.closest(".info");if(!b){if(!e.target.closest(".pop"))close();return}
+ if(open===b){close();return}close();e.stopPropagation();const[t,how,act]=info[b.dataset.info];
+ pop.innerHTML=`<b>${t}</b><p><span>How it's calculated:</span> ${how}</p><p><span>What it drives:</span> ${act}</p>`;pop.hidden=false;open=b;b.setAttribute("aria-expanded","true");
+ const a=b.getBoundingClientRect(),w=pop.offsetWidth,h=pop.offsetHeight;pop.style.left=Math.max(12,Math.min(a.left-8,innerWidth-w-12))+"px";pop.style.top=(a.bottom+h+12>innerHeight?a.top-h-6:a.bottom+6)+"px"});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const b=open;close();b&&b.focus()}});
+addEventListener("scroll",close,true);
+const press=(attr,v)=>document.querySelectorAll(`[data-${attr}]`).forEach(b=>b.setAttribute("aria-pressed",b.dataset[attr]===v));
+document.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{document.getElementById("stage").classList.toggle("phone",b.dataset.w==="phone");press("w",b.dataset.w)});
+document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{mode=b.dataset.s;render(mode);press("s",mode)});
+</script>
+</body>
+</html>
