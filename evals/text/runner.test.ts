@@ -19,7 +19,7 @@ describe("evaluation stream records", () => {
   });
   it("defines the planned use cases without treating expectations as reviewed", async () => {
     const cases: { id: string; corpus?: "challenge" | "demo"; messages: string[]; expectedSources: string[]; expectedDocuments?: string[]; reviewFor: string[] }[] = JSON.parse(await readFile(new URL("./scenarios.json", import.meta.url), "utf8"));
-    expect(cases.map(({ id }) => id)).toEqual(["direct-precedent", "complementary-cases", "failed-precedent", "changed-conditions", "conflicting-cases", "no-precedent", "ambiguous", "referential-follow-up", "process-plus-case", "process-only", "process-case-conflict", "predating-case", "procedure-completeness"]);
+    expect(cases.map(({ id }) => id)).toEqual(["direct-precedent", "complementary-cases", "failed-precedent", "changed-conditions", "conflicting-cases", "no-precedent", "ambiguous", "referential-follow-up", "process-plus-case", "process-only", "process-case-conflict", "predating-case", "procedure-completeness", "no-difference", "cannot-meet", "process-silent", "neither-source", "case-only"]);
     expect(cases.find(({ id }) => id === "referential-follow-up")?.messages).toHaveLength(2);
     expect(cases.every(({ reviewFor }) => reviewFor.length > 0)).toBe(true);
     const slugs = { challenge: new Set(challengeCases.map((item) => item.slug)), demo: new Set(demoCases.map((item) => item.slug)) };
@@ -28,7 +28,7 @@ describe("evaluation stream records", () => {
       for (const slug of scenario.expectedSources) expect(slugs[scenario.corpus ?? "challenge"].has(slug), slug).toBe(true);
       for (const slug of scenario.expectedDocuments ?? []) expect(documentSlugs.has(slug), slug).toBe(true);
     }
-    expect(cases.filter(({ expectedDocuments }) => expectedDocuments?.length).map(({ id }) => id)).toEqual(["process-plus-case", "process-only", "process-case-conflict", "predating-case", "procedure-completeness"]);
+    expect(cases.filter(({ expectedDocuments }) => expectedDocuments?.length).map(({ id }) => id)).toEqual(["process-plus-case", "process-only", "process-case-conflict", "predating-case", "procedure-completeness", "no-difference", "cannot-meet", "process-silent"]);
   });
 });
 

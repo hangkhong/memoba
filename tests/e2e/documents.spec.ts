@@ -38,6 +38,7 @@ test("a document that cannot be indexed is not saved and says so", async ({ page
 test("an older version opens read only and links to the current one", async ({ page }) => {
   await signIn(page.request);
   await page.goto("/workspace/knowledge?tab=documents");
+  await expect(page.getByRole("status").filter({ hasText: /documents?$/ })).toBeVisible();
   const link = page.getByRole("link", { name: "Price change policy", exact: true });
   test.skip(await link.count() === 0, "needs the demo documents (npm run db:seed -- --demo)");
   await link.click();
@@ -61,6 +62,7 @@ test("an older version opens read only and links to the current one", async ({ p
 test("the edit form asks for a change note", async ({ page }) => {
   await signIn(page.request);
   await page.goto("/workspace/knowledge?tab=documents");
+  await expect(page.getByRole("status").filter({ hasText: /documents?$/ })).toBeVisible();
   const link = page.getByRole("link", { name: "Price change policy", exact: true });
   test.skip(await link.count() === 0, "needs the demo documents (npm run db:seed -- --demo)");
   await link.click();

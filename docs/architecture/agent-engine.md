@@ -69,8 +69,10 @@ The [agent instructions](../../src/modules/analysis/agent.ts) follow OpenAI's GP
 - infer intent and ask a clarifying question only when the answer would change the advice;
 - search again with different wording and look for failures or counterexamples;
 - read every clearly relevant case it saw, up to about eight, and the process documents that apply, before answering;
-- answer in a fixed shape: what the process says, how similar cases went, where practice and process differ (only when true), what is different this time, suggested next step;
+- answer in a fixed shape: a direct opening sentence, what the process says (with version, effective date, and owner), how similar cases went, where practice and process differ (only for a specific requirement a case contradicted or lacked), what is different this time, suggested next step;
+- treat search results as candidates and read only the documents that apply, adding blocks on scope, approvals, exceptions, or escalation when it names blocks;
 - treat cases as what happened and documents as what is required now, report both when they differ, and never call a case a violation;
+- say when the process is silent on a point, report conflicting documents without choosing, and give a document's stated exception route instead of softening a requirement;
 - say plainly, per source, when a successful search found nothing relevant, and never claim absence from a source that failed.
 
 The instructions shape behavior. The controls above enforce what must not depend on the model following them.

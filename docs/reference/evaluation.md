@@ -150,6 +150,25 @@ What the answers showed, each a review point for a person and not a score. Proce
 
 In the running app: a new document published at version 1; an edit without a note was refused with a 400 and one with a note became version 2; an answer cited version 1; after version 2 the same saved answer's evidence panel read `Version 1 · Effective 1 Oct 2026`, "A newer version exists (version 2). The cited text below is from version 1.", and still showed the version 1 text; `?version=1` showed the earlier text under a read-only banner, with the version history listing both versions with date, author and note. A model wrapped some citations in private-use characters that no font draws, and they showed as empty boxes; the harness now removes them.
 
+### Reviewed system prompt on 2026-10-31
+
+The prompt was replaced with a reviewed text (direct opening sentence, candidate-not-match search rule, silence, conflict and exception rules, a stricter "Where practice and process differ"). Ten single in-process traces ran against the seeded local stack. The owner asked that three of them be read in full; the others were checked for tool results and size only. These are observations, not scores. No run was corrected, none hit `CONTEXT_LIMIT`, and every run finished complete.
+
+| Scenario | Output tokens | Input tokens | Behavior |
+|---|---|---|---|
+| Process plus case | 2,149 | 38,438 | Not read in full; five sections |
+| Process only | 613 | 16,001 | Not read in full |
+| Conflict (60-day case, 90-day policy) | 1,251 | 23,992 | Not read in full |
+| Predating case | 1,448 | 22,909 | Not read in full |
+| Full procedure walk-through | 1,960 | 22,174 | Not read in full |
+| No difference (duplicate-charge approvals) | 465 | 17,939 | Read: the heading "Where practice and process differ" was absent, and the opening sentence answered the question |
+| Cannot meet a requirement (30 days' notice) | 1,460 | 21,767 | Read: said "No" first, named the 90-day requirement, and gave the exception route (written VP Finance and CEO approval with Legal's confirmation, not for convenience) |
+| Process silent (app store review) | 831 | 25,195 | Read: said the procedure does not describe app-store review, did not infer a rule, and named Platform Engineering as the owner to ask |
+| Neither source (Singapore data center) | 299 | 10,705 | Not read in full |
+| Case only (helpdesk migration) | 1,237 | 18,128 | Not read in full; it still read a process document that does not apply, so "ignore cards that do not apply" held only partly |
+
+Notes from the three read answers. The cannot-meet answer filled the differences heading with the 10-day Pro case against the 90-day requirement, which is a specific difference, and it said the case predates the policy version; the case text gives no year, so the year is the model's inference. The process-silent answer also cited a case that does not address app-store review and said so. Input cost rose: the process-plus-case run used 38,400 input tokens against 25,100 before the change, because the prompt tells the model to read whole documents unless only parts matter, and the longest answer reached 2,149 output tokens, above the previous 2,000 cap, which the raised 3,000 cap covers. No wording was changed from the reviewed text.
+
 ## Deterministic checks and remaining work
 
 `npx vitest run src/modules/analysis/text-agent.test.ts src/modules/analysis/budget.test.ts` exercises scripted tool errors, citation failures, and deadline behavior without a paid model call. `npx vitest run evals/text/runner.test.ts` checks stream parsing and fixture structure. To exercise the runner against a temporary scripted local server, run `MEMOBA_EVAL_RUNNER_SMOKE=1 npx vitest run evals/text/runner.test.ts` with permission to bind a local port. That test does not establish live model quality.
