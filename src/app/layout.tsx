@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Geist } from "next/font/google";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 
-const geist = Geist({ subsets: ["latin", "vietnamese"], variable: "--font-geist" });
+const manrope = Manrope({ subsets: ["latin", "vietnamese"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
   title: "The Memoba",
@@ -11,5 +11,5 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
-  return <html lang="en" className={`${geist.variable} font-sans`}><body className="min-h-screen antialiased">{children}</body></html>;
+  return <html lang="en" className={`${manrope.variable} font-sans`}><body className="min-h-screen antialiased">{children}</body></html>;
 }
