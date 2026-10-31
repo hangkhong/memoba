@@ -11,7 +11,7 @@ import { Field, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet 
 import { OptionSelect } from "@/components/option-select";
 import { BlockPreview } from "./block-preview";
 import { documentAreas, documentTypeLabels, documentTypeMeaning } from "./presentation";
-import { documentInputSchema, savedDocumentSchema, type DocumentInput } from "./schema";
+import { documentFormSchema, savedDocumentSchema, type DocumentInput } from "./schema";
 
 const typeOptions = Object.entries(documentTypeLabels).map(([value, label]) => ({ value: value as DocumentInput["type"], label: `${label} · ${documentTypeMeaning[value as DocumentInput["type"]]}` }));
 const areaOptions = documentAreas.map((value) => ({ value, label: value }));
@@ -24,7 +24,9 @@ function Section({ title, description, children }: { title: string; description?
 export function DocumentForm({ initial, documentId, onCancel, onSaved }: { initial?: DocumentInput; documentId?: string; onCancel: () => void; onSaved: (documentId: string) => void }) {
   const [error, setError] = useState<string>();
   const [fileError, setFileError] = useState<string>();
-  const form = useForm<z.input<typeof documentInputSchema>, unknown, DocumentInput>({ resolver: zodResolver(documentInputSchema), defaultValues: initial ?? { title: "", description: "", body: "", type: "procedure", area: "Operations", owner: "", effectiveFrom: new Date().toISOString().slice(0, 10), sources: [] } });
+  const schema = documentFormSchema(!!documentId);
+  // A new version takes effect when published, so an edit starts from today's date and an empty note.
+  const form = useForm<z.input<typeof schema>, unknown, z.output<typeof schema>>({ resolver: zodResolver(schema), defaultValues: initial ? { ...initial, effectiveFrom: new Date().toISOString().slice(0, 10), changeNote: "" } : { changeNote: "", title: "", description: "", body: "", type: "procedure", area: "Operations", owner: "", effectiveFrom: new Date().toISOString().slice(0, 10), sources: [] } });
   const title = useWatch({ control: form.control, name: "title" });
   const body = useWatch({ control: form.control, name: "body" });
   const sources = useFieldArray({ control: form.control, name: "sources" });
@@ -38,7 +40,7 @@ export function DocumentForm({ initial, documentId, onCancel, onSaved }: { initi
     form.setValue("body", await file.text(), { shouldDirty: true, shouldValidate: true });
     if (!form.getValues("title")) form.setValue("title", file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " "), { shouldDirty: true });
   }
-  async function submit(input: DocumentInput) {
+  async function submit(input: z.output<typeof schema>) {
     setError(undefined);
     try {
       const response = await fetch(documentId ? `/api/documents/${documentId}` : "/api/documents", { method: documentId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
@@ -61,10 +63,13 @@ export function DocumentForm({ initial, documentId, onCancel, onSaved }: { initi
           <Field><FieldLabel htmlFor="document-type">Type</FieldLabel><Controller control={form.control} name="type" render={({ field }) => <OptionSelect id="document-type" items={typeOptions} value={field.value} className="w-full" onValueChange={field.onChange}/>}/></Field>
           <Field><FieldLabel htmlFor="document-area">Area</FieldLabel><Controller control={form.control} name="area" render={({ field }) => <OptionSelect id="document-area" items={areaOptions} value={field.value} className="w-full" onValueChange={field.onChange}/>}/></Field>
           <Field data-invalid={!!errors.owner}><FieldLabel htmlFor="document-owner">Owner</FieldLabel><Input id="document-owner" required maxLength={inputLimits.title} aria-invalid={!!errors.owner} aria-describedby={errors.owner ? "document-owner-error" : undefined} {...form.register("owner")}/><FieldError id="document-owner-error" errors={[errors.owner]}/></Field>
-          <Field data-invalid={!!errors.effectiveFrom}><FieldLabel htmlFor="document-effective">Effective from</FieldLabel><Input id="document-effective" type="date" required aria-invalid={!!errors.effectiveFrom} aria-describedby={errors.effectiveFrom ? "document-effective-error" : undefined} {...form.register("effectiveFrom")}/><FieldError id="document-effective-error" errors={[errors.effectiveFrom]}/></Field>
+          <Field data-invalid={!!errors.effectiveFrom}><FieldLabel htmlFor="document-effective">Effective from</FieldLabel><FieldDescription>Today or earlier. A new version replaces the current one when saved.</FieldDescription><Input id="document-effective" type="date" required aria-invalid={!!errors.effectiveFrom} aria-describedby={errors.effectiveFrom ? "document-effective-error" : undefined} {...form.register("effectiveFrom")}/><FieldError id="document-effective-error" errors={[errors.effectiveFrom]}/></Field>
         </div>
         <div className="space-y-4">{sources.fields.map((source, index) => <div key={source.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1fr_auto]"><Field><FieldLabel htmlFor={`document-source-label-${index}`}>Source {index + 1} label</FieldLabel><Input id={`document-source-label-${index}`} required aria-invalid={!!errors.sources?.[index]?.label} {...form.register(`sources.${index}.label`)}/><FieldError errors={[errors.sources?.[index]?.label]}/></Field><Field><FieldLabel htmlFor={`document-source-url-${index}`}>Source {index + 1} URL</FieldLabel><Input id={`document-source-url-${index}`} type="url" required aria-invalid={!!errors.sources?.[index]?.url} {...form.register(`sources.${index}.url`)}/><FieldError errors={[errors.sources?.[index]?.url]}/></Field><Button className="sm:mt-7" type="button" variant="ghost" onClick={() => sources.remove(index)}>Remove</Button></div>)}<Button type="button" variant="outline" disabled={sources.fields.length >= 12} onClick={() => sources.append({ label: "", url: "" })}>Add source</Button></div>
       </Section>
+      {documentId && <Section title="This version" description="Saved with the version, so people can see what changed and why. It is not shown to the agent.">
+        <Field data-invalid={!!errors.changeNote}><FieldLabel htmlFor="document-change-note">What changed and why</FieldLabel><Textarea id="document-change-note" rows={2} required maxLength={inputLimits.documentChangeNote} aria-invalid={!!errors.changeNote} aria-describedby={errors.changeNote ? "document-change-note-error" : undefined} {...form.register("changeNote")}/><FieldError id="document-change-note-error" errors={[errors.changeNote]}/></Field>
+      </Section>}
     </div>
     <div className="flex shrink-0 items-center justify-end gap-3 border-t px-6 py-4">{error && <p role="alert" className="mr-auto text-sm text-destructive">{error}</p>}<Button type="button" variant="outline" onClick={onCancel}>Cancel</Button><Button type="submit" disabled={form.formState.isSubmitting}>{form.formState.isSubmitting ? "Publishing…" : documentId ? "Save new version" : "Add document"}</Button></div>
   </form>;

@@ -7,7 +7,8 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Trace, TraceCollapsible, TraceCollapsibleContent, TraceCollapsibleTrigger, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { sectionLabels, outcomeLabels } from "@/modules/cases/presentation";
-import { isDocumentEvidence, type EvidenceItem } from "@/modules/knowledge/contracts";
+import { z } from "zod";
+import { isDocumentEvidence, type DocumentEvidence, type EvidenceItem } from "@/modules/knowledge/contracts";
 import { documentTypeLabels, effectiveLabel } from "@/modules/documents/presentation";
 
 export const evidenceTitle = (item: EvidenceItem) => isDocumentEvidence(item) ? item.documentTitle : item.caseTitle;
@@ -33,8 +34,26 @@ export function EvidenceLayout({ children }: { children: ReactNode }) {
   </EvidenceContext>;
 }
 function EvidenceContent({ item }: { item: EvidenceItem }) {
-  if (isDocumentEvidence(item)) return <div className="mt-5 space-y-5"><div><p className="text-xs text-[var(--evidence-accent)]">{evidenceLabel(item)}</p><h3 className="mt-2 text-lg font-medium leading-6">{item.documentTitle}</h3><p className="mt-2 text-xs text-muted-foreground">{documentTypeLabels[item.type]} · {item.area} · Effective {effectiveLabel(item.effectiveFrom)} · Owner {item.owner}</p></div><blockquote className="whitespace-pre-wrap border-l-2 border-ring pl-4 text-sm leading-7">{item.excerpt}</blockquote><p className="text-xs leading-5 text-muted-foreground">This excerpt belongs to the cited revision of the document. It says what is required, not what happened.</p><details className="text-xs text-muted-foreground"><summary className="cursor-pointer hover:text-foreground">Details</summary><p className="mt-2 break-all leading-6">Revision {item.revisionId}<br/>Section {item.sectionId}<br/>Author {item.authorId}</p></details><Link href={`/workspace/knowledge/documents/${item.documentId}#block-${item.block}`} className="inline-block text-sm text-[var(--evidence-accent)] underline underline-offset-4">Open current document</Link></div>;
+  if (isDocumentEvidence(item)) return <div className="mt-5 space-y-5"><div><p className="text-xs text-[var(--evidence-accent)]">{evidenceLabel(item)}</p><h3 className="mt-2 text-lg font-medium leading-6">{item.documentTitle}</h3><p className="mt-2 text-xs text-muted-foreground">Version {item.version} · Effective {effectiveLabel(item.effectiveFrom)}</p><p className="mt-1 text-xs text-muted-foreground">{documentTypeLabels[item.type]} · {item.area} · Owner {item.owner}</p></div><NewerVersion item={item}/><blockquote className="whitespace-pre-wrap border-l-2 border-ring pl-4 text-sm leading-7">{item.excerpt}</blockquote><p className="text-xs leading-5 text-muted-foreground">This excerpt belongs to the cited version of the document. It says what is required, not what happened.</p><details className="text-xs text-muted-foreground"><summary className="cursor-pointer hover:text-foreground">Details</summary><p className="mt-2 break-all leading-6">Revision {item.revisionId}<br/>Section {item.sectionId}<br/>Author {item.authorId}</p></details><Link href={`/workspace/knowledge/documents/${item.documentId}`} className="inline-block text-sm text-[var(--evidence-accent)] underline underline-offset-4">Open current document</Link></div>;
   return <div className="mt-5 space-y-5"><div><p className="text-xs text-[var(--evidence-accent)]">{evidenceLabel(item)}</p><h3 className="mt-2 text-lg font-medium leading-6">{item.caseTitle}</h3><p className="mt-2 text-xs text-muted-foreground">Recorded outcome: {outcomeLabels[item.outcome]}</p></div><blockquote className="whitespace-pre-wrap border-l-2 border-ring pl-4 text-sm leading-7">{item.excerpt}</blockquote><p className="text-xs leading-5 text-muted-foreground">Source recorded {new Date(item.recordedAt).toLocaleDateString("en-GB", { timeZone: "UTC" })}. This excerpt belongs to the cited revision.</p><details className="text-xs text-muted-foreground"><summary className="cursor-pointer hover:text-foreground">Details</summary><p className="mt-2 break-all leading-6">Revision {item.revisionId}<br/>Section {item.sectionId}<br/>Author {item.authorId}</p></details><Link href={`/workspace/knowledge/${item.caseId}`} className="inline-block text-sm text-[var(--evidence-accent)] underline underline-offset-4">Open current case</Link></div>;
+}
+const currentSchema = z.object({ lifecycle: z.enum(["active", "archived"]), published_revision_id: z.uuid().nullable(), revisions: z.array(z.object({ id: z.uuid(), version: z.number() })) });
+// The saved citation keeps its own version's text. This only says whether that version is still the current one.
+function NewerVersion({ item }: { item: DocumentEvidence }) {
+  const [state, setState] = useState<{ id: string; text: string } | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/documents/${item.documentId}`, { cache: "no-store", signal: controller.signal }).then((response) => response.ok ? response.json() : null).then((raw: unknown) => {
+      const detail = currentSchema.safeParse(raw);
+      if (!detail.success) return;
+      const current = detail.data.revisions.find((revision) => revision.id === detail.data.published_revision_id);
+      if (detail.data.lifecycle === "archived") setState({ id: item.evidenceId, text: "This document has been archived. The cited text below is unchanged." });
+      else if (current && current.version > item.version) setState({ id: item.evidenceId, text: `A newer version exists (version ${current.version}). The cited text below is from version ${item.version}.` });
+      else setState(null);
+    }).catch(() => undefined);
+    return () => controller.abort();
+  }, [item.documentId, item.evidenceId, item.version]);
+  return state?.id === item.evidenceId ? <p role="note" className="rounded-md bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">{state.text}</p> : null;
 }
 export function InlineEvidence({ item, number }: { item: EvidenceItem; number: number }) {
   const open = useContext(EvidenceContext);

@@ -10,8 +10,10 @@ create table public.document_revisions (
  content jsonb not null check(jsonb_typeof(content)='object'),
  embedding_model text not null check(embedding_model in ('gemini-embedding-2','text-embedding-3-small')),
  embedding_dimensions integer not null check(embedding_dimensions=1536),
- author_id uuid not null references auth.users, created_at timestamptz not null default now(),
- foreign key(document_id,workspace_id) references public.documents(id,workspace_id), unique(id, document_id), unique(id, workspace_id)
+ -- A version is a citable fact: assigned under the document lock, never reused. The change note says what changed and why; it is not embedded and not evidence.
+ version integer not null check(version>=1), change_note text not null check(char_length(change_note) between 1 and 1000),
+ author_id uuid not null references auth.users, author_email text not null default '', created_at timestamptz not null default now(),
+ foreign key(document_id,workspace_id) references public.documents(id,workspace_id), unique(id, document_id), unique(id, workspace_id), unique(document_id, version)
 );
 alter table public.documents add foreign key(published_revision_id,id) references public.document_revisions(id,document_id);
 -- summary: title, description and metadata; searchable but never disclosed or cited. body: verbatim text under its heading path.
@@ -31,7 +33,7 @@ create index document_sections_embedding on public.document_sections using hnsw(
 create function private.immutable_document() returns trigger language plpgsql set search_path='' as $$
 begin
  if tg_table_name='document_sections' then raise exception 'Immutable section'; end if;
- if new.content is distinct from old.content or new.document_id<>old.document_id or new.workspace_id<>old.workspace_id or new.author_id<>old.author_id or new.created_at<>old.created_at or new.embedding_model<>old.embedding_model or new.embedding_dimensions<>old.embedding_dimensions then raise exception 'Immutable revision'; end if;
+ if new.content is distinct from old.content or new.document_id<>old.document_id or new.workspace_id<>old.workspace_id or new.author_id<>old.author_id or new.author_email<>old.author_email or new.version<>old.version or new.change_note<>old.change_note or new.created_at<>old.created_at or new.embedding_model<>old.embedding_model or new.embedding_dimensions<>old.embedding_dimensions then raise exception 'Immutable revision'; end if;
  return new;
 end $$;
 create trigger immutable_document_revision before update on public.document_revisions for each row execute function private.immutable_document();
@@ -47,21 +49,27 @@ do $$ declare t text; begin
 end $$;
 
 -- Embeddings arrive with the call, so nothing is stored until the document is ready to search. Identical content and model return 'unchanged'.
-create function public.publish_document(w uuid, content jsonb, sections jsonb, model text, dimensions integer, target_document uuid default null) returns jsonb language plpgsql security definer set search_path='' as $$
-declare d public.documents; previous public.document_revisions; r uuid; s jsonb; n integer := 0; body text;
+create function public.publish_document(w uuid, content jsonb, sections jsonb, model text, dimensions integer, target_document uuid default null, change_note text default null) returns jsonb language plpgsql security definer set search_path='' as $$
+declare d public.documents; previous public.document_revisions; r uuid; s jsonb; n integer := 0; body text; v integer; note text;
 begin
  perform private.require_member(w);
  perform private.require_embedding_profile(model,dimensions);
  perform 1 from public.workspaces where id=w for update;
  body:=content->>'body';
  if jsonb_typeof(content)<>'object' or coalesce(length(content->>'title'),0) not between 1 and 200 or coalesce(length(content->>'description'),0) not between 1 and 600 or coalesce(length(body),0) not between 1 and 60000
-   or content->>'type' not in ('policy','procedure','guideline') or content->>'area' not in ('Product','Engineering','Operations','Finance','Legal','People') or coalesce(length(content->>'owner'),0) not between 1 and 200 then raise exception 'Invalid document'; end if;
- if target_document is null then insert into public.documents(workspace_id) values(w) returning * into d;
+   or content->>'type' not in ('policy','procedure','guideline') or content->>'area' not in ('Product','Engineering','Operations','Finance','Legal','People') or coalesce(length(content->>'owner'),0) not between 1 and 200 or coalesce(content->>'effectiveFrom','') !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'Invalid document'; end if;
+ -- Publishing replaces the current version at once, so a version cannot start in the future (one day of slack covers time zones).
+ if (content->>'effectiveFrom')::date > (now() at time zone 'utc')::date + 1 then raise exception 'Effective date in the future' using errcode='22023'; end if;
+ note:=nullif(trim(coalesce(publish_document.change_note,'')),'');
+ if char_length(coalesce(note,''))>1000 then raise exception 'Change note too long' using errcode='22023'; end if;
+ if target_document is null then insert into public.documents(workspace_id) values(w) returning * into d; v:=1; note:=coalesce(note,'First published');
  else
    select * into d from public.documents where id=target_document and workspace_id=w and lifecycle='active' for update;
    if not found then raise exception 'Resource unavailable' using errcode='42501'; end if;
    select * into previous from public.document_revisions where id=d.published_revision_id;
-   if found and previous.content=content and previous.embedding_model=model and previous.embedding_dimensions=dimensions then return jsonb_build_object('documentId',d.id,'revisionId',previous.id,'status','unchanged'); end if;
+   if found and previous.content=content and previous.embedding_model=model and previous.embedding_dimensions=dimensions then return jsonb_build_object('documentId',d.id,'revisionId',previous.id,'version',previous.version,'status','unchanged'); end if;
+   if note is null then raise exception 'Change note required' using errcode='22023'; end if;
+   select coalesce(max(version),0)+1 into v from public.document_revisions where document_id=d.id;
  end if;
  if jsonb_typeof(sections) is distinct from 'array' or jsonb_array_length(sections) not between 2 and 400 then raise exception 'Invalid sections'; end if;
  for s in select jsonb_array_elements(sections) loop
@@ -69,14 +77,14 @@ begin
    if n>0 and (coalesce((s->>'block')::integer,0)<1 or strpos(body,s->>'text')=0) then raise exception 'Section mismatch'; end if;
    n:=n+1;
  end loop;
- insert into public.document_revisions(document_id,workspace_id,content,embedding_model,embedding_dimensions,author_id) values(d.id,w,content,model,dimensions,auth.uid()) returning id into r;
+ insert into public.document_revisions(document_id,workspace_id,content,embedding_model,embedding_dimensions,version,change_note,author_id,author_email) values(d.id,w,content,model,dimensions,v,note,auth.uid(),coalesce(auth.jwt()->>'email','')) returning id into r;
  for s in select jsonb_array_elements(sections) loop
    insert into public.document_sections(revision_id,workspace_id,ordinal,kind,block,heading,heading_path,content,embedding)
    values(r,w,(s->>'ordinal')::integer,s->>'kind',(s->>'block')::integer,coalesce(s->>'heading',''),coalesce(s->>'headingPath',''),s->>'text',(s->'embedding')::text::extensions.vector);
  end loop;
  update public.documents set published_revision_id=r where id=d.id;
  update public.workspaces set knowledge_version=knowledge_version+1 where id=w;
- return jsonb_build_object('documentId',d.id,'revisionId',r,'status','published');
+ return jsonb_build_object('documentId',d.id,'revisionId',r,'version',v,'status','published');
 end $$;
 
 create function public.archive_document(d uuid) returns void language plpgsql security definer set search_path='' as $$
@@ -87,11 +95,11 @@ begin
  update public.documents set lifecycle='archived' where id=d and lifecycle='active';
  if found then update public.workspaces set knowledge_version=knowledge_version+1 where id=w; end if;
 end $$;
-revoke all on function public.publish_document(uuid,jsonb,jsonb,text,integer,uuid),public.archive_document(uuid) from public,anon;
-grant execute on function public.publish_document(uuid,jsonb,jsonb,text,integer,uuid),public.archive_document(uuid) to authenticated;
+revoke all on function public.publish_document(uuid,jsonb,jsonb,text,integer,uuid,text),public.archive_document(uuid) from public,anon;
+grant execute on function public.publish_document(uuid,jsonb,jsonb,text,integer,uuid,text),public.archive_document(uuid) to authenticated;
 
 create function private.document_evidence(s public.document_sections, r public.document_revisions) returns jsonb language sql immutable set search_path='' as $$
- select jsonb_build_object('source','document','evidenceId',s.id::text,'documentId',r.document_id,'revisionId',r.id,'sectionId',s.id,'block',s.block,'heading',coalesce(nullif(s.heading_path,''),s.heading),'documentTitle',r.content->>'title','type',r.content->>'type','area',r.content->>'area','owner',r.content->>'owner','effectiveFrom',r.content->>'effectiveFrom','excerpt',s.content,'authorId',r.author_id,'recordedAt',r.created_at,'sources',r.content->'sources');
+ select jsonb_build_object('source','document','evidenceId',s.id::text,'documentId',r.document_id,'revisionId',r.id,'sectionId',s.id,'version',r.version,'block',s.block,'heading',coalesce(nullif(s.heading_path,''),s.heading),'documentTitle',r.content->>'title','type',r.content->>'type','area',r.content->>'area','owner',r.content->>'owner','effectiveFrom',r.content->>'effectiveFrom','excerpt',s.content,'authorId',r.author_id,'recordedAt',r.created_at,'sources',r.content->'sources');
 $$;
 
 -- One card per document: best-matching sections rank the document; summary matches count but are not disclosed.
@@ -115,7 +123,7 @@ begin
  ), best as (
    select document_id,revision_id,max(score) score from scored group by document_id,revision_id order by max(score) desc,document_id limit greatest(1,least(max_documents,10))
  )
- select jsonb_build_object('documentId',best.document_id,'revisionId',best.revision_id,'title',rev.content->>'title','description',rev.content->>'description','type',rev.content->>'type','area',rev.content->>'area','owner',rev.content->>'owner','effectiveFrom',rev.content->>'effectiveFrom',
+ select jsonb_build_object('documentId',best.document_id,'revisionId',best.revision_id,'version',rev.version,'title',rev.content->>'title','description',rev.content->>'description','type',rev.content->>'type','area',rev.content->>'area','owner',rev.content->>'owner','effectiveFrom',rev.content->>'effectiveFrom',
    'outline',(select coalesce(jsonb_agg(jsonb_build_object('block',o.block,'heading',o.heading,'chars',o.chars) order by o.block),'[]'::jsonb) from (select block,min(heading) heading,sum(char_length(content))::integer chars from public.document_sections where revision_id=best.revision_id and kind='body' group by block) o),
    'matchedHeadings',(select coalesce(jsonb_agg(jsonb_build_object('block',m.block,'heading',m.heading) order by m.score desc,m.block),'[]'::jsonb) from (select block,heading,score from (select distinct on (block) block,heading,score from scored where scored.revision_id=best.revision_id and kind='body' order by block,score desc) x order by score desc,block limit 3) m))
  from best join public.document_revisions rev on rev.id=best.revision_id order by best.score desc,best.document_id;
@@ -168,7 +176,7 @@ begin
    end if;
    for item in select jsonb_array_elements(snapshots) loop
      if item->>'source'='document' then
-       if r.request->>'version'<>'2' or not exists(select 1 from public.document_sections s join public.document_revisions rev on rev.id=s.revision_id where s.id=(item->>'sectionId')::uuid and s.revision_id=(item->>'revisionId')::uuid and rev.document_id=(item->>'documentId')::uuid and s.kind='body' and s.block=(item->>'block')::integer and s.content=item->>'excerpt' and s.workspace_id=r.workspace_id and item->>'evidenceId'=s.id::text and item->>'heading'=coalesce(nullif(s.heading_path,''),s.heading) and item->>'documentTitle'=rev.content->>'title' and item->>'type'=rev.content->>'type' and item->>'area'=rev.content->>'area' and item->>'owner'=rev.content->>'owner' and item->>'effectiveFrom'=rev.content->>'effectiveFrom' and (item->>'authorId')::uuid=rev.author_id and (item->>'recordedAt')::timestamptz=rev.created_at and item->'sources'=rev.content->'sources') then raise exception 'Invalid evidence'; end if;
+       if r.request->>'version'<>'2' or not exists(select 1 from public.document_sections s join public.document_revisions rev on rev.id=s.revision_id where s.id=(item->>'sectionId')::uuid and s.revision_id=(item->>'revisionId')::uuid and rev.document_id=(item->>'documentId')::uuid and s.kind='body' and s.block=(item->>'block')::integer and (item->>'version')::integer=rev.version and s.content=item->>'excerpt' and s.workspace_id=r.workspace_id and item->>'evidenceId'=s.id::text and item->>'heading'=coalesce(nullif(s.heading_path,''),s.heading) and item->>'documentTitle'=rev.content->>'title' and item->>'type'=rev.content->>'type' and item->>'area'=rev.content->>'area' and item->>'owner'=rev.content->>'owner' and item->>'effectiveFrom'=rev.content->>'effectiveFrom' and (item->>'authorId')::uuid=rev.author_id and (item->>'recordedAt')::timestamptz=rev.created_at and item->'sources'=rev.content->'sources') then raise exception 'Invalid evidence'; end if;
      elsif not exists(select 1 from public.case_sections s join public.case_revisions rev on rev.id=s.revision_id where s.id=(item->>'sectionId')::uuid and s.revision_id=(item->>'revisionId')::uuid and rev.case_id=(item->>'caseId')::uuid and s.section_key=item->>'sectionKey' and s.content=item->>'excerpt' and s.workspace_id=r.workspace_id and rev.index_state='ready' and item->>'evidenceId'=s.id::text and item->>'caseTitle'=rev.content->>'title' and item->>'outcome'=rev.content->>'outcome' and (item->>'authorId')::uuid=rev.author_id and (item->>'recordedAt')::timestamptz=rev.created_at and item->'sources'=rev.content->'sources') then raise exception 'Invalid evidence'; end if;
    end loop;
    insert into public.briefs(workspace_id,run_id,generated,evidence,hard_constraints) values(r.workspace_id,r.id,draft,snapshots,case when r.request->>'version'='2' then '[]'::jsonb else r.request->'hardConstraints' end) returning id into b;

@@ -191,10 +191,10 @@ const documentId = "55555555-5555-4555-8555-555555555555";
 const documentRevision = "66666666-6666-4666-8666-666666666666";
 function documentSection(block: number, text: string, extra: Partial<DocumentEvidence> = {}): DocumentEvidence {
   const sectionId = crypto.randomUUID();
-  return { source: "document", evidenceId: sectionId, documentId: documentId as DocumentEvidence["documentId"], revisionId: documentRevision as DocumentEvidence["revisionId"], sectionId: sectionId as DocumentEvidence["sectionId"], block, heading: `Block ${block}`, documentTitle: "Price change policy", type: "policy", area: "Finance", owner: "Finance", effectiveFrom: "2026-01-01", excerpt: text, authorId: crypto.randomUUID(), recordedAt: "2026-10-29T00:00:00Z", sources: [], ...extra };
+  return { source: "document", evidenceId: sectionId, documentId: documentId as DocumentEvidence["documentId"], revisionId: documentRevision as DocumentEvidence["revisionId"], sectionId: sectionId as DocumentEvidence["sectionId"], version: 1, block, heading: `Block ${block}`, documentTitle: "Price change policy", type: "policy", area: "Finance", owner: "Finance", effectiveFrom: "2026-01-01", excerpt: text, authorId: crypto.randomUUID(), recordedAt: "2026-10-29T00:00:00Z", sources: [], ...extra };
 }
 function card(id = documentId, revisionId = documentRevision) {
-  return { documentId: id, revisionId, title: "Price change policy", description: "Required notice before a price change.", type: "policy" as const, area: "Finance" as const, owner: "Finance", effectiveFrom: "2026-01-01", outline: [{ block: 1, heading: "Notice", chars: 100 }], matchedHeadings: [{ block: 1, heading: "Notice" }] };
+  return { documentId: id, revisionId, version: 1, title: "Price change policy", description: "Required notice before a price change.", type: "policy" as const, area: "Finance" as const, owner: "Finance", effectiveFrom: "2026-01-01", outline: [{ block: 1, heading: "Notice", chars: 100 }], matchedHeadings: [{ block: 1, heading: "Notice" }] };
 }
 
 it("searches both sources from one call and keeps their states separate", async () => {

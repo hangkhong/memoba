@@ -27,6 +27,7 @@ export const documentEvidenceSchema = z.object({
   documentId: z.uuid().brand<"DocumentId">(),
   revisionId: z.uuid().brand<"DocumentRevisionId">(),
   sectionId: z.uuid().brand<"DocumentSectionId">(),
+  version: z.number().int().positive(),
   block: z.number().int().positive(),
   heading: z.string().min(1),
   documentTitle: z.string().min(1),
@@ -53,7 +54,7 @@ export const toolResultSchema = z.discriminatedUnion("kind", [
 export type ToolResult = z.infer<typeof toolResultSchema>;
 
 export const documentCardSchema = z.object({
-  documentId: z.uuid(), revisionId: z.uuid(), title: z.string(), description: z.string(),
+  documentId: z.uuid(), revisionId: z.uuid(), version: z.number().int().positive(), title: z.string(), description: z.string(),
   type: documentTypeSchema, area: documentAreaSchema, owner: z.string(), effectiveFrom: z.iso.date(),
   outline: z.array(z.object({ block: z.number().int().positive(), heading: z.string(), chars: z.number().int().nonnegative() })),
   matchedHeadings: z.array(z.object({ block: z.number().int().positive(), heading: z.string() })),
@@ -64,7 +65,7 @@ export type DocumentSearchResult =
   | { kind: "success"; items: DocumentCard[] }
   | { kind: "empty"; items: [] }
   | { kind: "error"; code: Extract<ToolResult, { kind: "error" }>["code"]; retryable: boolean };
-export type DocumentHeader = Pick<DocumentEvidence, "documentId" | "revisionId" | "documentTitle" | "type" | "area" | "owner" | "effectiveFrom">;
+export type DocumentHeader = Pick<DocumentEvidence, "documentId" | "revisionId" | "version" | "documentTitle" | "type" | "area" | "owner" | "effectiveFrom">;
 export type DocumentReadBlock = { block: number; heading: string; sections: { marker: string; heading: string; text: string }[] };
 export type DocumentReadResult =
   | { kind: "success"; document: DocumentHeader; blocks: DocumentReadBlock[]; omittedBlocks: number[] }

@@ -241,14 +241,14 @@ isOneToOne: false
                   ]
                 },"document_revisions": {
                   Row: {
-                    "author_id": string,"content": NonNullable<Json>,"created_at": string,"document_id": string,"embedding_dimensions": number,"embedding_model": string,"id": string,"workspace_id": string
+                    "author_email": string,"author_id": string,"change_note": string,"content": NonNullable<Json>,"created_at": string,"document_id": string,"embedding_dimensions": number,"embedding_model": string,"id": string,"version": number,"workspace_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "author_id": string,"content": NonNullable<Json>,"created_at"?: string,"document_id": string,"embedding_dimensions": number,"embedding_model": string,"id"?: string,"workspace_id": string
+                    "author_email"?: string,"author_id": string,"change_note": string,"content": NonNullable<Json>,"created_at"?: string,"document_id": string,"embedding_dimensions": number,"embedding_model": string,"id"?: string,"version": number,"workspace_id": string
                   }
                   Update: {
-                    "author_id"?: string,"content"?: NonNullable<Json>,"created_at"?: string,"document_id"?: string,"embedding_dimensions"?: number,"embedding_model"?: string,"id"?: string,"workspace_id"?: string
+                    "author_email"?: string,"author_id"?: string,"change_note"?: string,"content"?: NonNullable<Json>,"created_at"?: string,"document_id"?: string,"embedding_dimensions"?: number,"embedding_model"?: string,"id"?: string,"version"?: number,"workspace_id"?: string
                   }
                   Relationships: [
                     {
@@ -414,7 +414,7 @@ isOneToOne: false
 { Args: { "dimensions": number,"model": string,"r": string,"sections": Json }; Returns: Json
                            },
 "publish_document":
-{ Args: { "content": Json,"dimensions": number,"model": string,"sections": Json,"target_document"?: string,"w": string }; Returns: Json
+{ Args: { "change_note"?: string,"content": Json,"dimensions": number,"model": string,"sections": Json,"target_document"?: string,"w": string }; Returns: Json
                            },
 "read_knowledge_case":
 { Args: { "keys": (string)[],"max_results": number,"revision": string,"target": string,"w": string }; Returns: Json[]

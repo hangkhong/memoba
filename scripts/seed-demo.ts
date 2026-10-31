@@ -105,18 +105,31 @@ async function seed() {
   if (demo) {
     const documents = createDocumentService(documentRepository(client, context, models), models.embed, models);
     for (const fixture of demoDocuments) {
-      const listed = await client.from("document_revisions").select("document_id,content").eq("workspace_id", workspaceId).contains("content", { title: fixture.input.title }).order("created_at", { ascending: false }).limit(1);
+      const latest = fixture.versions[fixture.versions.length - 1];
+      if (!latest) continue;
+      const listed = await client.from("document_revisions").select("document_id,version").eq("workspace_id", workspaceId).contains("content", { title: latest.input.title }).order("version", { ascending: false }).limit(1);
       if (listed.error) throw new Error("Cannot inspect seed documents.");
-      const existing = z.array(z.object({ document_id: z.uuid() })).parse(listed.data)[0];
+      const existing = z.array(z.object({ document_id: z.uuid(), version: z.number().int() })).parse(listed.data)[0];
       if (existing) {
         const record = await client.from("documents").select("lifecycle").eq("id", existing.document_id).eq("workspace_id", workspaceId).single();
         if (record.error) throw new Error("Cannot inspect seed document.");
         if (record.data.lifecycle === "archived") throw new Error("A seed document was archived. Run npm run demo:reset to restore the demo documents.");
       }
-      // Unchanged content returns the current revision without an embedding call; changed content becomes a new revision.
-      const result = await documents.save(fixture.input, existing?.document_id ?? null);
-      if (result.kind !== "saved") throw new Error(`Seed document "${fixture.input.title}" was not saved: ${result.kind === "invalid" ? result.errors.join(" ") : "unavailable"}`);
-      documentIds.push(result.saved.documentId);
+      // Versions publish oldest first, so a reset recreates the same history. A version that already exists is never published again;
+      // a visitor's edit after the last seed version is replaced by the seed text as a new version.
+      let documentId = existing?.document_id ?? null; let published = existing?.version ?? 0;
+      for (const [index, version] of fixture.versions.entries()) {
+        if (index < published) continue;
+        const result = await documents.save({ ...version.input, changeNote: version.changeNote }, documentId);
+        if (result.kind !== "saved") throw new Error(`Seed document "${latest.input.title}" version ${index + 1} was not saved: ${result.kind === "invalid" ? result.errors.join(" ") : "unavailable"}`);
+        documentId = result.saved.documentId; published = result.saved.version;
+      }
+      if (!documentId) throw new Error("Seed document was not created.");
+      if (published > fixture.versions.length || existing) {
+        const restored = await documents.save({ ...latest.input, changeNote: "Restored the demo text." }, documentId);
+        if (restored.kind !== "saved") throw new Error(`Seed document "${latest.input.title}" could not be restored.`);
+      }
+      documentIds.push(documentId);
     }
   }
   mkdirSync(".superpowers/evals",{recursive:true});writeFileSync(".superpowers/evals/seed.json",JSON.stringify(manifest,null,2)+"\n");

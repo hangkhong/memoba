@@ -201,7 +201,7 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
       added += entries.length; readDocuments.add(documentId);
       delivered.push({ block, heading: sections[0]?.heading.split(" > ")[0] ?? "", sections: entries });
     }
-    const document = { documentId: first.documentId, revisionId: first.revisionId, documentTitle: first.documentTitle, type: first.type, area: first.area, owner: first.owner, effectiveFrom: first.effectiveFrom };
+    const document = { documentId: first.documentId, revisionId: first.revisionId, version: first.version, documentTitle: first.documentTitle, type: first.type, area: first.area, owner: first.owner, effectiveFrom: first.effectiveFrom };
     if (reason) return { kind: "partial", document, blocks: delivered, omittedBlocks, reason };
     if (!added) return { kind: "no_progress", alreadyRead };
     return { kind: "success", document, blocks: delivered, omittedBlocks };
