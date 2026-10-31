@@ -30,8 +30,8 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 72px; }
   .top nav a { text-decoration: none; }
   .top nav a:hover { color: var(--case); }
 
-  h1 { font-size: clamp(38px, 5.6vw, 84px); line-height: 1.02; letter-spacing: -.04em; font-weight: 600; }
-  h2 { font-size: clamp(32px, 4.6vw, 68px); line-height: 1.04; letter-spacing: -.035em; font-weight: 600; }
+  h1 { font-size: clamp(38px, 5.6vw, 84px); line-height: 1.02; letter-spacing: -.022em; font-weight: 600; }
+  h2 { font-size: clamp(32px, 4.6vw, 68px); line-height: 1.04; letter-spacing: -.02em; font-weight: 600; }
   .hero { padding: clamp(40px, 6vw, 80px) 0 clamp(64px, 8vw, 112px); text-align: center; }
   .hero h1 { margin: 0 auto; max-width: 13.5em; }
   .lede { font-size: clamp(18px, 1.6vw, 22px); line-height: 1.45; max-width: 36em; margin: 24px auto 0; }
@@ -142,7 +142,7 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 72px; }
   .end .btn { background: #fff; color: var(--ink); height: 48px; padding: 0 22px; font-size: 16px; margin-top: 28px; }
   .end .btn:hover { background: var(--doc-soft); }
   .end p { margin-top: 16px; max-width: 36em; }
-  .big { font-size: clamp(72px, 21vw, 340px); font-weight: 700; letter-spacing: -.05em; line-height: .9; margin-top: clamp(40px, 6vw, 88px); color: #fff; opacity: .95; }
+  .big { font-size: clamp(72px, 21vw, 340px); font-weight: 700; letter-spacing: -.03em; line-height: .9; margin-top: clamp(40px, 6vw, 88px); color: #fff; opacity: .95; }
 
   @media (max-width: 900px) {
     .top nav { display: none; }
