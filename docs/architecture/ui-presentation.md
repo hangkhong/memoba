@@ -1,6 +1,6 @@
 # UI presentation
 
-Memoba uses a full-bleed workspace layout with shared tokens in `src/app/globals.css`. Next.js loads Manrope (Latin and Vietnamese subsets); code stays in the system monospace font. The workspace keeps one sidebar (`variant="sidebar"`) and a white content area separated from it by a border, with no inset padding, radius, or shadow. Mobile navigation uses shadcn Sheet.
+Memoba uses a full-bleed workspace layout with shared tokens in `src/app/globals.css`. Text uses the system font stack, which is SF Pro on Apple devices and the platform default elsewhere; code stays in the system monospace font. The workspace keeps one sidebar (`variant="sidebar"`) and a white content area separated from it by a border, with no inset padding, radius, or shadow. Mobile navigation uses shadcn Sheet.
 
 ## Framework patterns
 

@@ -8,7 +8,7 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 72px; }
   --muted: #f4f6f8; --sub: #5d5f60; --line: #dfe2e5; --fail: #b42318; --fail-soft: #fdecea;
   --m: clamp(16px, 3vw, 40px);
   background: var(--bg); color: var(--ink);
-  font: 400 17px/1.55 var(--font-manrope), Arial, sans-serif; font-variant-numeric: tabular-nums;
+  font: 400 17px/1.55 var(--font-system); font-variant-numeric: tabular-nums;
 
   :is(h1, h2, h3, p, ol, ul, figure) { margin: 0; padding: 0; }
   :is(ol, ul) { list-style: none; }
@@ -79,7 +79,7 @@ html:has(.lp) { scroll-behavior: smooth; scroll-padding-top: 72px; }
   .q { font-size: 15px; padding: 6px 8px 10px; }
   .q b { font-weight: 600; }
   svg.map { display: block; width: 100%; height: auto; }
-  svg.map text { font-family: var(--font-manrope), Arial, sans-serif; }
+  svg.map text { font-family: var(--font-system); }
   .lk { fill: none; stroke: #c3c8cc; stroke-width: 2; transition: opacity .5s ease, stroke .35s ease; }
   .lk.bad { stroke: var(--fail); stroke-dasharray: 3 6; }
   .lk.gone { opacity: .15; }
