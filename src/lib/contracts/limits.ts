@@ -12,7 +12,7 @@ export const executionLimits = Object.freeze({
   previewTokens: 8_000,
   previewExcerptChars: 240,
   searchSectionsPerCase: 2,
-  outputTokens: 2_000,
+  outputTokens: 3_000,
   relationDepth: 1,
   concurrentRuns: 2,
   draftDeadlineMs: 30_000,
@@ -20,8 +20,8 @@ export const executionLimits = Object.freeze({
   // Process documents have their own search quota and read pool so they never take case budget.
   documentCandidates: 5,
   documentPreviewTokens: 3_000,
-  documentContextSections: 24,
-  documentContextTokens: 12_000,
+  documentContextSections: 48,
+  documentContextTokens: 20_000,
 });
 // Most sources one answer can cite: the case pool plus the document pool.
 export const citationLimit = executionLimits.contextSections + executionLimits.documentContextSections;

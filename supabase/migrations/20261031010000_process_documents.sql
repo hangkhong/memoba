@@ -148,7 +148,7 @@ begin
  if clock_timestamp()>=r.deadline_at then terminal:='timed_out'; code:='TIMED_OUT'; end if;
  if terminal not in ('complete','gap_report','failed','cancelled','timed_out') then raise exception 'Invalid terminal'; end if;
  if terminal='complete' then
-   if draft is null or jsonb_array_length(snapshots)>72 then raise exception 'Invalid brief'; end if;
+   if draft is null or jsonb_array_length(snapshots)>96 then raise exception 'Invalid brief'; end if;
    if draft->>'version'='2' then
      if r.request->>'version'<>'2' or jsonb_typeof(draft->'citations') is distinct from 'array' or jsonb_typeof(draft->'text') is distinct from 'string' then raise exception 'Invalid answer'; end if;
      for ref in select jsonb_array_elements(draft->'citations') loop
