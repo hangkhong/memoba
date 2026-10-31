@@ -63,7 +63,7 @@ export function Composer({ conversationId, parentTurnId = null, disabled = false
       event.preventDefault();
       if (!blocked) event.currentTarget.form?.requestSubmit();
     }}/>
-    <InputGroupAddon align="block-end" className="justify-end px-2.5 pb-2.5">{canStop ? <Button type="button" size="icon" variant="outline" className="rounded-full" aria-label="Stop analysis" onClick={session.cancel}><Square className="fill-current"/></Button> : <Button type="submit" size="icon" className="rounded-full" aria-label="Send question" disabled={blocked}><ArrowUp/></Button>}</InputGroupAddon></InputGroup>
+    <InputGroupAddon align="block-end" className="justify-end px-2.5 pb-2.5">{canStop ? <Button type="button" size="icon" variant="outline" className="rounded-full" aria-label="Stop response" onClick={session.cancel}><Square className="fill-current"/></Button> : <Button type="submit" size="icon" className="rounded-full" aria-label="Send question" disabled={blocked}><ArrowUp/></Button>}</InputGroupAddon></InputGroup>
     {form.formState.errors.message && <p role="alert" className="text-sm text-destructive">Enter your question.</p>}
     {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
   </form>;

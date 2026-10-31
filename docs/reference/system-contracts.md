@@ -85,6 +85,8 @@ Membership is established before the demo. Public sign-up does not enroll a memb
 
 A turn is saved before model availability and run admission. Missing model access leaves the question saved without creating a run. Turn creation and attempt admission have separate idempotency keys. Admission checks the latest parent, prevents concurrent runs in one conversation, and enforces the workspace quota. A failed, cancelled, or timed-out attempt can be retried as a new run on the latest turn. Existing independent runs retain a null turn reference.
 
+The conversation never asks the user to start the agent: sending a message starts it, and opening or refreshing a conversation never starts a model call. A latest turn with no run, or with a failed, cancelled, or timed-out run, reads "Memoba could not respond" (or that Memoba is unavailable and the question is saved) with one "Try again" button for the owner; an earlier turn without an answer reads "No response". The word "analysis" does not appear in conversation copy.
+
 A text run saves the final answer, cited source snapshots, usage, and terminal state. Activity comes from actual tool and run events. Refresh reads saved state and does not restart generation. The stream is request-bound; background continuation and durable resume are not supported.
 
 The vector migration, stored vectors, and query embedding model use matching model IDs and dimensions. Supported profiles are `gemini-embedding-2` and `text-embedding-3-small`, both at 1536 dimensions. Search filters keyword and semantic candidates by profile. A model change requires indexed replacement revisions through `npm run ai:migrate-embeddings`, with the app stopped until the active corpus is verified.

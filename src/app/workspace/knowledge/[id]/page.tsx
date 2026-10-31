@@ -14,7 +14,7 @@ import { OutcomePill, TemplateChip } from "@/modules/cases/case-badges";
 import { StatusDot } from "@/components/badges";
 import { CaseHeaderActions, ReindexButton } from "@/modules/cases/case-detail-actions";
 import { CaseArticle } from "@/modules/cases/case-article";
-import { PageBar, PageBody, PageFrame } from "@/components/page-frame";
+import { PageBar, PageBody, PageFrame, PageRail } from "@/components/page-frame";
 import { DetailRows, RailLayer, RailSection, TagList, VersionHistory } from "@/components/rail";
 import { versionRows } from "@/modules/cases/revision-history";
 
@@ -44,7 +44,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
     </PageBar>
     <PageBody>
       <main className="min-w-0 max-w-[42.5rem] min-[1281px]:mx-auto min-[1281px]:w-full"><CaseArticle content={content}/></main>
-      <aside aria-label="Case details" className="flex min-w-0 flex-col gap-3 text-sm">
+      <PageRail label="Case details">
         <RailLayer label="Details">
           <RailSection title="Details">
             <DetailRows rows={[{ label: "Template", value: <TemplateChip template={content.template}/> }, { label: "Outcome", value: <OutcomePill outcome={content.outcome}/> }, { label: "Status", value: <StatusDot status={status}/> }, ...(tags.length > 0 ? [{ label: "Concepts", value: <TagList labels={tags}/> }] : [])]}/>
@@ -55,7 +55,7 @@ export default async function CasePage({ params, searchParams }: { params: Promi
           <RelatedCases caseId={detail.id} links={links} candidates={candidates} editable={active}/>
         </RailLayer>
         <RailLayer label="Version history"><RailSection title="Version history"><VersionHistory rows={history}/></RailSection></RailLayer>
-      </aside>
+      </PageRail>
     </PageBody>
   </PageFrame>;
 }

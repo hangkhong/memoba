@@ -7,7 +7,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { buttonVariants } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { StatusDot } from "@/components/badges";
-import { PageBar, PageBody, PageFrame } from "@/components/page-frame";
+import { PageBar, PageBody, PageFrame, PageRail } from "@/components/page-frame";
 import { DetailRows, RailLayer, RailSection, VersionHistory } from "@/components/rail";
 import { documentDetail } from "@/modules/documents/repository";
 import { DocumentHeaderActions } from "@/modules/documents/document-actions";
@@ -41,8 +41,8 @@ export default async function DocumentPage({ params, searchParams }: { params: P
       {active && isCurrent && <DocumentHeaderActions documentId={detail.id} title={content.title} initial={content} defaultEdit={edit === "1"}/>}
     </PageBar>
     <PageBody>
-      <main className="min-w-0 max-w-[42.5rem] min-[1281px]:mx-auto min-[1281px]:w-full">{!isCurrent && <div role="note" className="mb-6 rounded-lg border bg-muted/40 px-4 py-3 text-sm">You are reading version {shown.version}, an earlier version that is read only. <Link className="text-[var(--evidence-accent)] underline underline-offset-4" href={`/workspace/knowledge/documents/${detail.id}`}>Open the current version ({current.version})</Link></div>}<p className="mb-8 text-lg leading-8 text-muted-foreground">{content.description}</p><DocumentArticle blocks={blocks}/></main>
-      <aside aria-label="Document details" className="flex min-w-0 flex-col gap-3 text-sm">
+      <main className="min-w-0 max-w-[42.5rem] min-[1281px]:mx-auto min-[1281px]:w-full">{!isCurrent && <div role="note" className="mb-6 rounded-lg border bg-muted/40 px-4 py-3 text-sm">You are reading version {shown.version}, an earlier version that is read only. <Link className="text-[var(--evidence-accent)] underline underline-offset-4" href={`/workspace/knowledge/documents/${detail.id}`}>Open the current version ({current.version})</Link></div>}<div className="mb-8 rounded-lg bg-muted/40 px-4 py-3 text-[15px] leading-[26px]">{content.description}</div><DocumentArticle blocks={blocks}/></main>
+      <PageRail label="Document details">
         <RailLayer label="Details">
           <RailSection title="Details">
             <DetailRows rows={[{ label: "Version", value: <>Version {shown.version}{isCurrent ? "" : " (earlier)"}</> }, { label: "Type", value: <span title={documentTypeMeaning[content.type]}>{documentTypeLabels[content.type]} · {documentTypeMeaning[content.type]}</span> }, { label: "Area", value: content.area }, { label: "Owner", value: content.owner }, { label: "Effective", value: effectiveLabel(content.effectiveFrom) }, { label: "Status", value: <StatusDot status={active ? "available" : "archived"}/> }]}/>
@@ -51,7 +51,7 @@ export default async function DocumentPage({ params, searchParams }: { params: P
           <RailSection title="Contents"><ol className="space-y-1.5">{blocks.map((block) => <li key={block.index}><a className="text-[var(--evidence-accent)] underline underline-offset-4" href={`#block-${block.index}`}>{block.heading}</a></li>)}</ol></RailSection>
         </RailLayer>
         <RailLayer label="Version history"><RailSection title="Version history"><VersionHistory rows={history}/></RailSection></RailLayer>
-      </aside>
+      </PageRail>
     </PageBody>
   </PageFrame>;
 }

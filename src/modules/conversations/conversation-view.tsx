@@ -17,7 +17,7 @@ import { selectLiveAttempt } from "./presentation";
 import { fetchConversationDetail, hasRunningRun, isAwaitingSaved, watchSavedResult } from "./saved-result";
 import type { ConversationDetail } from "./view-schema";
 
-const statusNotes = { complete: "Loading the saved answer…", failed: "The analysis didn’t finish.", cancelled: "Analysis stopped.", timed_out: "Analysis reached its time limit." } as const;
+const failedRuns = ["failed", "cancelled", "timed_out"];
 export function ConversationView({ detail: serverDetail, userId, concepts }: { detail: ConversationDetail; userId: string; concepts: { id: string; label: string }[] }) {
   const [served, setServed] = useState(serverDetail);
   const [detail, setDetail] = useState(serverDetail);
@@ -64,6 +64,9 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
         const draftText = live && (liveWorking || (pendingRun && live.outcome?.status === "complete")) ? live.draft : "";
         const events = liveWorking || pendingRun ? live?.events ?? [] : run?.events ?? live?.events ?? [];
         const status = liveWorking ? "running" : pendingRun ? live?.outcome?.status : run?.status;
+        // A turn that has no answer and no run in progress. Only the latest one can be retried, and only by its owner, on a click.
+        const noResponse = !liveWorking && !pendingRun && !run?.brief && (!run || failedRuns.includes(run.status));
+        const answerable = turn.id === latest?.id && !pendingAsk && !waiting && !session.state?.busy;
         return <MessageScrollerItem key={turn.id} messageId={turn.id} scrollAnchor><section aria-label={`Turn ${turn.position}`}>
           <Message align="end"><MessageContent><Bubble align="end" variant="muted" className="max-w-xl"><BubbleContent className="rounded-2xl px-4 py-2.5 text-base leading-7">
             <p className="whitespace-pre-wrap break-words">{turn.message}</p>
@@ -73,15 +76,14 @@ export function ConversationView({ detail: serverDetail, userId, concepts }: { d
             <AnalysisActivity key={run?.id ?? live?.runId ?? "pending"} events={events} status={status}/>
             {run?.brief && !liveWorking && !pendingRun ? <><BriefView brief={run.brief} evidencePrefix={`${turn.id}-${run.id}`}/></> : <>
               {draftText ? <DraftAnswer text={draftText} animating={liveWorking}/> : null}
-              {status === "running" || status === "gap_report" || draftText ? null : <p className="text-sm text-muted-foreground">{status ? statusNotes[status] : "Question saved. Analysis has not started."}</p>}
+              {status === "complete" && !draftText ? <p className="text-sm text-muted-foreground">Loading the saved answer…</p> : null}
               {status === "gap_report" && <section className="rounded-xl border p-5"><h2 className="font-semibold">No precedent found</h2><p className="mt-3">The search completed successfully without usable evidence. Add cases covering the method, applicability conditions, and failures or exceptions for this request.</p></section>}
-              {!liveWorking && !pendingRun && run?.error_code && <p className="text-sm text-muted-foreground">Check the knowledge and model services, then retry.</p>}
-              
+              {noResponse && !answerable && <p className="text-sm text-muted-foreground">No response</p>}
+              {noResponse && answerable && <div className="flex flex-wrap items-center gap-3"><p role="status" className="text-sm text-muted-foreground">{live?.message || "Memoba could not respond."}</p>{owner && <Button variant="outline" size="sm" onClick={() => { void session.start(detail.conversation.id, turn.id, run ? crypto.randomUUID() : turn.id); }}>Try again</Button>}</div>}
             </>}
             {turn.runs.length > 1 && <details><summary className="cursor-pointer text-sm text-muted-foreground">Previous attempts</summary>{turn.runs.slice(0, -1).map((attempt) => <p key={attempt.id}><Link className="underline" href={`/workspace/analyses/${attempt.id}`}>{attempt.status.replaceAll("_", " ")}</Link></p>)}</details>}
             {loadFailed && waiting && turn.id === latest?.id && <p role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border p-4 text-sm">Could not load the saved answer.<Button variant="outline" size="sm" onClick={() => { setLoadFailed(false); setAttempt((count) => count + 1); }}>Try again</Button></p>}
-            {live?.message && !savedTerminal && <p role="status" className="rounded-lg border p-4 text-sm">{live.message}</p>}
-            {owner && !pendingAsk && turn.id === latest?.id && !running && !awaitingSaved && !session.state?.busy && (!run || ["failed", "cancelled", "timed_out"].includes(run.status)) && <Button variant="outline" onClick={() => { void session.start(detail.conversation.id, turn.id, run ? crypto.randomUUID() : turn.id); }}>{run ? "Retry analysis" : "Run analysis"}</Button>}
+            {live?.message && !savedTerminal && !(noResponse && answerable) && <p role="status" className="rounded-lg border p-4 text-sm">{live.message}</p>}
           </MessageContent></Message>
         </section></MessageScrollerItem>;
       })}{pendingAsk && <MessageScrollerItem key="pending-ask" messageId="pending-ask" scrollAnchor><PendingQuestion ask={pendingAsk}/></MessageScrollerItem>}</ChatConversationContent>
