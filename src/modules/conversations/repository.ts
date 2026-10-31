@@ -25,6 +25,13 @@ export async function createConversation(client: SupabaseClient<Database>, conte
   if (result.error) databaseError(result.error.code);
   return z.uuid().parse(result.data);
 }
+// The database refuses unless the caller is the author and no run is live; the error codes map as for the other writes.
+export async function deleteConversation(client: SupabaseClient<Database>, id: string) {
+  const result = await client.rpc("delete_conversation", { conversation: id });
+  if (!result.error) return;
+  if (result.error.code === "23505") throw new ConversationError(409, "A response is still running. Wait for it or stop it, then delete this conversation.");
+  databaseError(result.error.code);
+}
 export async function saveTurn(client: SupabaseClient<Database>, conversationId: string, input: TextTurnInput, request: StoredRunInput) {
   const result = await client.rpc("save_conversation_turn", { conversation: conversationId, parent: input.parentTurnId ?? undefined, key: input.key, body: input.message, input: request });
   if (result.error) databaseError(result.error.code);

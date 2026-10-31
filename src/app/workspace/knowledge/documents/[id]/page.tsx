@@ -11,6 +11,7 @@ import { PageBar, PageBody, PageFrame, PageRail } from "@/components/page-frame"
 import { DetailRows, RailLayer, RailSection, VersionHistory } from "@/components/rail";
 import { documentDetail } from "@/modules/documents/repository";
 import { DocumentHeaderActions } from "@/modules/documents/document-actions";
+import { DocumentContents } from "@/modules/documents/document-contents";
 import { DocumentArticle } from "@/modules/documents/document-article";
 import { documentTypeLabels, documentTypeMeaning, effectiveLabel } from "@/modules/documents/presentation";
 import { documentVersionRows } from "@/modules/documents/revision-history";
@@ -43,12 +44,12 @@ export default async function DocumentPage({ params, searchParams }: { params: P
     <PageBody>
       <main className="min-w-0 max-w-[42.5rem] min-[1281px]:mx-auto min-[1281px]:w-full">{!isCurrent && <div role="note" className="mb-6 rounded-lg border bg-muted/40 px-4 py-3 text-sm">You are reading version {shown.version}, an earlier version that is read only. <Link className="text-[var(--evidence-accent)] underline underline-offset-4" href={`/workspace/knowledge/documents/${detail.id}`}>Open the current version ({current.version})</Link></div>}<div className="mb-8 rounded-lg bg-muted/40 px-4 py-3 text-[15px] leading-[26px]">{content.description}</div><DocumentArticle blocks={blocks}/></main>
       <PageRail label="Document details">
-        <RailLayer label="Details">
+        <DocumentContents blocks={blocks}/>
+        <RailLayer label="Metadata">
           <RailSection title="Details">
             <DetailRows rows={[{ label: "Version", value: <>Version {shown.version}{isCurrent ? "" : " (earlier)"}</> }, { label: "Type", value: <span title={documentTypeMeaning[content.type]}>{documentTypeLabels[content.type]} · {documentTypeMeaning[content.type]}</span> }, { label: "Area", value: content.area }, { label: "Owner", value: content.owner }, { label: "Effective", value: effectiveLabel(content.effectiveFrom) }, { label: "Status", value: <StatusDot status={active ? "available" : "archived"}/> }]}/>
           </RailSection>
           {content.sources.length > 0 && <RailSection title="Sources"><ul className="space-y-1.5">{content.sources.map((source) => <li key={source.url}><a className="text-[var(--evidence-accent)] underline underline-offset-4 break-words" href={source.url} target="_blank" rel="noopener noreferrer">{source.label}<span className="sr-only"> (opens in a new tab)</span></a></li>)}</ul></RailSection>}
-          <RailSection title="Contents"><ol className="space-y-1.5">{blocks.map((block) => <li key={block.index}><a className="text-[var(--evidence-accent)] underline underline-offset-4" href={`#block-${block.index}`}>{block.heading}</a></li>)}</ol></RailSection>
         </RailLayer>
         <RailLayer label="Version history"><RailSection title="Version history"><VersionHistory rows={history}/></RailSection></RailLayer>
       </PageRail>

@@ -16,5 +16,5 @@ export default async function WorkspaceLayout({children}:{children:ReactNode}) {
   });
   if (!context) return <main className="p-10"><h1>Workspace unavailable</h1><Link href="/login">Return to sign in</Link></main>;
   const conversations = await listConversations(await createServerSupabase(), context);
-  return <TooltipProvider><ChatSession><SidebarProvider><WorkspaceSidebar workspaceName={context.workspaceName} conversations={conversations}/><SidebarInset className="group/inset min-w-0"><header className="flex h-12 shrink-0 items-center px-3 group-has-[[data-page-bar]]/inset:hidden md:hidden"><SidebarTrigger className="text-muted-foreground"/></header>{children}</SidebarInset></SidebarProvider></ChatSession></TooltipProvider>;
+  return <TooltipProvider><ChatSession><SidebarProvider><WorkspaceSidebar workspaceName={context.workspaceName} conversations={conversations.map((conversation) => ({ id: conversation.id, title: conversation.title, mine: conversation.author_id === context.userId }))}/><SidebarInset className="group/inset min-w-0"><header className="flex h-12 shrink-0 items-center px-3 group-has-[[data-page-bar]]/inset:hidden md:hidden"><SidebarTrigger className="text-muted-foreground"/></header>{children}</SidebarInset></SidebarProvider></ChatSession></TooltipProvider>;
 }

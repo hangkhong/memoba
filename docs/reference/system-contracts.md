@@ -87,6 +87,8 @@ A turn is saved before model availability and run admission. Missing model acces
 
 The conversation never asks the user to start the agent: sending a message starts it, and opening or refreshing a conversation never starts a model call. A latest turn with no run, or with a failed, cancelled, or timed-out run, reads "Memoba could not respond" (or that Memoba is unavailable and the question is saved) with one "Try again" button for the owner; an earlier turn without an answer reads "No response". The word "analysis" does not appear in conversation copy.
 
+Only the author can delete a conversation, through `delete_conversation`: it times out expired runs, refuses (`23505`, HTTP 409) while one is live, and removes the briefs, runs, turns, and conversation in one transaction. Turns stay immutable: the trigger on `conversation_turns` blocks every update, and blocks a delete unless the RPC has named that conversation in the transaction-local setting `memoba.deleting_conversation`. No role has a delete grant on these tables.
+
 A text run saves the final answer, cited source snapshots, usage, and terminal state. Activity comes from actual tool and run events. Refresh reads saved state and does not restart generation. The stream is request-bound; background continuation and durable resume are not supported.
 
 The vector migration, stored vectors, and query embedding model use matching model IDs and dimensions. Supported profiles are `gemini-embedding-2` and `text-embedding-3-small`, both at 1536 dimensions. Search filters keyword and semantic candidates by profile. A model change requires indexed replacement revisions through `npm run ai:migrate-embeddings`, with the app stopped until the active corpus is verified.
@@ -104,6 +106,7 @@ Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A c
 | `GET /api/conversations` | Recent conversations in the verified workspace |
 | `POST /api/conversations` | Idempotent conversation creation |
 | `GET /api/conversations/:id` | Authorized turns, attempts, and permitted answers |
+| `DELETE /api/conversations/:id` | Permanently deletes the author's conversation with its turns, runs, and briefs. `404` for anyone else, `409` while a run is live (expired runs time out first) |
 | `POST /api/conversations/:id/turns` | Saved text turn before model access |
 | `POST /api/conversations/:id/turns/:turnId/analyses` | Attempt through the shared analysis service and UI stream |
 | `POST /api/cases` | Saved IDs and index state |
