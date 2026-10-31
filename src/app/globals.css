@@ -112,4 +112,14 @@
   .answer-markdown a { @apply text-[var(--evidence-accent)] underline underline-offset-4; }
   .answer-markdown table { @apply block max-w-full overflow-x-auto; }
   .answer-markdown th, .answer-markdown td { @apply border-b px-3 py-2 text-left text-sm; }
+  /* The same Markdown at the scale of the 360px evidence panel. */
+  .evidence-markdown { @apply min-w-0 text-sm leading-6 wrap-break-word; }
+  .evidence-markdown table { @apply block max-w-full overflow-x-auto; }
+  .evidence-markdown a { @apply text-[var(--evidence-accent)] underline underline-offset-4; }
+  .evidence-markdown h1, .evidence-markdown h2, .evidence-markdown h3, .evidence-markdown h4 { @apply mt-4 mb-2 text-sm font-semibold leading-snug first:mt-0; }
+  .evidence-markdown p { @apply my-2 first:mt-0 last:mb-0; }
+  .evidence-markdown ul { @apply my-2 list-disc space-y-1.5 pl-5; }
+  .evidence-markdown ol { @apply my-2 list-decimal space-y-1.5 pl-5; }
+  .evidence-markdown pre { @apply my-2 text-xs; }
+  .evidence-markdown th, .evidence-markdown td { @apply px-2 py-1.5 text-xs; }
 }
