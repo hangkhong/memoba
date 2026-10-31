@@ -28,10 +28,10 @@ function MarkdownPre({ children }: { children?: ReactNode }) {
   const source = typeof code?.children === "string" ? code.children : "";
   const language = /language-(\S+)/.exec(code?.className ?? "")?.[1] ?? "text";
   const incomplete = useIsCodeFenceIncomplete();
-  return <CodeBlock className="my-4"><CodeBlockHeader><CodeBlockTitle>{language}</CodeBlockTitle><CodeBlockActions><CodeBlockCopyButton value={source} disabled={incomplete}/></CodeBlockActions></CodeBlockHeader><CodeBlockContent><HighlightedLines code={source} language={language}/></CodeBlockContent></CodeBlock>;
+  return <CodeBlock className="my-4 border-border bg-muted"><CodeBlockHeader><CodeBlockTitle>{language}</CodeBlockTitle><CodeBlockActions><CodeBlockCopyButton value={source} disabled={incomplete}/></CodeBlockActions></CodeBlockHeader><CodeBlockContent><HighlightedLines code={source} language={language}/></CodeBlockContent></CodeBlock>;
 }
 
-// shadcn defaults throughout. The one exception is wrapping cells, because document tables hold sentences, not short values.
+// shadcn parts throughout. Code blocks use the app border and muted fill; cells wrap because document tables hold sentences, not short values.
 const blockComponents: Components = {
   pre: ({ children }) => <MarkdownPre>{children}</MarkdownPre>,
   table: ({ className, ...props }) => <div className="my-4 overflow-hidden rounded-lg border"><Table className={className} {...omitNode(props)}/></div>,
