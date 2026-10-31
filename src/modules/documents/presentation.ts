@@ -1,4 +1,4 @@
-import { formatDate } from "@/lib/format-date";
+import { formatDate } from "../../lib/format-date.ts";
 import type { DocumentArea, DocumentType } from "./schema";
 
 export const documentTypeLabels = { policy: "Policy", procedure: "Procedure", guideline: "Guideline" } satisfies Record<DocumentType, string>;
