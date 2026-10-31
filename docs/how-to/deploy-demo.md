@@ -77,7 +77,23 @@ Then on the deployed URL check that:
 - a refresh keeps the answers;
 - function logs show runs under the hosted deadline in `limits.ts`.
 
-## 5. Reset between reviewers
+## 5. Release a fixture change
+
+A merge to `main` applies migrations and deploys the app, but it does not seed. When a release adds or changes files under `evals/demo`, the hosted workspace keeps its old content until you seed it. The first release with process documents shows an empty Documents tab until then.
+
+Confirm that the merge reached the database, then seed:
+
+```bash
+npx supabase migration list --project-ref <project-ref>
+```
+
+```bash
+npm run db:seed -- --demo --remote
+```
+
+Expected: 20 cases and five process documents with their full version history (10 versions). The seed embeds only what is missing and does not touch conversations. Run the same command without `--remote` to update a local stack.
+
+## 6. Reset between reviewers
 
 ```bash
 npm run demo:reset -- --remote --app-url https://<your-app>.vercel.app
