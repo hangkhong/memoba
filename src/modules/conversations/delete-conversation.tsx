@@ -27,7 +27,7 @@ export function DeleteConversationAction({ id, title }: { id: string; title: str
     <SidebarMenuAction showOnHover aria-label={`Delete conversation: ${title}`} onClick={() => setOpen(true)}><Trash2 aria-hidden="true"/></SidebarMenuAction>
     <Dialog open={open} onOpenChange={(next) => { if (!next) close(); }}><DialogContent className="sm:max-w-md">
       <DialogHeader><DialogTitle className="text-base">Delete this conversation?</DialogTitle><DialogDescription>Its questions and answers are removed for everyone in the workspace. This can’t be undone.</DialogDescription></DialogHeader>
-      <p className="line-clamp-3 rounded-md bg-muted px-3 py-2 text-sm break-words">{title}</p>
+      <p className="rounded-md bg-muted px-3 py-2 text-sm"><span className="line-clamp-3 break-words">{title}</span></p>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter><Button variant="outline" onClick={close}>Cancel</Button><Button variant="destructive" disabled={busy} onClick={() => { void remove(); }}>Delete conversation</Button></DialogFooter>
     </DialogContent></Dialog>

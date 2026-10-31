@@ -8,5 +8,5 @@ it("drops a first heading that repeats the shown one, and only that", () => {
   expect(dropMatchingHeading("## Notice", "Notice")).toBe("## Notice");
 });
 it("reduces Markdown to plain words", () => {
-  expect(plainPreview("## Notice\n\n- Send **in writing**\n- See [policy](https://x.y)\n\n| a | b |\n| - | - |\n| 1 | 2 |")).toBe("Notice · Send in writing · See policy · a b · 1 2");
+  expect(plainPreview("## Notice\n\n- Send **in writing**\n- See [policy](https://x.y)\n\n| a | b |\n| - | - |\n| 1 | 2 |")).toBe("Notice Send in writing See policy a b 1 2");
 });

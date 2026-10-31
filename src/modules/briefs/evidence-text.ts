@@ -16,5 +16,5 @@ export function dropMatchingHeading(excerpt: string, heading: string) {
 export function plainPreview(markdown: string) {
   return markdown.split("\n").filter((line) => !/^[\s:|-]*-[\s:|-]*$/.test(line))
     .map((line) => line.replace(/^\s{0,3}#{1,6}[ \t]+/, "").replace(/^\s*(?:[-*+]|\d{1,9}[.)])[ \t]+/, "").replace(/^\s*>\s?/, "").replace(/\|/g, " ").replace(/!?\[([^\]]*)\]\([^)]*\)/g, "$1").replace(/[*_`~]/g, "").replace(/\s+/g, " ").trim())
-    .filter(Boolean).join(" · ");
+    .filter(Boolean).join(" ");
 }

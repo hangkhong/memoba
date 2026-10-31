@@ -22,7 +22,7 @@ import { documentTypeLabels } from "@/modules/documents/presentation";
 
 export const evidenceTitle = (item: EvidenceItem) => isDocumentEvidence(item) ? item.documentTitle : item.caseTitle;
 // A document section reads as part of the process, a case section as a part of the case.
-export const evidenceLabel = (item: EvidenceItem) => isDocumentEvidence(item) ? `Process · ${item.heading}` : sectionLabels[item.sectionKey];
+export const evidenceLabel = (item: EvidenceItem) => isDocumentEvidence(item) ? `Process · ${item.heading}` : `Case · ${sectionLabels[item.sectionKey]}`;
 
 const EvidenceContext = createContext<((item: EvidenceItem) => void) | null>(null);
 function subscribe(callback: () => void) { const media = window.matchMedia("(min-width: 1280px)"); media.addEventListener("change", callback); return () => media.removeEventListener("change", callback); }
@@ -42,7 +42,8 @@ export function EvidenceLayout({ children }: { children: ReactNode }) {
     {!desktop && <Sheet open={!!selected} onOpenChange={(open) => { if (!open) close(); }}><SheetContent className="overflow-y-auto data-[side=right]:w-full sm:max-w-[360px]" finalFocus={trigger}><SheetHeader><SheetTitle>Source evidence</SheetTitle></SheetHeader>{selected && <div className="px-5 pb-6"><EvidenceContent item={selected}/></div>}</SheetContent></Sheet>}
   </EvidenceContext>;
 }
-const linkClass = buttonVariants({ variant: "outline", size: "sm" });
+// `cn` resolves the outline variant's border colour against the base transparent one.
+const linkClass = cn(buttonVariants({ variant: "outline", size: "sm" }));
 // One layout for both kinds: where it comes from, the cited text, what it is, and a way to the source.
 function EvidenceContent({ item }: { item: EvidenceItem }) {
   const document = isDocumentEvidence(item);
@@ -79,7 +80,7 @@ function NewerVersion({ item }: { item: DocumentEvidence }) {
 }
 export function InlineEvidence({ item, number }: { item: EvidenceItem; number: number }) {
   const open = useContext(EvidenceContext);
-  return <HoverCard><HoverCardTrigger render={<Button variant="secondary" size="xs" className="mx-0.5 inline-flex h-5 align-baseline px-1.5 text-xs text-[var(--evidence-accent)]" aria-label={`Open source ${number}: ${evidenceTitle(item)}`} onClick={() => open?.(item)}/>}>[{number}]</HoverCardTrigger><HoverCardContent className="w-80 space-y-2 p-4"><p className="font-medium">{evidenceTitle(item)}</p><p className="text-xs text-muted-foreground">{evidenceLabel(item)}</p><blockquote className="line-clamp-5 text-sm leading-6">{isDocumentEvidence(item) ? plainPreview(item.excerpt) : item.excerpt}</blockquote></HoverCardContent></HoverCard>;
+  return <HoverCard><HoverCardTrigger render={<Button variant="secondary" size="xs" className="mx-0.5 inline-flex h-5 align-baseline px-1.5 text-xs text-[var(--evidence-accent)]" aria-label={`Open source ${number}: ${evidenceTitle(item)}`} onClick={() => open?.(item)}/>}>[{number}]</HoverCardTrigger><HoverCardContent className="w-80 space-y-2 p-4"><p className="font-medium">{evidenceTitle(item)}</p><p className="text-xs text-muted-foreground">{evidenceLabel(item)}</p><blockquote className="line-clamp-5 text-sm leading-6">{isDocumentEvidence(item) ? plainPreview(dropMatchingHeading(item.excerpt, item.heading)) : item.excerpt}</blockquote></HoverCardContent></HoverCard>;
 }
 export function EvidenceSources({ evidence }: { evidence: readonly EvidenceItem[] }) {
   const open = useContext(EvidenceContext);
