@@ -33,7 +33,7 @@ export async function runObservedScenario({ scenario, models, client, context, m
           const sources = new Map(snapshots.map((item) => [item.evidenceId, item]));
           turn.citedSources = answer?.citations.map((citation) => {
             const source = sources.get(citation.evidenceId);
-            return { ...citation, source: source ? { caseId: source.caseId, revisionId: source.revisionId, sectionKey: source.sectionKey } : null };
+            return { ...citation, source: !source ? null : source.source === "document" ? { documentId: source.documentId, revisionId: source.revisionId, block: source.block } : { caseId: source.caseId, revisionId: source.revisionId, sectionKey: source.sectionKey } };
           }) ?? [];
           turn.usage = usage;
           turn.termination = { status, code };

@@ -239,6 +239,72 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"document_revisions": {
+                  Row: {
+                    "author_id": string,"content": NonNullable<Json>,"created_at": string,"document_id": string,"embedding_dimensions": number,"embedding_model": string,"id": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "author_id": string,"content": NonNullable<Json>,"created_at"?: string,"document_id": string,"embedding_dimensions": number,"embedding_model": string,"id"?: string,"workspace_id": string
+                  }
+                  Update: {
+                    "author_id"?: string,"content"?: NonNullable<Json>,"created_at"?: string,"document_id"?: string,"embedding_dimensions"?: number,"embedding_model"?: string,"id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "document_revisions_document_id_workspace_id_fkey"
+      columns: ["document_id","workspace_id"]
+isOneToOne: false
+      referencedRelation: "documents"
+      referencedColumns: ["id","workspace_id"]
+    }
+                  ]
+                },"document_sections": {
+                  Row: {
+                    "block": number | null,"content": string,"embedding": string,"fts": unknown,"heading": string,"heading_path": string,"id": string,"kind": string,"ordinal": number,"revision_id": string,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "block"?: number | null,"content": string,"embedding": string,"fts"?: never,"heading"?: string,"heading_path"?: string,"id"?: string,"kind": string,"ordinal": number,"revision_id": string,"workspace_id": string
+                  }
+                  Update: {
+                    "block"?: number | null,"content"?: string,"embedding"?: string,"fts"?: never,"heading"?: string,"heading_path"?: string,"id"?: string,"kind"?: string,"ordinal"?: number,"revision_id"?: string,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "document_sections_revision_id_workspace_id_fkey"
+      columns: ["revision_id","workspace_id"]
+isOneToOne: false
+      referencedRelation: "document_revisions"
+      referencedColumns: ["id","workspace_id"]
+    }
+                  ]
+                },"documents": {
+                  Row: {
+                    "created_at": string,"id": string,"lifecycle": string,"published_revision_id": string | null,"workspace_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"lifecycle"?: string,"published_revision_id"?: string | null,"workspace_id": string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"lifecycle"?: string,"published_revision_id"?: string | null,"workspace_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "documents_published_revision_id_id_fkey"
+      columns: ["published_revision_id","id"]
+isOneToOne: false
+      referencedRelation: "document_revisions"
+      referencedColumns: ["id","document_id"]
+    },{
+      foreignKeyName: "documents_workspace_id_fkey"
+      columns: ["workspace_id"]
+isOneToOne: false
+      referencedRelation: "workspaces"
+      referencedColumns: ["id"]
+    }
+                  ]
                 },"revision_concepts": {
                   Row: {
                     "concept_id": string,"revision_id": string,"workspace_id": string
@@ -317,6 +383,9 @@ isOneToOne: false
 "archive_case":
 { Args: { "c": string }; Returns: undefined
                            },
+"archive_document":
+{ Args: { "d": string }; Returns: undefined
+                           },
 "create_conversation":
 { Args: { "conversation": string,"w": string }; Returns: string
                            },
@@ -344,8 +413,14 @@ isOneToOne: false
 "publish_case_revision":
 { Args: { "dimensions": number,"model": string,"r": string,"sections": Json }; Returns: Json
                            },
+"publish_document":
+{ Args: { "content": Json,"dimensions": number,"model": string,"sections": Json,"target_document"?: string,"w": string }; Returns: Json
+                           },
 "read_knowledge_case":
 { Args: { "keys": (string)[],"max_results": number,"revision": string,"target": string,"w": string }; Returns: Json[]
+                           },
+"read_knowledge_document":
+{ Args: { "blocks": (number)[],"max_results": number,"revision"?: string,"target": string,"w": string }; Returns: Json[]
                            },
 "reconcile_analysis":
 { Args: { "run": string }; Returns: undefined
@@ -361,6 +436,9 @@ isOneToOne: false
                            },
 "search_knowledge":
 { Args: { "concept_ids": (string)[],"max_results": number,"model": string,"per_case": number,"purpose": string,"query_embedding": string,"query_text": string,"w": string }; Returns: Json[]
+                           },
+"search_knowledge_documents":
+{ Args: { "max_documents": number,"model": string,"query_embedding": string,"query_text": string,"w": string }; Returns: Json[]
                            },
 "unlink_cases":
 { Args: { "relation": string,"source": string,"target": string }; Returns: undefined

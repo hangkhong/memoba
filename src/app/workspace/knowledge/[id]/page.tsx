@@ -10,11 +10,12 @@ import { RelatedCases } from "@/modules/cases/related-cases";
 import { caseDetail, listCases } from "@/modules/cases/repository";
 import { listConcepts } from "@/modules/cases/queries";
 import { caseStatus, publicationLabel } from "@/modules/cases/presentation";
-import { OutcomePill, StatusDot, TemplateChip } from "@/modules/cases/case-badges";
+import { OutcomePill, TemplateChip } from "@/modules/cases/case-badges";
+import { StatusDot } from "@/components/badges";
 import { CaseHeaderActions, ReindexButton } from "@/modules/cases/case-detail-actions";
 import { CaseArticle } from "@/modules/cases/case-article";
-import { CasePageBar, CasePageBody, CasePageFrame } from "@/modules/cases/case-page-frame";
-import { DetailRows, RailLayer, RailSection, TagList, VersionHistory } from "@/modules/cases/case-rail";
+import { PageBar, PageBody, PageFrame } from "@/components/page-frame";
+import { DetailRows, RailLayer, RailSection, TagList, VersionHistory } from "@/components/rail";
 import { versionRows } from "@/modules/cases/revision-history";
 
 export default async function CasePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ edit?: string }> }) {
@@ -34,14 +35,14 @@ export default async function CasePage({ params, searchParams }: { params: Promi
   const status = caseStatus(state); const active = detail.lifecycle === "active";
   const tags = content.conceptIds.flatMap((conceptId) => concepts.find((concept) => concept.id === conceptId)?.label ?? []);
   const history = versionRows(detail.revisions, { publishedId: detail.published_revision_id, archived: !active });
-  return <CasePageFrame>
-    <CasePageBar>
+  return <PageFrame>
+    <PageBar>
       <SidebarTrigger className="-ml-1 text-muted-foreground md:hidden"/>
       <Link href="/workspace/knowledge" aria-label="Back to Knowledge Hub" className={buttonVariants({ variant: "ghost", size: "icon", className: "text-muted-foreground" })}><ChevronLeft aria-hidden="true"/></Link>
       <h1 title={content.title} className="min-w-0 flex-1 truncate text-sm font-medium">{content.title}</h1>
       {active && <CaseHeaderActions caseId={detail.id} title={content.title} initial={content} concepts={concepts} defaultEdit={edit === "1"}/>}
-    </CasePageBar>
-    <CasePageBody>
+    </PageBar>
+    <PageBody>
       <main className="min-w-0 max-w-[42.5rem] min-[1281px]:mx-auto min-[1281px]:w-full"><CaseArticle content={content}/></main>
       <aside aria-label="Case details" className="flex min-w-0 flex-col gap-3 text-sm">
         <RailLayer label="Details">
@@ -55,6 +56,6 @@ export default async function CasePage({ params, searchParams }: { params: Promi
         </RailLayer>
         <RailLayer label="Version history"><RailSection title="Version history"><VersionHistory rows={history}/></RailSection></RailLayer>
       </aside>
-    </CasePageBody>
-  </CasePageFrame>;
+    </PageBody>
+  </PageFrame>;
 }

@@ -4,7 +4,8 @@ import { executionLimits } from "@/lib/contracts/limits";
 import { textInstructions, textReasoningAdapter } from "./agent";
 import { createRunBudget } from "./budget";
 import { createRunKnowledge } from "@/modules/knowledge/service";
-import { evidenceSchema } from "@/modules/knowledge/contracts";
+import { caseEvidenceSchema as evidenceSchema, documentEvidenceSchema, type DocumentEvidence, type EvidenceItem } from "@/modules/knowledge/contracts";
+import { citationPlacement } from "@/modules/briefs/validation";
 import { runTextAnalysis } from "./harness";
 import type { TextAnswer } from "@/modules/briefs/schema";
 import type { EvaluationTraceEvent } from "./evaluation-trace";
@@ -17,15 +18,15 @@ const usage = { inputTokens: 1, outputTokens: 1, totalTokens: 2 };
 function modelResult(content: ({ type: "text"; text: string } | { type: "tool-call"; toolCallId: string; toolName: string; input: string })[], toolCall: boolean) { return { content, finishReason: { unified: toolCall ? "tool-calls" as const : "stop" as const, raw: undefined }, usage: { inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } }, warnings: [] }; }
 it("lets the model search, read, revise its search and answer using the disclosed source", async () => {
   const searches: string[] = [];
-  const knowledge = createRunKnowledge({ search: async ({ query }) => { searches.push(query); return { kind: "success", items: [item] }; }, read: async () => ({ kind: "success", items: [item] }), expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async ({ query }) => { searches.push(query); return { cases: { kind: "success", items: [item] }, documents: empty }; }, readDocument: async () => empty, read: async () => ({ kind: "success", items: [item] }), expand: async () => empty }, runId);
   const events: string[] = [];
   const trace: EvaluationTraceEvent[] = [];
   let calls = 0;
   const model = streamedModel({ doGenerate: async ({ prompt }) => {
     calls++;
-    if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
+    if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_knowledge", input: JSON.stringify({ query: "pilot" }) }], true);
     if (calls === 2) return modelResult([{ type: "tool-call", toolCallId: "r1", toolName: "read_case", input: JSON.stringify({ caseIds: [item.caseId], sectionKeys: ["approach"] }) }], true);
-    if (calls === 3) return modelResult([{ type: "tool-call", toolCallId: "s2", toolName: "search_cases", input: JSON.stringify({ query: "failure" }) }], true);
+    if (calls === 3) return modelResult([{ type: "tool-call", toolCallId: "s2", toolName: "search_knowledge", input: JSON.stringify({ query: "failure" }) }], true);
     expect(JSON.stringify(prompt)).toContain(item.excerpt);
     return modelResult([{ type: "text", text: `We reviewed a pilot [S:${runId}:1].` }], false);
   } });
@@ -35,9 +36,9 @@ it("lets the model search, read, revise its search and answer using the disclose
     const result = await adapter.generate(question, budget);
     expect(result.text).toContain(`[S:${runId}:1]`);
     expect(searches).toEqual(["pilot", "failure"]);
-    expect(events).toEqual(["search_cases:started", "search_cases:completed", "read_case:started", "read_case:completed", "search_cases:started", "search_cases:completed"]);
+    expect(events).toEqual(["search_knowledge:started", "search_knowledge:completed", "read_case:started", "read_case:completed", "search_knowledge:started", "search_knowledge:completed"]);
     expect(knowledge.disclosed()).toHaveLength(1);
-    expect(trace.filter((event) => event.kind === "tool_call")).toMatchObject([{ name: "search_cases", input: { query: "pilot" } }, { name: "read_case", input: { caseIds: [item.caseId], sectionKeys: ["approach"] } }, { name: "search_cases", input: { query: "failure" } }]);
+    expect(trace.filter((event) => event.kind === "tool_call")).toMatchObject([{ name: "search_knowledge", input: { query: "pilot" } }, { name: "read_case", input: { caseIds: [item.caseId], sectionKeys: ["approach"] } }, { name: "search_knowledge", input: { query: "failure" } }]);
     expect(trace.filter((event) => event.kind === "model_sources")).toEqual([{ kind: "model_sources", sources: [{ marker: `[S:${runId}:1]`, evidenceId: item.evidenceId, caseId: item.caseId, revisionId: item.revisionId, sectionKey: "approach" }] }]);
     expect(JSON.stringify(trace)).not.toContain(item.excerpt);
   } finally { budget.dispose(); }
@@ -68,11 +69,11 @@ it("saves only cited source snapshots and rejects loss of source access", async 
   expect((await runTextAnalysis(question, { ...deps, canRead: async () => false })).code).toBe("SOURCE_ACCESS_DENIED");
 });
 it("sends a failed search to the model as an error and permits an uncited answer", async () => {
-  const knowledge = createRunKnowledge({ search: async () => ({ kind: "error", code: "UNAVAILABLE", retryable: false }), read: async () => empty, expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async () => { const failed = { kind: "error", code: "UNAVAILABLE", retryable: false } as const; return { cases: failed, documents: failed }; }, readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   let calls = 0;
   const model = streamedModel({ doGenerate: async ({ prompt }) => {
     calls++;
-    if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
+    if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_knowledge", input: JSON.stringify({ query: "pilot" }) }], true);
     expect(JSON.stringify(prompt)).toContain("UNAVAILABLE");
     return modelResult([{ type: "text", text: "I cannot check the team's history. As general advice, start with a pilot." }], false);
   } });
@@ -81,11 +82,11 @@ it("sends a failed search to the model as an error and permits an uncited answer
   finally { budget.dispose(); }
 });
 it("leaves a model step for a final answer after repeated investigative calls", async () => {
-  const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: empty, documents: empty }), readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   let calls = 0;
   const model = streamedModel({ doGenerate: async (options) => {
     calls++;
-    if (calls < 5) return modelResult([{ type: "tool-call", toolCallId: `s${calls}`, toolName: "search_cases", input: JSON.stringify({ query: `query ${calls}` }) }], true);
+    if (calls < 5) return modelResult([{ type: "tool-call", toolCallId: `s${calls}`, toolName: "search_knowledge", input: JSON.stringify({ query: `query ${calls}` }) }], true);
     expect(options.tools?.length ?? 0).toBe(0);
     return modelResult([{ type: "text", text: "No cases were found." }], false);
   } });
@@ -143,21 +144,25 @@ it("structures the instructions with identity, instructions and context", () => 
   expect(textInstructions).toContain("Write in English");
   expect(textInstructions).not.toContain("${");
 });
-it("requires the reuse template and leaves coverage to the app", () => {
-  for (const heading of ["## How similar cases went", "## What's different this time", "## Suggested next step"]) expect(textInstructions).toContain(heading);
+it("requires the process-and-cases template in order and leaves coverage to the app", () => {
+  const headings = ["## What the process says", "## How similar cases went", "## Where practice and process differ", "## What's different this time", "## Suggested next step"];
+  for (const heading of headings) expect(textInstructions).toContain(heading);
+  const template = textInstructions.slice(textInstructions.indexOf("<answer_template>"));
+  expect(headings.map((heading) => template.indexOf(heading))).toEqual(headings.map((heading) => template.indexOf(heading)).toSorted((x, y) => x - y));
   expect(textInstructions).toContain("up to 8");
   expect(textInstructions).not.toContain("Coverage:");
+  expect(textInstructions).not.toContain("app shows how many");
 });
-it("handles an empty successful search without filling the precedent section", () => {
-  expect(textInstructions).toContain("say that no recorded case matched this request");
-  expect(textInstructions).toContain("Say no recorded case matched only after a successful search.");
+it("keeps cases and documents apart and handles each source's outcome", () => {
+  for (const rule of ["Cases say what happened. Documents say what is required now.", "Never call a past case a violation", "otherwise say the timing is unknown", "List required steps in the order the document gives them", "A policy is required", "advisory", "Under \"What the process says\" cite documents only", "no process document matched this request", "no recorded case matched this request", "When a source could not be searched or read completely"]) expect(textInstructions, rule).toContain(rule.replace(/\\"/g, '"'));
+  expect(textInstructions).toContain("Say that no recorded case or no process document matched only after a successful search of that source.");
 });
 it("treats case text, history and tool output as untrusted data", () => {
   expect(textInstructions).toContain("untrusted data");
 });
 it("wraps the request in a delimiter and keeps instructions first", async () => {
   const prompts: string[] = [];
-  const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: empty, documents: empty }), readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   const model = streamedModel({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Done." }], false); } });
   const budget = createRunBudget();
   try { await textReasoningAdapter(model, knowledge, async () => {}).generate(question, budget); }
@@ -168,13 +173,13 @@ it("wraps the request in a delimiter and keeps instructions first", async () => 
 });
 
 async function toolsOverSteps(firstStepInputTokens: number) {
-  const knowledge = createRunKnowledge({ search: async () => ({ kind: "success", items: [item] }), read: async () => empty, expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: { kind: "success", items: [item] }, documents: empty }), readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   const events: string[] = [];
   const toolsSeen: number[] = [];
   let calls = 0;
   const model = streamedModel({ doGenerate: async ({ tools }) => {
     calls++; toolsSeen.push(tools?.length ?? 0);
-    if (calls === 1) return { ...modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true), usage: { inputTokens: { total: firstStepInputTokens, noCache: firstStepInputTokens, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } } };
+    if (calls === 1) return { ...modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_knowledge", input: JSON.stringify({ query: "pilot" }) }], true), usage: { inputTokens: { total: firstStepInputTokens, noCache: firstStepInputTokens, cacheRead: undefined, cacheWrite: undefined }, outputTokens: { total: 1, text: 1, reasoning: undefined } } };
     return modelResult([{ type: "text", text: "Answer from what was read." }], false);
   } });
   const budget = createRunBudget();
@@ -196,7 +201,7 @@ it("keeps tools available while step input stays below the ceiling", async () =>
 
 it("builds the repair prompt from static instructions followed by tagged blocks", async () => {
   const prompts: string[] = [];
-  const knowledge = createRunKnowledge({ search: async () => empty, read: async () => empty, expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: empty, documents: empty }), readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   const model = streamedModel({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Fixed." }], false); } });
   const budget = createRunBudget();
   try { await textReasoningAdapter(model, knowledge, async () => {}).repair(question, "Draft [S:x:1]", "INVALID_CITATION", budget); }
@@ -214,11 +219,11 @@ it("saves the answer with the coverage computed by the run", async () => {
 });
 
 it("streams answer text as draft chunks and restarts the draft when a step ends in a tool call", async () => {
-  const knowledge = createRunKnowledge({ search: async () => ({ kind: "success", items: [item] }), read: async () => ({ kind: "success", items: [item] }), expand: async () => empty }, runId);
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: { kind: "success", items: [item] }, documents: empty }), readDocument: async () => empty, read: async () => ({ kind: "success", items: [item] }), expand: async () => empty }, runId);
   let calls = 0;
   const model = streamedModel({ doGenerate: async () => {
     calls++;
-    if (calls === 1) return modelResult([{ type: "text", text: "Let me look." }, { type: "tool-call", toolCallId: "s1", toolName: "search_cases", input: JSON.stringify({ query: "pilot" }) }], true);
+    if (calls === 1) return modelResult([{ type: "text", text: "Let me look." }, { type: "tool-call", toolCallId: "s1", toolName: "search_knowledge", input: JSON.stringify({ query: "pilot" }) }], true);
     return modelResult([{ type: "text", text: "A final answer." }], false);
   } });
   const budget = createRunBudget();
@@ -241,4 +246,63 @@ it("discards the draft before a citation repair and streams the corrected answer
   expect(result.status).toBe("complete");
   expect(drafts).toEqual(["Bad [S:x:9]", "<reset>", "Fixed."]);
   expect(saved).toEqual(["complete", "Fixed."]);
+});
+
+const documentItem: DocumentEvidence = documentEvidenceSchema.parse({ source: "document", evidenceId: crypto.randomUUID(), documentId: crypto.randomUUID(), revisionId: crypto.randomUUID(), sectionId: crypto.randomUUID(), block: 1, heading: "Notice", documentTitle: "Price change policy", type: "policy", area: "Finance", owner: "Finance", effectiveFrom: "2026-01-01", excerpt: "Give 90 days' notice.", authorId: crypto.randomUUID(), recordedAt: new Date().toISOString(), sources: [] });
+const documentCard = { documentId: documentItem.documentId, revisionId: documentItem.revisionId, title: "Price change policy", description: "Notice rules.", type: "policy" as const, area: "Finance" as const, owner: "Finance", effectiveFrom: "2026-01-01", outline: [{ block: 1, heading: "Notice", chars: 22 }], matchedHeadings: [{ block: 1, heading: "Notice" }] };
+
+it("searches both sources, reads a document, and reports per-source state through the tool events", async () => {
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: empty, documents: { kind: "success", items: [documentCard] } }), readDocument: async () => ({ kind: "success", items: [documentItem] }), read: async () => empty, expand: async () => empty }, runId);
+  const events: { tool?: string; state: string; code?: string }[] = [];
+  const trace: EvaluationTraceEvent[] = [];
+  let calls = 0;
+  const model = streamedModel({ doGenerate: async () => {
+    calls++;
+    if (calls === 1) return modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_knowledge", input: JSON.stringify({ query: "price notice" }) }], true);
+    if (calls === 2) return modelResult([{ type: "tool-call", toolCallId: "d1", toolName: "read_document", input: JSON.stringify({ documentId: documentItem.documentId }) }], true);
+    return modelResult([{ type: "text", text: `## What the process says\n- Give notice [S:${runId}:1].` }], false);
+  } });
+  const budget = createRunBudget();
+  try {
+    const result = await textReasoningAdapter(model, knowledge, async (event) => { events.push({ tool: event.tool, state: event.state, code: event.code }); }, (event) => trace.push(event)).generate(question, budget);
+    expect(result.text).toContain(`[S:${runId}:1]`);
+    expect(events).toEqual([
+      { tool: "search_knowledge", state: "started", code: undefined }, { tool: "search_knowledge", state: "completed", code: "cases:none:0;documents:found:1" },
+      { tool: "read_document", state: "started", code: undefined }, { tool: "read_document", state: "completed", code: undefined },
+    ]);
+    expect(trace.filter((event) => event.kind === "model_sources")).toEqual([{ kind: "model_sources", sources: [{ marker: `[S:${runId}:1]`, evidenceId: documentItem.evidenceId, documentId: documentItem.documentId, revisionId: documentItem.revisionId, block: 1 }] }]);
+    expect(trace.find((event) => event.kind === "tool_result" && event.callId === "s1")).toMatchObject({ documentIds: [documentItem.documentId], caseIds: [], sourceStates: "cases:none:0;documents:found:1" });
+  } finally { budget.dispose(); }
+});
+
+it("records a failed source in the tool event code without failing the other", async () => {
+  const failed = { kind: "error", code: "QUERY_FAILED", retryable: false } as const;
+  const knowledge = createRunKnowledge({ search: async () => ({ cases: { kind: "success", items: [item] }, documents: failed }), readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
+  const events: string[] = [];
+  let calls = 0;
+  const model = streamedModel({ doGenerate: async () => { calls++; return calls === 1 ? modelResult([{ type: "tool-call", toolCallId: "s1", toolName: "search_knowledge", input: JSON.stringify({ query: "pilot" }) }], true) : modelResult([{ type: "text", text: "Done." }], false); } });
+  const budget = createRunBudget();
+  try { await textReasoningAdapter(model, knowledge, async (event) => { events.push(`${event.state}:${event.code ?? ""}`); }).generate(question, budget); }
+  finally { budget.dispose(); }
+  expect(events).toContain("completed:cases:found:1;documents:failed:0");
+});
+
+it("allows only documents under the process heading and only cases under the cases heading", async () => {
+  const documentMarker = `[S:${runId}:1]`; const caseMarker = `[S:${runId}:2]`;
+  const sources = new Map<string, EvidenceItem>([[documentMarker, documentItem], [caseMarker, item]]);
+  expect(citationPlacement(`## What the process says\n- Notice ${documentMarker}\n\n## How similar cases went\n- Pilot ${caseMarker}\n\n## Suggested next step\nBoth ${documentMarker} ${caseMarker}`, sources)).toBe(true);
+  expect(citationPlacement(`## What the process says\n- Pilot ${caseMarker}`, sources)).toBe(false);
+  expect(citationPlacement(`## How similar cases went\n- Notice ${documentMarker}`, sources)).toBe(false);
+  expect(citationPlacement(`Plain answer ${documentMarker}`, sources)).toBe(true);
+});
+
+it("repairs a misplaced citation once", async () => {
+  const documentMarker = `[S:${runId}:1]`; const caseMarker = `[S:${runId}:2]`;
+  const misplaced = `## What the process says\n- Pilot ${caseMarker}\n- Notice ${documentMarker}`;
+  const fixed = `## What the process says\n- Notice ${documentMarker}\n\n## How similar cases went\n- Pilot ${caseMarker}`;
+  let corrections = 0; const codes: string[] = [];
+  const result = await runTextAnalysis(question, { generate: async () => ({ text: misplaced, usage }), repair: async (_request, _draft, code) => { corrections++; codes.push(code); return { text: fixed, usage }; }, disclosed: () => [{ marker: documentMarker, evidence: documentItem }, { marker: caseMarker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async () => crypto.randomUUID() });
+  expect(result.status).toBe("complete"); expect(corrections).toBe(1); expect(codes).toEqual(["MISPLACED_CITATION"]);
+  const stuck = await runTextAnalysis(question, { generate: async () => ({ text: misplaced, usage }), repair: async () => ({ text: misplaced, usage }), disclosed: () => [{ marker: documentMarker, evidence: documentItem }, { marker: caseMarker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async () => null });
+  expect(stuck).toMatchObject({ status: "failed", code: "MISPLACED_CITATION" });
 });

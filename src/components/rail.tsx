@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { cn } from "cn";
-import { Pill, Tag } from "./case-badges";
+import { Pill, Tag } from "./badges";
 import { RevisionTime } from "./revision-time";
-import type { VersionRow, VersionState } from "./revision-history";
-import type { Tone } from "./presentation";
+import type { Tone } from "./tone";
+
+export type VersionState = "live" | "preparing" | "failed";
+export type VersionRow = { id: string; number: number; state: VersionState | null; createdAt: string; summary: string };
 
 export function RailLayer({ label, children }: { label: string; children: ReactNode }) {
   return <section aria-label={label} className="rounded-xl border bg-background">{children}</section>;

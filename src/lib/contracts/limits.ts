@@ -17,5 +17,12 @@ export const executionLimits = Object.freeze({
   concurrentRuns: 2,
   draftDeadlineMs: 30_000,
   maxModelInputTokens: 64_000,
+  // Process documents have their own search quota and read pool so they never take case budget.
+  documentCandidates: 5,
+  documentPreviewTokens: 3_000,
+  documentContextSections: 24,
+  documentContextTokens: 12_000,
 });
-export const inputLimits = Object.freeze({ title: 200, text: 4_000, concepts: 12, hardConstraints: 8, conversationMessages: 12, importText: 12_000 });
+// Most sources one answer can cite: the case pool plus the document pool.
+export const citationLimit = executionLimits.contextSections + executionLimits.documentContextSections;
+export const inputLimits = Object.freeze({ title: 200, text: 4_000, concepts: 12, hardConstraints: 8, conversationMessages: 12, importText: 12_000, documentDescription: 600, documentBody: 60_000, documentBlock: 12_000 });

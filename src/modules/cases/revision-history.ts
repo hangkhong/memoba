@@ -1,9 +1,8 @@
 import { sectionLabels, sectionOrder } from "./presentation";
+import type { VersionRow } from "@/components/rail";
 import type { CaseInput, SectionKey } from "./schema";
 
 export type HistoryRevision = { id: string; created_at: string; index_state: "pending" | "ready" | "failed"; content: CaseInput };
-export type VersionState = "live" | "preparing" | "failed";
-export type VersionRow = { id: string; number: number; state: VersionState | null; createdAt: string; summary: string };
 
 const sectionKeys: SectionKey[] = [...new Set([...sectionOrder.product_delivery, ...sectionOrder.cs_operations])];
 const fieldLabels = { title: "Title", template: "Template", ...sectionLabels, outcome: "Outcome", conceptIds: "Concepts", sources: "Sources" } satisfies Record<string, string>;

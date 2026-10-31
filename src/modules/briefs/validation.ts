@@ -1,5 +1,20 @@
-import type { DisclosedSource, EvidenceItem } from "@/modules/knowledge/contracts";
+import { isDocumentEvidence, type DisclosedSource, type EvidenceItem } from "@/modules/knowledge/contracts";
 import { textAnswerSchema } from "./schema";
+
+// Cases say what happened and documents say what is required, so each heading may cite only its own kind.
+export const processHeading = "What the process says";
+export const casesHeading = "How similar cases went";
+const headingKind = (heading: string) => { const name = heading.trim().replace(/[:.]$/, "").toLocaleLowerCase(); return name === processHeading.toLocaleLowerCase() ? "document" : name === casesHeading.toLocaleLowerCase() ? "case" : undefined; };
+export function citationPlacement(text: string, sources: ReadonlyMap<string, EvidenceItem>) {
+  let expected: "document" | "case" | undefined;
+  for (const line of text.split("\n")) {
+    const heading = /^#{1,6}\s+(.+?)\s*#*$/.exec(line);
+    if (heading?.[1]) { expected = headingKind(heading[1]); continue; }
+    if (!expected) continue;
+    for (const marker of line.match(/\[S:[^\]\n]*\]/g) ?? []) { const evidence = sources.get(marker); if (evidence && isDocumentEvidence(evidence) !== (expected === "document")) return false; }
+  }
+  return true;
+}
 
 export async function validateTextAnswer({ text, disclosed, canRead }: {
   text: string;
@@ -21,6 +36,7 @@ export async function validateTextAnswer({ text, disclosed, canRead }: {
     citations.push({ marker, evidenceId: evidence.evidenceId });
     snapshots.push(evidence);
   }
+  if (!citationPlacement(text, sources)) return { kind: "invalid", code: "MISPLACED_CITATION" } as const;
   const answer = textAnswerSchema.safeParse({ version: 2, text, citations });
   if (!answer.success) return { kind: "invalid", code: "INVALID_SCHEMA" } as const;
   return { kind: "valid", value: answer.data, snapshots } as const;

@@ -35,7 +35,7 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
     await event("validation", "started");
     let checked = await budget.run(() => validateTextAnswer({ text: output.text, disclosed: deps.disclosed(), canRead: deps.canRead }));
     deps.trace?.({ kind: "validation", result: checked.kind, code: checked.kind === "invalid" ? checked.code : null });
-    if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA")) {
+    if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA" || checked.code === "MISPLACED_CITATION")) {
       const validationCode = checked.code;
       deps.trace?.({ kind: "correction", state: "started" });
       output = await budget.run(() => { deps.draft?.({ kind: "reset" }); return deps.repair(request, output.text, validationCode, budget, deps.draft); });
@@ -51,7 +51,7 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
     return { status: "complete", briefId, code: null } as const;
   } catch (error) {
     const status = error instanceof BudgetError ? error.code === "TIMED_OUT" ? "timed_out" : error.code === "CANCELLED" ? "cancelled" : "failed" : "failed";
-    const allowedCodes = ["INVALID_SCHEMA", "INVALID_CITATION", "SOURCE_ACCESS_DENIED", "SOURCE_ACCESS_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_UNAVAILABLE", "MODEL_FAILED"];
+    const allowedCodes = ["INVALID_SCHEMA", "INVALID_CITATION", "MISPLACED_CITATION", "SOURCE_ACCESS_DENIED", "SOURCE_ACCESS_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_UNAVAILABLE", "MODEL_FAILED"];
     const code = error instanceof BudgetError ? error.code : error instanceof Error && allowedCodes.includes(error.message) ? error.message : "ANALYSIS_FAILED";
     await deps.finish(status, null, [], code, usage);
     return { status, briefId: null, code };

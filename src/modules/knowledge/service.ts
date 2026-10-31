@@ -1,15 +1,25 @@
 import { executionLimits } from "@/lib/contracts/limits";
 import type { NormalizedRequest } from "@/modules/analysis/schema";
 import type { SectionKey } from "@/modules/cases/schema";
-import type { CaseHeader, CasePreview, DisclosedSource, EvidenceItem, ReadResult, ReadSection, RunToolResult, ToolResult } from "./contracts";
+import { isCaseEvidence, isDocumentEvidence, type CaseEvidence, type CaseHeader, type CasePreview, type DisclosedSource, type DocumentCard, type DocumentEvidence, type DocumentReadBlock, type DocumentReadResult, type DocumentSearchResult, type KnowledgeSearchResult, type ReadResult, type ReadSection, type RunToolResult, type ToolResult } from "./contracts";
 import { estimateEvidenceTokens } from "./context";
 import type { AnswerCoverage } from "@/modules/briefs/schema";
 export type SearchInput = { query: string; purpose: "method" | "conditions" | "exceptions"; conceptIds: NormalizedRequest["conceptIds"] };
 export type ReadInput = { caseId: string; sectionKeys: SectionKey[]; revisionId?: string };
 export type ExpandInput = { seedIds: string[]; relationTypes: ("related_to" | "contrasts_with" | "supersedes")[] };
-export type KnowledgeStore = { search: (input: SearchInput) => Promise<ToolResult>; read: (input: ReadInput) => Promise<ToolResult>; expand: (input: ExpandInput) => Promise<ToolResult>; template?: (revisionId: string) => Promise<CaseHeader["template"]> };
+export type ReadDocumentInput = { documentId: string; blocks: number[]; revisionId?: string };
+export type DocumentReadStoreResult = { kind: "success"; items: DocumentEvidence[] } | { kind: "empty"; items: [] } | { kind: "error"; code: Extract<ToolResult, { kind: "error" }>["code"]; retryable: boolean };
+// `search` embeds the query once and runs the case and document searches separately; one source failing leaves the other intact.
+export type KnowledgeStore = {
+  search: (input: SearchInput) => Promise<{ cases: ToolResult; documents: DocumentSearchResult }>;
+  read: (input: ReadInput) => Promise<ToolResult>;
+  readDocument: (input: ReadDocumentInput) => Promise<DocumentReadStoreResult>;
+  expand: (input: ExpandInput) => Promise<ToolResult>;
+  template?: (revisionId: string) => Promise<CaseHeader["template"]>;
+};
 
-export type RunCoverage = { searchState: "none" | "succeeded" | "failed_or_partial"; previewed: { caseId: string; title: string }[]; readCaseIds: string[] };
+type SearchState = "none" | "succeeded" | "failed_or_partial";
+export type RunCoverage = { searchState: SearchState; previewed: { caseId: string; title: string }[]; readCaseIds: string[]; documents: { searchState: SearchState; previewedIds: string[]; readIds: string[] } };
 
 // Saved with the answer. Read counts include any case read, even one search did not preview.
 export function answerCoverage(coverage: RunCoverage): AnswerCoverage {
@@ -21,6 +31,7 @@ export function answerCoverage(coverage: RunCoverage): AnswerCoverage {
     read: read.size,
     searchFailed: coverage.searchState === "failed_or_partial",
     unreadTitles: coverage.previewed.filter((item) => !read.has(item.caseId)).map((item) => item.title).slice(0, 10),
+    documents: { searched: coverage.documents.searchState !== "none", previewed: new Set([...coverage.documents.previewedIds, ...coverage.documents.readIds]).size, read: new Set(coverage.documents.readIds).size, searchFailed: coverage.documents.searchState === "failed_or_partial" },
   };
 }
 
@@ -30,14 +41,21 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
   const previews = new Set<string>();
   const previewedCases = new Map<string, string>();
   const readIds = new Set<string>();
-  let searchState: RunCoverage["searchState"] = "none";
+  let searchState: SearchState = "none";
   const disclosed = new Map<string, DisclosedSource>();
   let previewTokens = 0;
+  // Documents have their own pins, preview pool and read pool, so they never spend case budget.
+  const pinnedDocuments = new Map<string, string>();
+  const previewedDocuments = new Set<string>();
+  const readDocuments = new Set<string>();
+  let documentSearchState: SearchState = "none";
+  let documentPreviewTokens = 0;
+  const caseEvidence = () => [...disclosed.values()].map((entry) => entry.evidence).filter(isCaseEvidence);
+  const documentEvidence = () => [...disclosed.values()].map((entry) => entry.evidence).filter(isDocumentEvidence);
   const sectionPriority: SectionKey[] = ["approach", "observedOutcome", "problem", "context", "constraints", "lessons", "deliverable", "changeScope", "deploymentConditions", "customerImpact", "handlingConditions", "escalationNotes"];
-  const key = (item: DisclosedSource["evidence"]) => `${item.revisionId}:${item.sectionKey}`;
+  const key = (item: CaseEvidence) => `${item.revisionId}:${item.sectionKey}`;
 
-  async function searchCases(query: string): Promise<RunToolResult<CasePreview>> {
-    const result = await store.search({ query, purpose: "method", conceptIds: [] });
+  function casePreviews(result: ToolResult): RunToolResult<CasePreview> {
     if (result.kind === "error" || result.kind === "partial") searchState = "failed_or_partial";
     else if (searchState === "none") searchState = "succeeded";
     if (result.kind === "error" || result.kind === "empty") return result;
@@ -54,7 +72,7 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
       const excerpt = item.excerpt.slice(0, executionLimits.previewExcerptChars);
       const section = { sectionKey: item.sectionKey, excerpt, truncated: excerpt.length < item.excerpt.length };
       const itemTokens = Math.ceil(new TextEncoder().encode(JSON.stringify({ caseId: item.caseId, revisionId: item.revisionId, title: item.caseTitle, outcome: item.outcome, section })).byteLength / 3);
-      if (previewTokens + itemTokens > executionLimits.previewTokens || previewTokens + itemTokens + estimateEvidenceTokens([...disclosed.values()].map((entry) => entry.evidence)) > executionLimits.contextTokens) { reason = "CONTEXT_LIMIT"; continue; }
+      if (previewTokens + itemTokens > executionLimits.previewTokens || previewTokens + itemTokens + estimateEvidenceTokens(caseEvidence()) > executionLimits.contextTokens) { reason = "CONTEXT_LIMIT"; continue; }
       previewTokens += itemTokens;
       pinned.set(item.caseId, item.revisionId);
       previews.add(itemKey);
@@ -74,7 +92,7 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
   // Lowest-priority sections are dropped first when the context budget runs out.
   async function readCases(caseIds: string[], sectionKeys: SectionKey[]): Promise<ReadResult> {
     const requested = [...new Set([...(sectionKeys.length ? sectionKeys : sectionPriority), "observedOutcome" as const])];
-    const fetched: { caseId: string; items: EvidenceItem[] }[] = [];
+    const fetched: { caseId: string; items: CaseEvidence[] }[] = [];
     const errors: Extract<ReadResult, { kind: "error" }>[] = [];
     let unavailable = false; let unavailablePinned = false;
     let reason: Extract<ReadResult, { kind: "partial" }>["reason"] | undefined;
@@ -90,7 +108,7 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
       return unavailablePinned ? { kind: "partial", items: [], cases: [], reason: "SOURCE_UNAVAILABLE" } : { kind: "empty", items: [] };
     }
     if (unavailable || errors.length) reason = "SOURCE_UNAVAILABLE";
-    const candidates: { caseId: string; item: EvidenceItem }[] = [];
+    const candidates: { caseId: string; item: CaseEvidence }[] = [];
     const headers = new Map<string, CaseHeader>();
     for (const { caseId, items: found } of fetched) {
       for (const item of found) {
@@ -112,7 +130,7 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
       let marker: string; let fresh = false;
       if (previous) { alreadyRead.push(previous.marker); marker = previous.marker; readIds.add(caseId); }
       else {
-        const all = [...disclosed.values()].map((entry) => entry.evidence);
+        const all = caseEvidence();
         if (all.length >= executionLimits.contextSections || previewTokens + estimateEvidenceTokens([...all, item]) > executionLimits.contextTokens) { reason = "CONTEXT_LIMIT"; break; }
         pinned.set(caseId, item.revisionId);
         marker = `[S:${runId}:${disclosed.size + 1}]`;
@@ -130,6 +148,74 @@ export function createRunKnowledge(store: KnowledgeStore, runId: string) {
     return { kind: "success", items, cases };
   }
 
-  const coverage = (): RunCoverage => ({ searchState, previewed: [...previewedCases].map(([caseId, title]) => ({ caseId, title })), readCaseIds: [...readIds] });
-  return { searchCases, readCases, coverage, disclosed: () => [...disclosed.values()] };
+  function documentCards(result: DocumentSearchResult): RunToolResult<DocumentCard> {
+    if (result.kind === "error") { documentSearchState = "failed_or_partial"; return result; }
+    if (documentSearchState === "none") documentSearchState = "succeeded";
+    if (result.kind === "empty") return result;
+    const cards: DocumentCard[] = [];
+    let reason: Extract<RunToolResult<DocumentCard>, { kind: "partial" }>["reason"] | undefined;
+    for (const card of result.items.slice(0, executionLimits.documentCandidates)) {
+      const pinnedRevision = pinnedDocuments.get(card.documentId);
+      if (pinnedRevision && pinnedRevision !== card.revisionId) { reason = "PINNED_REVISION_CONFLICT"; continue; }
+      if (!previewedDocuments.has(card.documentId)) {
+        const tokens = Math.ceil(new TextEncoder().encode(JSON.stringify(card)).byteLength / 3);
+        if (documentPreviewTokens + tokens > executionLimits.documentPreviewTokens) { reason = "CONTEXT_LIMIT"; continue; }
+        documentPreviewTokens += tokens; previewedDocuments.add(card.documentId); pinnedDocuments.set(card.documentId, card.revisionId);
+      }
+      cards.push(card);
+    }
+    if (reason) { documentSearchState = "failed_or_partial"; return { kind: "partial", items: cards, reason }; }
+    return { kind: "success", items: cards };
+  }
+
+  // One query feeds both sources. Each keeps its own state, so a failed source is never read as absence.
+  async function searchKnowledge(query: string): Promise<KnowledgeSearchResult> {
+    const raw = await store.search({ query, purpose: "method", conceptIds: [] });
+    const cases = casePreviews(raw.cases);
+    const documents = documentCards(raw.documents);
+    return { kind: overallKind(cases, documents), cases, documents };
+  }
+
+  // A block is delivered whole or listed in omittedBlocks; context never cuts inside one.
+  async function readDocument(documentId: string, blocks: number[]): Promise<DocumentReadResult> {
+    const pinnedRevision = pinnedDocuments.get(documentId);
+    const result = await store.readDocument({ documentId, blocks, ...(pinnedRevision ? { revisionId: pinnedRevision } : {}) });
+    if (result.kind === "error") return result;
+    if (result.kind === "empty") return pinnedRevision ? { kind: "partial", document: null, blocks: [], omittedBlocks: [], reason: "SOURCE_UNAVAILABLE" } : { kind: "empty", items: [] };
+    let reason: Extract<DocumentReadResult, { kind: "partial" }>["reason"] | undefined;
+    const usable = result.items.filter((item) => { if (pinnedRevision && item.revisionId !== pinnedRevision) { reason = "PINNED_REVISION_CONFLICT"; return false; } return item.documentId === documentId; });
+    const first = usable[0];
+    if (!first) return { kind: "partial", document: null, blocks: [], omittedBlocks: [], reason: reason ?? "SOURCE_UNAVAILABLE" };
+    pinnedDocuments.set(documentId, first.revisionId);
+    const grouped = new Map<number, DocumentEvidence[]>();
+    for (const item of usable) grouped.set(item.block, [...(grouped.get(item.block) ?? []), item]);
+    const delivered: DocumentReadBlock[] = []; const omittedBlocks: number[] = []; const alreadyRead: string[] = [];
+    let added = 0;
+    for (const [block, sections] of [...grouped].sort(([a], [b]) => a - b)) {
+      const fresh = sections.filter((section) => !disclosed.has(`doc:${section.sectionId}`));
+      for (const section of sections) { const previous = disclosed.get(`doc:${section.sectionId}`); if (previous) { alreadyRead.push(previous.marker); readDocuments.add(documentId); } }
+      if (!fresh.length) continue;
+      const current = documentEvidence();
+      if (current.length + fresh.length > executionLimits.documentContextSections || estimateEvidenceTokens([...current, ...fresh]) > executionLimits.documentContextTokens) { omittedBlocks.push(block); reason = "CONTEXT_LIMIT"; continue; }
+      const entries = fresh.map((section) => { const marker = `[S:${runId}:${disclosed.size + 1}]`; disclosed.set(`doc:${section.sectionId}`, { marker, evidence: section }); return { marker, heading: section.heading, text: section.excerpt }; });
+      added += entries.length; readDocuments.add(documentId);
+      delivered.push({ block, heading: sections[0]?.heading.split(" > ")[0] ?? "", sections: entries });
+    }
+    const document = { documentId: first.documentId, revisionId: first.revisionId, documentTitle: first.documentTitle, type: first.type, area: first.area, owner: first.owner, effectiveFrom: first.effectiveFrom };
+    if (reason) return { kind: "partial", document, blocks: delivered, omittedBlocks, reason };
+    if (!added) return { kind: "no_progress", alreadyRead };
+    return { kind: "success", document, blocks: delivered, omittedBlocks };
+  }
+
+  const coverage = (): RunCoverage => ({ searchState, previewed: [...previewedCases].map(([caseId, title]) => ({ caseId, title })), readCaseIds: [...readIds], documents: { searchState: documentSearchState, previewedIds: [...previewedDocuments], readIds: [...readDocuments] } });
+  return { searchKnowledge, readCases, readDocument, coverage, disclosed: () => [...disclosed.values()] };
+}
+
+type SourceKind = RunToolResult<unknown>["kind"];
+function overallKind(cases: { kind: SourceKind }, documents: { kind: SourceKind }): KnowledgeSearchResult["kind"] {
+  const kinds = [cases.kind, documents.kind];
+  if (kinds.every((kind) => kind === "error")) return "error";
+  if (kinds.some((kind) => kind === "error" || kind === "partial")) return "partial";
+  if (kinds.every((kind) => kind === "empty")) return "empty";
+  return kinds.includes("success") ? "success" : "no_progress";
 }

@@ -3,23 +3,36 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { WorkspaceContext } from "@/lib/auth/schema";
 import { executionLimits } from "@/lib/contracts/limits";
-import { evidenceSchema, type ToolResult } from "./contracts";
+import { caseEvidenceSchema, documentCardSchema, documentEvidenceSchema, type DocumentSearchResult, type ToolResult } from "./contracts";
 import type { KnowledgeStore } from "./service";
 
 type Embed = (args: { texts: string[]; signal: AbortSignal }) => Promise<{ kind: "success"; vectors: number[][]; tokens: number | null } | { kind: "error"; code: string; retryable: boolean }>;
 export function knowledgeRepository(client: SupabaseClient<Database>, context: WorkspaceContext, embed: Embed, model: string, signal: AbortSignal): KnowledgeStore {
   function parse(result: { data: unknown; error: { code?: string } | null }): ToolResult {
     if (result.error) return { kind: "error", code: result.error.code === "42501" ? "ACCESS_DENIED" : "QUERY_FAILED", retryable: ["57014", "PGRST000", "PGRST001"].includes(result.error.code ?? "") };
-    const parsed = z.array(evidenceSchema).safeParse(result.data);
+    const parsed = z.array(caseEvidenceSchema).safeParse(result.data);
+    if (!parsed.success) return { kind: "error", code: "INVALID_RESULT", retryable: false };
+    return parsed.data.length ? { kind: "success", items: parsed.data } : { kind: "empty", items: [] };
+  }
+  function parseCards(result: { data: unknown; error: { code?: string } | null }): DocumentSearchResult {
+    if (result.error) return { kind: "error", code: result.error.code === "42501" ? "ACCESS_DENIED" : "QUERY_FAILED", retryable: ["57014", "PGRST000", "PGRST001"].includes(result.error.code ?? "") };
+    const parsed = z.array(documentCardSchema).safeParse(result.data);
     if (!parsed.success) return { kind: "error", code: "INVALID_RESULT", retryable: false };
     return parsed.data.length ? { kind: "success", items: parsed.data } : { kind: "empty", items: [] };
   }
   return {
+    // One embedding, two RPCs settled separately. An embedding failure fails both sources.
     async search(input) {
       const embedding = await embed({ texts: [input.query], signal });
-      if (embedding.kind === "error") return { kind: "error", code: "UNAVAILABLE", retryable: embedding.retryable };
-      const vector = embedding.vectors[0]; if (!vector) return { kind: "error", code: "INVALID_RESULT", retryable: false };
-      return parse(await client.rpc("search_knowledge", { w: context.workspaceId, query_text: input.query, query_embedding: JSON.stringify(vector), purpose: input.purpose, concept_ids: input.conceptIds, max_results: executionLimits.candidateSections, model, per_case: executionLimits.searchSectionsPerCase }).abortSignal(signal));
+      if (embedding.kind === "error") { const failed = { kind: "error", code: "UNAVAILABLE", retryable: embedding.retryable } as const; return { cases: failed, documents: failed }; }
+      const vector = embedding.vectors[0]; if (!vector) { const failed = { kind: "error", code: "INVALID_RESULT", retryable: false } as const; return { cases: failed, documents: failed }; }
+      const query_embedding = JSON.stringify(vector);
+      const [cases, documents] = await Promise.allSettled([
+        client.rpc("search_knowledge", { w: context.workspaceId, query_text: input.query, query_embedding, purpose: input.purpose, concept_ids: input.conceptIds, max_results: executionLimits.candidateSections, model, per_case: executionLimits.searchSectionsPerCase }).abortSignal(signal),
+        client.rpc("search_knowledge_documents", { w: context.workspaceId, query_text: input.query, query_embedding, model, max_documents: executionLimits.documentCandidates }).abortSignal(signal),
+      ]);
+      const failed = { kind: "error", code: "QUERY_FAILED", retryable: false } as const;
+      return { cases: cases.status === "fulfilled" ? parse(cases.value) : failed, documents: documents.status === "fulfilled" ? parseCards(documents.value) : failed };
     },
     async read(input) {
       let revision = input.revisionId;
@@ -32,6 +45,13 @@ export function knowledgeRepository(client: SupabaseClient<Database>, context: W
         if (!revision) return { kind: "empty", items: [] };
       }
       return parse(await client.rpc("read_knowledge_case", { w: context.workspaceId, target: input.caseId, revision, keys: input.sectionKeys, max_results: executionLimits.candidateSections }).abortSignal(signal));
+    },
+    async readDocument(input) {
+      const result = await client.rpc("read_knowledge_document", { w: context.workspaceId, target: input.documentId, revision: input.revisionId, blocks: input.blocks, max_results: 200 }).abortSignal(signal);
+      if (result.error) return { kind: "error", code: result.error.code === "42501" ? "ACCESS_DENIED" : "QUERY_FAILED", retryable: ["57014", "PGRST000", "PGRST001"].includes(result.error.code ?? "") };
+      const parsed = z.array(documentEvidenceSchema).safeParse(result.data);
+      if (!parsed.success) return { kind: "error", code: "INVALID_RESULT", retryable: false };
+      return parsed.data.length ? { kind: "success", items: parsed.data } : { kind: "empty", items: [] };
     },
     async template(revisionId) {
       const result = await client.from("case_revisions").select("template:content->>template").eq("workspace_id", context.workspaceId).eq("id", revisionId).abortSignal(signal).maybeSingle();
