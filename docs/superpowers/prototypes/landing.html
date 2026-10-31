@@ -43,10 +43,7 @@ h1{font-size:clamp(38px,6.6vw,100px);line-height:1.02;letter-spacing:-.04em;font
 .src.d{background:var(--doc)}.src b{font-size:19px;line-height:1.25;letter-spacing:-.01em}.src span{opacity:.85;font-size:14px}.src small{margin-top:auto;font-size:13px;opacity:.85}
 
 .lost{padding:clamp(72px,10vw,160px) 0}
-.lost .wrap{display:grid;grid-template-columns:5fr 7fr;gap:clamp(32px,6vw,96px);align-items:start}
 h2{font-size:clamp(32px,4.6vw,68px);line-height:1.04;letter-spacing:-.035em;font-weight:600}
-.lost .full{grid-column:1/-1}.ticket{background:var(--muted);padding:20px;font-size:15px}.ticket b{display:block;font-size:17px}.ticket span{color:var(--sub)}
-.lostl li{padding:16px 0 18px}.lostl li+li{margin-top:4px}.lostl h3{font-size:clamp(20px,2vw,27px);letter-spacing:-.02em;font-weight:600;line-height:1.2}.lostl p{max-width:38em}
 
 .engine{background:var(--muted);padding:clamp(72px,9vw,136px) 0}
 .engine .intro{display:grid;grid-template-columns:7fr 5fr;gap:32px;align-items:end;margin-bottom:32px}
@@ -117,6 +114,12 @@ svg.map{display:block;width:100%;height:auto}svg.map text{font-family:Manrope,Ar
 .nd rect{transition:fill .35s ease,stroke .35s ease}.nd text{transition:fill .35s ease}.nd{transition:opacity .5s ease}
 .tok{will-change:transform;transition:opacity .3s}
 @media (max-width:900px){.hero{text-align:left}.hero h1,.hero .lede{margin-left:0}.stage{border-radius:14px}.two,.pair{grid-template-columns:1fr}.shot.float{display:none}.hero-stage .main{max-height:none}.top nav{display:none}.top .btn{margin-left:auto}.end{margin:0}.end{border-radius:0}}
+.lost-stage{margin-top:clamp(32px,4vw,56px);overflow:visible}.lost-stage picture{display:block;overflow:hidden;border-radius:12px 12px 0 0}.lost-stage .main{max-height:640px;object-fit:cover;object-position:top}
+.tick{position:absolute;left:clamp(12px,1.5vw,28px);bottom:28px;display:flex;gap:12px;align-items:center;background:#fff;padding:16px 28px 16px 18px;border-radius:12px;box-shadow:0 0 0 1px rgb(19 20 22/.07),0 24px 56px -24px rgb(19 20 22/.4)}
+.tick i{width:12px;height:12px;background:var(--doc);flex:none}.tick b{display:block;font-size:17px;line-height:1.25;letter-spacing:-.01em}.tick span{font-size:15px;color:var(--sub)}
+.lostl{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(20px,3vw,44px);margin-top:clamp(40px,5vw,64px)}.lostl h3{font-size:21px;line-height:1.25;letter-spacing:-.015em;font-weight:600}.lostl p{margin-top:6px}
+@media (max-width:900px){.lostl{grid-template-columns:1fr 1fr}.lost-stage .main{max-height:560px}.tick{left:auto;right:10px;bottom:10px;padding:10px 16px 10px 12px}}
+@media (max-width:560px){.lostl{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.tok{display:none}}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 </style>
@@ -141,8 +144,12 @@ svg.map{display:block;width:100%;height:auto}svg.map text{font-family:Manrope,Ar
 </div></section>
 
 <section class="lost"><div class="wrap">
-  <h2 class="full">The ticket survives. The reasoning doesn't.</h2>
-  <div><div class="ticket"><b>Recurring invoices</b><span>Status: Done</span></div></div>
+  <h2>The ticket survives. The reasoning doesn't.</h2>
+  <figure class="stage lost-stage">
+    <picture><source media="(max-width:900px)" srcset="../../../public/landing/recurring-case-phone.png"><img class="shot main" src="../../../public/landing/recurring-case.png" alt="The Memoba case page for the all-at-once launch of recurring invoices, showing outcome Not achieved, the observed outcome, and lessons."></picture>
+    <div class="tick" role="img" aria-label="An illustrative ticket reading Recurring invoices, status Done"><i></i><div><b>Recurring invoices</b><span>Done</span></div></div>
+  </figure>
+  <p class="cap">The small ticket is an illustration of what usually remains. Behind it is the case as recorded in the demo workspace.</p>
   <ul class="lostl">
     <li><h3>The conditions</h3><p>No feature flag, no rollback rehearsal, no weekend on-call owner, and a Friday afternoon release.</p></li>
     <li><h3>The road not taken</h3><p>A 5% start was discussed and rejected, because the feature had to be visible during a keynote.</p></li>

@@ -14,7 +14,7 @@ Take every string from the prototype. The structure is:
 |---|---|---|
 | Header | none | Wordmark, three anchor links, "Open the demo". Links hide below 900px. The button never hides |
 | Hero | Your team already solved this. Nobody remembers where. | Lede, button, framed chat answer with the evidence panel floating over it. The phone uses a phone capture and drops the float |
-| Problem | The ticket survives. The reasoning doesn't. | A "Done" ticket beside the four things it lost, all from the recurring invoices case |
+| Problem | The ticket survives. The reasoning doesn't. | Framed capture of the real recurring invoices case with a small illustrative "Done" ticket floating over it, then a four-column list of what the ticket lost. The caption says the ticket is an illustration |
 | Two memories | Cases say what happened. / Documents say what is required. | Two tinted panels, each with a cropped case or document page, stacked on phones |
 | Engine | Follow one question through the engine. | Interactive diagram below |
 | Workspace | See what the team knows, and where it's thin. | Knowledge Hub and Dashboard frames. The Dashboard keeps its Sample data label |
@@ -28,6 +28,7 @@ Captures live in `public/landing/`, taken at 2x from the local demo workspace (3
 | File | Used in |
 |---|---|
 | `chat-answer.png`, `chat-answer-phone.png`, `evidence-panel.png` | Hero |
+| `recurring-case.png`, `recurring-case-phone.png` | Problem |
 | `case-page.png`, `document-page.png` | Two memories |
 | `knowledge-hub.png`, `dashboard.png` | Workspace |
 | `answer-differ.png` | Honesty |
