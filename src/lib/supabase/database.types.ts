@@ -389,6 +389,9 @@ isOneToOne: false
 "create_conversation":
 { Args: { "conversation": string,"w": string }; Returns: string
                            },
+"delete_conversation":
+{ Args: { "conversation": string }; Returns: undefined
+                           },
 "edit_brief":
 { Args: { "brief": string,"save_value": boolean,"text_value": string }; Returns: undefined
                            },
