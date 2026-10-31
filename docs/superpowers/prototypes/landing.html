@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memoba</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Workspace tokens from src/app/globals.css, plus --doc. Light only. Circle = case, square = document. */
+:root{color-scheme:light;--bg:#fff;--ink:#131416;--doc:#20282c;--case:#1b6c80;--case-soft:#e3f0f3;--doc-soft:#e7e9ea;--muted:#f4f6f8;--sub:#5d5f60;--line:#dfe2e5;--fail:#b42318;--fail-soft:#fdecea;--m:clamp(16px,3vw,40px)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:72px}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 17px/1.55 Manrope,Arial,sans-serif;font-variant-numeric:tabular-nums}
+h1,h2,h3,p,ol,ul,figure{margin:0;padding:0}ol,ul{list-style:none}a{color:inherit}button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--case);outline-offset:2px}
+code{font:13px ui-monospace,monospace}
+.wrap{max-width:1360px;margin:0 auto;padding:0 var(--m)}
+.btn{display:inline-flex;align-items:center;height:40px;padding:0 16px;background:var(--doc);color:#fff;font-weight:600;font-size:15px;text-decoration:none;border-radius:8px;white-space:nowrap;transition:background .15s,transform .1s}
+.btn:hover{background:var(--case)}.btn:active{transform:translateY(1px)}
+
+.top{position:sticky;top:0;z-index:30;background:#fff}
+.top .wrap{height:60px;display:flex;align-items:center;gap:28px}
+.mark{display:flex;align-items:center;gap:7px;font-weight:700;font-size:19px;letter-spacing:-.02em;text-decoration:none}
+.mark i{width:11px;height:11px;background:var(--case);border-radius:50%}.mark i+i{background:var(--doc);border-radius:0;margin-left:-5px}.mark b{font-weight:700;margin-left:3px}
+.top nav{display:flex;gap:24px;margin-left:auto;font-size:15px;font-weight:500}.top nav a{text-decoration:none}.top nav a:hover{color:var(--case)}
+
+.hero{padding:clamp(40px,6vw,80px) 0 clamp(64px,8vw,112px)}
+h1{font-size:clamp(38px,6.6vw,100px);line-height:1.02;letter-spacing:-.04em;font-weight:600;max-width:15.5em}
+.lede{font-size:clamp(18px,1.6vw,22px);line-height:1.45;max-width:36em;margin-top:28px}
+.hero .btn{height:48px;padding:0 22px;font-size:16px;margin-top:24px}
+
+.spec{margin-top:clamp(40px,5vw,72px);display:grid;grid-template-columns:minmax(0,1fr) 340px;background:var(--muted)}
+.ans{padding:clamp(20px,3vw,40px);min-width:0;background:var(--muted)}
+.ask{background:var(--doc);color:#fff;padding:12px 16px;border-radius:8px;max-width:44em;margin-left:auto;font-size:15px}
+.ans h3{font-size:15px;font-weight:700;margin:22px 0 4px}.ans .lead{font-size:clamp(19px,1.8vw,23px);line-height:1.35;font-weight:600;letter-spacing:-.015em;margin-top:22px;max-width:30em}
+.ans p.b{max-width:42em;font-size:16px}
+.cite{border:0;cursor:pointer;display:inline-flex;align-items:center;gap:5px;vertical-align:1px;padding:0 7px;height:22px;font-size:12.5px;font-weight:600;background:var(--case-soft);color:var(--case);border-radius:11px;transition:transform .1s}
+.cite::before{content:"";width:8px;height:8px;background:currentColor;border-radius:50%}
+.cite.d{background:var(--doc-soft);color:var(--doc);border-radius:2px}.cite.d::before{border-radius:0}
+.cite[aria-pressed=true]{background:var(--case);color:#fff}.cite.d[aria-pressed=true]{background:var(--doc)}
+.src{background:var(--case);color:#fff;padding:clamp(20px,2.5vw,32px);display:flex;flex-direction:column;gap:10px;font-size:15.5px}
+.src.d{background:var(--doc)}.src b{font-size:19px;line-height:1.25;letter-spacing:-.01em}.src span{opacity:.85;font-size:14px}.src small{margin-top:auto;font-size:13px;opacity:.85}
+
+.lost{padding:clamp(72px,10vw,160px) 0}
+.lost .wrap{display:grid;grid-template-columns:5fr 7fr;gap:clamp(32px,6vw,96px);align-items:start}
+h2{font-size:clamp(32px,4.6vw,68px);line-height:1.04;letter-spacing:-.035em;font-weight:600}
+.lost .full{grid-column:1/-1}.ticket{background:var(--muted);padding:20px;font-size:15px}.ticket b{display:block;font-size:17px}.ticket span{color:var(--sub)}
+.lostl li{padding:16px 0 18px}.lostl li+li{margin-top:4px}.lostl h3{font-size:clamp(20px,2vw,27px);letter-spacing:-.02em;font-weight:600;line-height:1.2}.lostl p{max-width:38em}
+
+.two{display:grid;grid-template-columns:1fr 1fr}
+.two>div{padding:clamp(32px,5vw,72px) var(--m) clamp(40px,6vw,88px);color:#fff;position:relative;overflow:hidden;min-height:560px;display:flex;flex-direction:column}
+.two .c{background:var(--case)}.two .k{background:var(--doc)}
+.two .sh{width:clamp(96px,14vw,200px);aspect-ratio:1;background:#fff;margin-bottom:auto}.two .c .sh{border-radius:50%}
+.two h2{margin-top:48px;max-width:9em}.two p{margin-top:16px;max-width:30em}.two ul{margin-top:16px;font-weight:500}
+.two .wide{grid-column:1/-1;min-height:0;background:#fff;color:var(--ink);padding-top:28px;padding-bottom:0}
+
+.engine{background:var(--muted);padding:clamp(72px,9vw,136px) 0}
+.engine .intro{display:grid;grid-template-columns:7fr 5fr;gap:32px;align-items:end;margin-bottom:32px}
+.runs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.runs button{height:44px;padding:0 14px;border:0;background:#fff;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer}
+.runs button[aria-pressed=true]{background:var(--doc);color:#fff}.runs button[data-r=failed][aria-pressed=true]{background:var(--fail)}
+.board{background:#fff;padding:clamp(8px,1.5vw,20px)}
+.q{font-size:15px;padding:6px 8px 10px}.q b{font-weight:600}
+svg.map{display:block;width:100%;height:auto}svg.map text{font-family:Manrope,Arial,sans-serif}
+.lk{fill:none;stroke:#c3c8cc;stroke-width:2;transition:opacity .4s,stroke .3s}.lk.on{stroke:var(--doc)}.lk.gone{opacity:.15}.lk.bad{stroke:var(--fail);stroke-dasharray:3 6}
+.lk.tr{stroke-dasharray:7 7;stroke:#c3c8cc}.lk.tr.on{stroke:var(--case)}
+.nd rect,.nd circle{fill:#fff;stroke:#c3c8cc;stroke-width:2;transition:fill .25s,stroke .25s}
+.nd{transition:opacity .4s}.nd text{fill:var(--ink);font-size:15px;font-weight:600;text-anchor:middle;transition:fill .25s}.nd text.s{font-size:12.5px;font-weight:500;fill:var(--sub)}
+.nd.gone{opacity:.25}.nd.seen rect,.nd.seen circle{stroke:var(--doc)}
+.nd.case.seen rect,.nd.case.seen circle{stroke:var(--case)}
+.nd.now rect,.nd.now circle{fill:var(--doc);stroke:var(--doc)}.nd.case.now rect,.nd.case.now circle{fill:var(--case);stroke:var(--case)}.nd.now text,.nd.now text.s{fill:#fff}
+.nd.none rect{stroke-dasharray:5 5;stroke:var(--sub)}.nd.fail rect{stroke:var(--fail);fill:var(--fail-soft)}.nd.fail text{fill:var(--fail)}
+.tok{fill:var(--case);stroke:#fff;stroke-width:3}
+.ins{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0;margin-top:12px;min-height:188px}
+.note{background:#fff;padding:20px;min-width:0}.note h3{font-size:clamp(20px,2vw,26px);letter-spacing:-.02em;line-height:1.2;font-weight:600}.note p{margin-top:8px;max-width:36em}.note code{display:block;margin-top:10px;color:var(--sub);overflow-wrap:anywhere}
+.out{background:var(--doc);color:#fff;padding:20px;min-width:0;font-size:15.5px}.out.fail{background:var(--fail)}.out h3{font-size:15px;font-weight:700}.out p{margin-top:4px}
+.prog{display:flex;align-items:center;gap:4px;margin-top:12px}
+.prog i{height:6px;flex:1;background:#d7dbde;transition:background .2s}.prog i.d{background:var(--case)}.prog i.n{background:var(--doc)}
+.ctl{display:flex;gap:6px;margin-top:10px;align-items:center;font-size:14px;color:var(--sub)}
+.ctl button{height:44px;min-width:44px;padding:0 12px;background:#fff;border:0;border-radius:8px;cursor:pointer;font-weight:600;color:var(--ink)}.ctl span{margin-left:auto}
+.all{margin-top:32px;display:none;grid-template-columns:repeat(3,1fr);gap:16px}.all>div{background:#fff;padding:16px}.all h3{font-size:17px}.all ol{list-style:decimal;padding-left:20px;font-size:15px;margin-top:8px}
+.static .all,.nojs .all{display:grid}.static .prog,.static .ctl{display:none}
+
+.honest{padding:clamp(72px,10vw,160px) 0}
+.honest h2{max-width:13em;margin-bottom:clamp(32px,5vw,64px)}
+.hon{display:grid;grid-template-columns:7fr 5fr;gap:clamp(24px,5vw,72px)}
+.diff{background:var(--muted);padding:clamp(20px,3vw,36px)}.diff h3{font-size:clamp(20px,2vw,26px);letter-spacing:-.02em;line-height:1.2}.diff p{margin-top:12px;max-width:36em}
+.rules li{padding-bottom:24px}.rules h3{font-size:19px;line-height:1.3;letter-spacing:-.01em}
+
+.end{background:var(--case);color:#fff;padding:clamp(56px,8vw,112px) 0 24px;overflow:hidden}
+.end h2{max-width:13em}.end .btn{background:#fff;color:var(--ink);height:48px;padding:0 22px;font-size:16px;margin-top:28px}.end .btn:hover{background:var(--doc-soft)}
+.end p{margin-top:16px;max-width:36em}.big{font-size:clamp(72px,21vw,340px);font-weight:700;letter-spacing:-.05em;line-height:.9;margin-top:clamp(40px,6vw,88px)}
+
+@media (max-width:820px){
+ .top nav{display:none}.top .btn{margin-left:auto}.top .wrap{height:56px}
+ .spec{grid-template-columns:1fr}.lost .wrap,.engine .intro,.hon{grid-template-columns:1fr}
+ .two{grid-template-columns:1fr}.two>div{min-height:420px}.ins{grid-template-columns:1fr}.note{min-height:172px}
+ .engine>.wrap{display:flex;flex-direction:column}.ins{display:contents}.note{order:1;position:sticky;top:56px;z-index:5;height:180px;overflow:hidden;padding:12px 14px;margin-top:6px}.note p{font-size:15px;line-height:1.4;margin-top:4px}.note code{font-size:12px;margin-top:4px}.board{order:2}.prog{order:3}.out{order:4;margin-top:12px}.ctl{order:5}.all{order:6}.static .note{position:static;height:auto}.all{grid-template-columns:1fr}.runs button{flex:1 1 auto;padding:0 10px;font-size:14px}.ctl span{display:none}
+ .board{padding:8px 4px}.nd text{font-size:13px}.nd text.s{font-size:11.5px}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+</head>
+<body class="nojs">
+<header class="top"><div class="wrap">
+  <a class="mark" href="#top" aria-label="Memoba home"><i></i><i></i><b>Memoba</b></a>
+  <nav aria-label="Page"><a href="#memories">Two memories</a><a href="#engine">How it answers</a><a href="#honest">What it won't say</a></nav>
+  <a class="btn" href="/login">Open the demo</a>
+</div></header>
+
+<main id="top">
+<section class="hero"><div class="wrap">
+  <h1>Your team already solved this. Nobody remembers where.</h1>
+  <p class="lede">Memoba answers questions from your team's recorded cases and process documents, and cites the sources it read.</p>
+  <a class="btn" href="/login">Open the demo</a>
+  <figure class="spec" data-ui>
+    <div class="ans">
+      <p class="ask">We want to release our new bulk payment-matching feature to all customers next month. What does our release process require, and how have our past launches gone?</p>
+      <p class="lead">Plan a staged release: the procedure sets the steps, and your two closest launches went opposite ways.</p>
+      <h3>What the process says</h3>
+      <p class="b">Exposure moves from internal accounts to 5%, 25%, then all customers, behind a per-customer flag. <button class="cite d" data-s="doc" aria-pressed="false">Release procedure v3</button></p>
+      <h3>How similar cases went</h3>
+      <p class="b">The staged approval rollout reached everyone in five weeks with no rollback. <button class="cite" data-s="staged" aria-pressed="true">Staged rollout</button> The all-at-once recurring invoices launch produced about 900 duplicate invoices over a weekend. <button class="cite" data-s="big" aria-pressed="false">All-at-once launch</button></p>
+    </div>
+    <aside class="src" id="src" aria-live="polite"></aside>
+  </figure>
+</div></section>
+
+<section class="lost"><div class="wrap">
+  <h2 class="full">The ticket survives. The reasoning doesn't.</h2>
+  <div><div class="ticket"><b>Recurring invoices</b><span>Status: Done</span></div></div>
+  <ul class="lostl">
+    <li><h3>The conditions</h3><p>No feature flag, no rollback rehearsal, no weekend on-call owner, and a Friday afternoon release.</p></li>
+    <li><h3>The road not taken</h3><p>A 5% start was discussed and rejected, because the feature had to be visible during a keynote.</p></li>
+    <li><h3>What really happened</h3><p>About 900 duplicate invoices for roughly 70 customers, found through a customer email on Saturday evening.</p></li>
+    <li><h3>What to do next time</h3><p>A fixed date is a reason to cut scope, not to skip a staged rollout.</p></li>
+  </ul>
+</div></section>
+
+<section class="two" id="memories">
+  <div class="c"><i class="sh"></i><h2>Cases say what happened.</h2><p>A case records the problem, conditions, approach, and the outcome someone actually observed.</p></div>
+  <div class="k"><i class="sh"></i><h2>Documents say what is required.</h2><p>A document is the versioned rule in force today, with its owner and effective date.</p></div>
+</section>
+
+<section class="engine" id="engine"><div class="wrap">
+  <div class="intro"><h2>Follow one question through the engine.</h2><p>The model chooses what to search and read. The application holds the limits, and records what each source really returned.</p></div>
+  <div class="runs" role="group" aria-label="Choose an outcome">
+    <button data-r="found" aria-pressed="true">Document found</button><button data-r="none" aria-pressed="false">Searched, nothing found</button><button data-r="failed" aria-pressed="false">Could not search</button>
+  </div>
+  <div class="board">
+    <p class="q"><b>Question:</b> <span>What does our release process require, and how have our past launches gone?</span></p>
+    <svg class="map" id="map" role="img" aria-label="Diagram of a question passing through admission and search, into a case lane and a document lane, then to a written answer, a citation check, and a saved record, with a dashed line back to the start."></svg>
+  </div>
+  <div class="prog" id="prog" aria-hidden="true"></div>
+  <div class="ins"><div class="note" id="note"></div><div class="out" id="out"></div></div>
+  <div class="ctl"><button id="prev" aria-label="Previous step">Back</button><button id="play">Pause</button><button id="next" aria-label="Next step">Next</button><button id="replay">Replay</button><span id="cnt"></span></div>
+  <div class="all" id="all"></div>
+</div></section>
+
+<section class="honest" id="honest"><div class="wrap">
+  <h2>When they differ, you get both sides.</h2>
+  <div class="hon">
+    <div class="diff" data-ui><h3>Where practice and process differ</h3><p>The recurring invoices launch shipped with no feature flag. The current release procedure requires one. <span class="cite">All-at-once launch</span> <span class="cite d">Release procedure v3</span></p><p>Memoba reports the difference. It never calls a case a violation.</p></div>
+    <ul class="rules">
+      <li><h3>Advice stays advice.</h3><p>A generated brief never becomes an observed outcome.</p></li>
+      <li><h3>A failed search is never "no precedent".</h3><p>A source that could not be searched is reported as unchecked.</p></li>
+      <li><h3>A citation shows where a claim came from.</h3><p>It proves the agent read that section. It doesn't prove the section supports the claim, so open it and judge.</p></li>
+    </ul>
+  </div>
+</div></section>
+</main>
+
+<footer class="end"><div class="wrap">
+  <h2>Ask the demo workspace a real question.</h2>
+  <p>It holds 20 cases and five process documents from Northwind Ledger, a fictional invoicing company.</p>
+  <a class="btn" href="/login">Open the demo</a>
+  <div class="big" aria-hidden="true">Memoba</div>
+</div></footer>
+
+<script>
+/* Citation specimen */
+const SRC={staged:["Staged rollout of invoice approval workflow","Case. Outcome: achieved","The workflow reached 100% of customers in five weeks with no outage and no rollback.",""],
+big:["All-at-once launch of recurring invoices","Case. Outcome: not achieved","Over the weekend the scheduler generated about 900 duplicate invoices for roughly 70 customers.",""],
+doc:["Production release procedure","Document. Version 3, effective 2026-02-01, owner Platform Engineering","One stage of a rollout: internal, 5%, 25%, or all customers.","d"]};
+const srcEl=document.getElementById("src"),cites=[...document.querySelectorAll("button.cite")];
+function showSrc(k){const s=SRC[k];srcEl.className="src "+s[3];srcEl.innerHTML=`<b>${s[0]}</b><span>${s[1]}</span><p>${s[2]}</p><small>Written from the demo workspace seed.</small>`;cites.forEach(c=>c.setAttribute("aria-pressed",c.dataset.s===k))}
+cites.forEach(c=>c.onclick=()=>showSrc(c.dataset.s));showSrc("staged");
+
+/* Engine. LAYOUT is geometry only; RUNS is the timeline the build keeps as data. */
+const LAYOUT={
+ wide:{vb:[1245,420],w:140,h:58,n:{q:[80,200],admit:[235,200],search:[390,200],cp:[545,70],dp:[545,330],rc:[700,70],rd:[700,330],write:[855,200],check:[1010,200],save:[1165,200]},ty:402,tx:[1165,80],axis:"x"},
+ tall:{vb:[358,484],w:134,h:44,n:{q:[190,24],admit:[190,80],search:[190,136],cp:[98,206],dp:[270,206],rc:[98,276],rd:[270,276],write:[190,346],check:[190,402],save:[190,458]},ty:12,tx:[0,0],axis:"y"}};
+const NODES={q:["Question",""],admit:["Admission","membership, deadline"],search:["search_knowledge","two searches"],cp:["Cases",""],dp:["Documents",""],rc:["read_case","outcome first"],rd:["read_document","whole blocks"],write:["Write","own headings"],check:["Check citations","in this run"],save:["Save","answer, sources"]};
+const LINKS=[["q","admit"],["admit","search"],["search","cp"],["search","dp"],["cp","rc"],["dp","rd"],["rc","write"],["rc","rd"],["rd","write"],["write","check"],["check","save"]];
+const COMMON={
+ q:{t:"A person asks in plain language.",b:"The request carries no workspace choice. The server derives the user and workspace from the session."},
+ admit:{t:"The server admits the run.",b:"It checks membership and quota, then writes one deadline that every model call, tool, and correction shares.",c:"stage: intake"},
+ rc:{t:"It reads cases, outcome first.",b:"Each read is pinned to one revision. If the budget runs out, background drops before the outcome does.",c:"read_case · Read 4 cases"},
+ write:{t:"The model writes. Tools are gone.",b:"Process and cases go under separate headings, and any gap in practice is named on its own."},
+ check:{t:"Every citation is checked.",b:"Each one must match a section read in this run, and access is rechecked. One correction is allowed inside the same deadline.",c:"stage: validation"},
+ save:{t:"The run leaves a record.",b:"Answer, source snapshots, and coverage are saved. The record returns to the conversation, not to your cases: refresh reads it and never restarts the model."}};
+const VAR={
+ found:{code:"cases:found:4;documents:found:1",act:"4 cases found · 1 document found",sb:"Each source settles on its own. Search results are only candidates, and can't be cited.",
+  path:["q","admit","search","cp","rc","rd","write","check","save"],gone:["rc>write"],dp:"1 found",ds:"",
+  out:["What the process says","Production release procedure, version 3, effective 2026-02-01, owner Platform Engineering."],
+  extra:{rd:{t:"It reads the document.",b:"A block arrives whole or is listed as omitted, so a requirement is never cut in half. Documents have their own budget.",c:"read_document · Read process document details"}}},
+ none:{code:"cases:found:4;documents:none:0",act:"4 cases found · no documents matched",sb:"The document search worked and returned nothing relevant. That is a real result, so the system takes the short path.",
+  path:["q","admit","search","cp","rc","write","check","save"],gone:["rc>rd","rd>write","dp>rd"],goneN:["rd"],dp:"none matched",ds:"none",
+  out:["What the process says","The answer says no matching process document was found, and goes on from the cases."],extra:{}},
+ failed:{code:"cases:found:4;documents:failed:0",act:"4 cases found · documents could not be searched",sb:"The document search broke. The case results stand, and the failed source is recorded as failed rather than empty.",
+  path:["q","admit","search","cp","rc","write","check","save"],gone:["rc>rd","rd>write","dp>rd"],goneN:["rd"],dp:"not searched",ds:"fail",bad:["search>dp"],
+  out:["What the process says","Unchecked. The answer states that documents could not be searched. It does not say no rule exists."],extra:{}}};
+const NOTE=(r,id)=>{const v=VAR[r];if(id==="search")return{t:r==="failed"?"One search failed. The other stands.":r==="none"?"Both searches finished. One came back empty.":"One embedding, two searches.",b:v.sb,c:"code: "+v.code};if(id==="cp")return{t:"The system chooses a path.",b:v.act+".",c:"search_knowledge · "+v.act};return v.extra[id]||COMMON[id]};
+
+const $=i=>document.getElementById(i),svg=$("map"),NS="http://www.w3.org/2000/svg";
+const reduced=matchMedia("(prefers-reduced-motion: reduce)"),narrow=matchMedia("(max-width:820px)");
+document.body.classList.remove("nojs");
+let L,paths={},nodes={},tok,trace,run="found",i=0,playing=false,user=false,raf=0,visible=false,started=false;
+const el=(t,a,p)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p&&p.appendChild(e);return e};
+function curve(a,b){const[x1,y1]=L.n[a],[x2,y2]=L.n[b];if(x1===x2||y1===y2)return`M${x1} ${y1}L${x2} ${y2}`;
+ if(L.axis==="x"){const m=(x1+x2)/2;return`M${x1} ${y1}C${m} ${y1} ${m} ${y2} ${x2} ${y2}`}const m=(y1+y2)/2;return`M${x1} ${y1}C${x1} ${m} ${x2} ${m} ${x2} ${y2}`}
+function build(){L=narrow.matches?LAYOUT.tall:LAYOUT.wide;svg.innerHTML="";svg.setAttribute("viewBox",`0 0 ${L.vb[0]} ${L.vb[1]}`);paths={};nodes={};
+ for(const[a,b]of LINKS)paths[a+">"+b]=el("path",{d:curve(a,b),class:"lk"},svg);
+ const[sx,sy]=L.n.save,[qx,qy]=L.n.q;
+ const d=L.axis==="x"?`M${sx} ${sy+L.h/2}V${L.ty}H${qx}V${qy+L.h/2}`:`M${sx-L.w/2} ${sy}H${L.ty}V${qy}H${qx-L.w/2}`;
+ trace=el("path",{d,class:"lk tr"},svg);
+ const lb=el("text",L.axis==="x"?{x:(sx+qx)/2,y:L.ty-10,"text-anchor":"middle","font-size":14,"font-weight":600,fill:"#5d5f60"}:{x:0,y:0,"font-size":0},svg);lb.textContent=L.axis==="x"?"Every run leaves a record you can reopen":"";
+ for(const id in L.n){const[x,y]=L.n[id],g=el("g",{class:"nd"+(/^(cp|rc)$/.test(id)?" case":"")},svg),w=L.w,h=L.h;
+  if(id==="cp"||id==="rc")el("rect",{x:x-w/2,y:y-h/2,width:w,height:h,rx:h/2},g);else el("rect",{x:x-w/2,y:y-h/2,width:w,height:h,rx:id==="dp"||id==="rd"?0:8},g);
+  const[a,b]=NODES[id],t=el("text",{x,y:y+(b||id==="cp"||id==="dp"?-2:5)},g);t.textContent=a;const s=el("text",{x,y:y+15,class:"s"},g);s.textContent=b;nodes[id]={g,s}}
+ tok=el("circle",{r:9,class:"tok"},svg);render()}
+function edge(k){return paths[k]}
+function pos(k,f){const p=edge(k),l=p.getTotalLength(),q=p.getPointAtLength(l*f);tok.setAttribute("cx",q.x);tok.setAttribute("cy",q.y)}
+function render(){const v=VAR[run],P=v.path,stat=reduced.matches;
+ const at=stat?P.length-1:i;
+ for(const k in paths){paths[k].setAttribute("class","lk"+(v.bad&&v.bad.includes(k)?" bad":""))}
+ for(let j=0;j<at;j++){const e=edge(P[j]+">"+P[j+1]);e&&e.classList.add("on")}
+ const reachedSearch=at>=2;
+ for(const k of v.gone){if(at>=P.indexOf("rc")||stat)paths[k].classList.add("gone")}
+ if(run==="found"&&at>=P.indexOf("rc")+1)paths["rc>write"].classList.add("gone");
+ for(const id in nodes){const g=nodes[id].g;let c="nd"+(/^(cp|rc)$/.test(id)?" case":"");const j=P.indexOf(id);
+  if(j>=0&&j<at)c+=" seen";if(j===at&&!stat)c+=" now";if(stat&&j>=0)c+=" seen";
+  if(id==="dp"&&reachedSearch){c+=v.ds?" "+v.ds:" seen"}
+  if(id==="cp"&&reachedSearch&&!c.includes("now"))c+=" seen";
+  if((v.goneN||[]).includes(id)&&(at>=P.indexOf("rc")))c+=" gone";g.setAttribute("class",c)}
+ nodes.cp.s.textContent=reachedSearch?"4 found":"waiting";nodes.dp.s.textContent=reachedSearch?v.dp:"waiting";
+ trace.setAttribute("class","lk tr"+(at>=P.length-1?" on":""));
+ const[x,y]=L.n[P[at]];tok.setAttribute("cx",x);tok.setAttribute("cy",y);tok.style.display=stat?"none":"";
+ const n=NOTE(run,P[at]);$("note").innerHTML=`<h3>${n.t}</h3><p>${n.b}</p>${n.c?`<code>${n.c}</code>`:""}`;
+ const shown=stat||at>=P.indexOf("rc");$("out").className="out"+(run==="failed"&&shown?" fail":"");
+ $("out").innerHTML=shown?`<h3>${v.out[0]}</h3><p>${v.out[1]}</p><h3 style="margin-top:12px">How similar cases went</h3><p>All-at-once launch of recurring invoices, and three more cases cited.</p>`:`<h3>The answer so far</h3><p>Nothing yet. Progress here comes from tool events, not a story written by the model.</p>`;
+ $("prog").innerHTML=P.map((_,j)=>`<i class="${j<at?"d":j===at?"n":""}"></i>`).join("");
+ $("cnt").textContent=`Step ${at+1} of ${P.length}`;$("play").textContent=playing?"Pause":"Play";
+ document.querySelectorAll(".runs button").forEach(b=>b.setAttribute("aria-pressed",b.dataset.r===run))}
+const HOLD=2200,MOVE=850,R=["found","none","failed"];
+function stop(){playing=false;cancelAnimationFrame(raf);clearTimeout(raf.t);render()}
+function advance(){const P=VAR[run].path;if(!playing)return;
+ if(i>=P.length-1){ // token walks the dashed trace, then the next outcome starts
+  animate(trace,1600,()=>{if(user){stop();return}run=R[(R.indexOf(run)+1)%3];i=0;render();hold()});return}
+ const k=P[i]+">"+P[i+1];animate(edge(k),MOVE,()=>{i++;render();hold()})}
+function animate(p,dur,done){const l=p.getTotalLength(),t0=performance.now();let over=false;const end=()=>{if(over)return;over=true;cancelAnimationFrame(raf);if(playing)done()};setTimeout(end,dur+120);(function f(t){if(!playing||over)return;const u=Math.min(1,(t-t0)/dur),q=p.getPointAtLength(l*u);tok.setAttribute("cx",q.x);tok.setAttribute("cy",q.y);u<1?raf=requestAnimationFrame(f):end()})(t0)}
+let holdT;function hold(){clearTimeout(holdT);holdT=setTimeout(()=>{if(playing&&visible)advance();else waiting=playing},HOLD)}
+let waiting=false;
+function start(){if(reduced.matches)return;playing=true;render();hold()}
+function halt(){playing=false;clearTimeout(holdT);render()}
+document.querySelectorAll(".runs button").forEach(b=>b.onclick=()=>{run=b.dataset.r;i=0;user=true;clearTimeout(holdT);playing=false;render();if(!reduced.matches){setTimeout(start,0)}});
+$("play").onclick=()=>{playing?halt():start()};
+$("replay").onclick=()=>{i=0;halt();start()};
+$("prev").onclick=()=>{halt();i=Math.max(0,i-1);render()};
+$("next").onclick=()=>{halt();i=Math.min(VAR[run].path.length-1,i+1);render()};
+function allRuns(){$("all").innerHTML=R.map(r=>{const v=VAR[r];return`<div><h3>${{found:"Document found",none:"Searched, nothing found",failed:"Could not search"}[r]}</h3><ol>${v.path.map(id=>`<li>${NOTE(r,id).t}</li>`).join("")}</ol><p style="margin-top:8px;font-size:15px">${v.out[1]}</p></div>`}).join("")}
+function mode(){document.body.classList.toggle("static",reduced.matches);if(reduced.matches){halt()}render()}
+allRuns();build();mode();
+narrow.addEventListener("change",build);reduced.addEventListener("change",mode);
+new IntersectionObserver(([e])=>{visible=e.isIntersecting;if(visible&&!started){started=true;start()}else if(visible&&waiting){waiting=false;advance()}},{threshold:.35}).observe(document.querySelector(".board"));
+</script>
+</body>
+</html>
