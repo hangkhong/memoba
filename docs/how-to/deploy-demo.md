@@ -36,7 +36,7 @@ In Authentication → Sign In / Providers, turn off "Allow new users to sign up"
 npm run db:seed -- --demo --remote
 ```
 
-Expected: the seed reports the case count with index state ready (20 for the demo corpus). Seeding is incremental; rerunning embeds only missing cases. The seed sets the demo user's password to `DEMO_PASSWORD` every run, so `npm run demo:reset -- --remote` also recovers the account if a reviewer changes it.
+Expected: the seed reports the case count with index state ready (20 for the demo corpus) and five process documents. Seeding is incremental; rerunning embeds only missing cases and documents. The demo seed fails without a configured embedding model. The seed sets the demo user's password to `DEMO_PASSWORD` every run, so `npm run demo:reset -- --remote` also recovers the account if a reviewer changes it.
 
 ## 3. Configure Vercel
 
@@ -85,4 +85,4 @@ npm run demo:reset -- --remote --app-url https://<your-app>.vercel.app
 
 With `--app-url` (or `APP_URL`) the reset then signs in as the demo user and re-creates the three seeded conversations (separate from the suggested prompts), each with a real completed answer. This calls the model three times. Without it the conversations are left empty; run `npm run demo:conversations -- --app-url <url>` later.
 
-This removes visitor cases, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay. The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.
+This removes visitor cases, every document, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay, and the seed step publishes the demo documents again (about 30 embeddings). The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.

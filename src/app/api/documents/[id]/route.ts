@@ -4,7 +4,7 @@ import { accessResponse, isSameOrigin, privateJson } from "@/lib/auth/http";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { documentDetail } from "@/modules/documents/repository";
 import { documentService } from "@/modules/documents/runtime";
-import { documentSaveResponse } from "@/modules/documents/http";
+import { respondToSave } from "@/modules/documents/http";
 type RouteContext = { params: Promise<{ id: string }> };
 export async function GET(_request: Request, route: RouteContext) {
   try {
@@ -20,6 +20,7 @@ export async function PATCH(request: Request, route: RouteContext) {
   try {
     const context = await requireWorkspace(); const id = z.uuid().safeParse((await route.params).id);
     if (!id.success) return privateJson({ error: "Document unavailable." }, 404);
-    return documentSaveResponse(await (await documentService(context)).save(await request.json().catch(() => null), id.data));
+    const body = await request.json().catch(() => null);
+    return await respondToSave(async () => (await documentService(context)).save(body, id.data));
   } catch (error) { return accessResponse(error); }
 }

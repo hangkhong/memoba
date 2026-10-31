@@ -39,7 +39,7 @@ The first run (`2bc69604-6f35-4bfe-a725-43ef1e67dc31`) called `search_cases` and
 
 The runs reported 513 and 491 output tokens, below the current per-call cap. Neither approached the deadline or exercised the final 60-second synthesis reserve. These observations do not establish that the model-step, tool-call, context, or output caps are sufficient for more complex cases.
 
-[`evals/text/scenarios.json`](../../evals/text/scenarios.json) defines eight synthetic scenarios. They cover a direct precedent, complementary and conflicting cases, a failure, changed conditions, no precedent, ambiguity, and a referential follow-up. The expected source slugs and review points are proposed fixtures. They have not been reviewed by the user and are not calibrated scores. Source expectations assume that the 24-case challenge corpus is published and indexed.
+[`evals/text/scenarios.json`](../../evals/text/scenarios.json) defines eight synthetic scenarios over the challenge corpus and four over the demo corpus and documents. They cover a direct precedent, complementary and conflicting cases, a failure, changed conditions, no precedent, ambiguity, and a referential follow-up. The expected source slugs and review points are proposed fixtures. They have not been reviewed by the user and are not calibrated scores. Source expectations assume that the 24-case challenge corpus is published and indexed.
 
 The runner executes one named scenario per invocation against a local running app. It needs the demo credentials in ignored `.env.local`, a configured real model, and indexed synthetic cases. Seeding the challenge corpus uses the real embedding provider. Each run creates a conversation in the demo workspace and does not delete it.
 
@@ -128,6 +128,25 @@ The coverage line is now derived by the app from tool results and saved with the
 The "before" column is the previous restructured-instructions run and the "after" column is a new run, so cases read differ between runs as well as the counts. The computed denominators are the real preview counts, which the model's own "matching" count understated in six of seven questions. Two things to know: the list is capped at 10 titles, so it can be shorter than the unread count; and the Singapore question previews two nearest-neighbour cases that the model judged irrelevant, so the line says "Found 2 cases, none read" next to prose saying no recorded case matched. Search returns the nearest cases under a similarity threshold, so a "found" count is not a relevance judgment.
 
 Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
+
+## Process documents on 2026-10-31
+
+These are individual local observations with `gpt-6-luna` and `text-embedding-3-small` against the 20-case demo corpus and the five seed documents in [`evals/demo/documents.ts`](../../evals/demo/documents.ts). They are not quality scores, and no hosted run has happened. The four scenarios in [`evals/text/scenarios.json`](../../evals/text/scenarios.json) with `corpus: "demo"` run through `--trace-live`: process plus case, process only, process against case, and a predating case. Each run was a single in-process trace.
+
+Limits measured before any change:
+
+| Measurement | Result | Limit | Decision |
+|---|---|---|---|
+| Document search cards | 244 to 285 tokens each (about 1,400 for five) | `documentPreviewTokens` 3,000 | Kept |
+| Reading every seed document in full | 27 body sections, about 8,600 tokens (1.4 to 2.0 KB of text per document, 5 or 6 sections each) | `documentContextTokens` 12,000 and `documentContextSections` 24 | Kept. Tokens fit, but the section cap would bind when all five documents are read in full; no run read more than one |
+| Output of a five-section answer | 589, 970, 1,250 and 1,276 tokens; every run finished with `stop` | `outputTokens` 2,000 | Kept |
+| Search recall at `cosine<0.65` | Eight on-topic queries each returned the expected document (release, deletion twice, price twice, incident, refund); an unrelated query returned none | 0.65 | Kept |
+
+One broad query ("How should we ship a risky change to production?") also returned the price change policy through its support-preparation block. Total tokens per run were 9,390 to 20,485 and runs took 10 to 19 seconds.
+
+What the four answers showed. Process plus case cited the release procedure under the process heading and three cases under the cases heading, put the 5% and 25% hold times of the procedure next to the one-week holds of the staged case under "Where practice and process differ", and started its next step from the process. Process only said no recorded case matched, listed the deletion steps in the document's order, and cited the process in the next step. Against the 60-day Starter case it reported the difference from the 90-day policy without calling the case a violation and told the user to follow the policy. The predating scenario also named the policy as the requirement and the case as what happened; it did not state that the case predates the policy's effective date, which the rule permits only when the case text states a date. The wording is a review point for a person, not a score. No correction was needed in any run, so `MISPLACED_CITATION` was exercised only by unit tests.
+
+In the running app, a pasted document showed a four-block preview, published in about three seconds, appeared in the Documents tab, and gained a second version after an edit. A process-only question and a process-plus-case question completed, a document citation opened the evidence panel (`Process · Delete`, effective date, owner, `Open current document`, no outcome line), the link opened the document at the cited block, and the saved answer survived a reload. The activity line read "Searched cases and documents · 15 cases found · 4 documents found".
 
 ## Deterministic checks and remaining work
 

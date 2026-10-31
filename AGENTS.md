@@ -23,7 +23,7 @@ The Supabase native stack is an explicit experimental exception. Pin CLI `2.122.
 
 ## Keep the module boundaries
 
-Put product modules in `src/modules/cases`, `src/modules/knowledge`, `src/modules/analysis`, and `src/modules/briefs`.
+Put product modules in `src/modules/cases`, `src/modules/documents`, `src/modules/knowledge`, `src/modules/analysis`, and `src/modules/briefs`. Put UI pieces that cases and documents share in `src/components`.
 Keep route handlers and UI components thin. Put business rules in typed functions and services.
 Make agent tools call the knowledge service.
 Keep SDK and database types behind adapters. Use domain contracts between modules.
@@ -39,7 +39,7 @@ Avoid `any`, unchecked casts, and duplicate runtime validation inside typed func
 Keep case content revisions immutable. Publish a revision only after its index is ready.
 Keep citations tied to a section and revision. Check access before returning saved evidence text.
 Exclude archived cases from new retrieval. Preserve authorized historical citations.
-Keep generated briefs separate from observed case outcomes.
+Keep generated briefs separate from observed case outcomes. Keep process documents apart from cases: cases say what happened and documents say what is required, and an answer cites each under its own heading.
 
 ## Bound the analysis
 
