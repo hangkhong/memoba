@@ -12,17 +12,28 @@ Take every string from the prototype. The structure is:
 
 | Section | Headline | Content |
 |---|---|---|
-| Header | none | Wordmark, three anchor links, "Open the demo". Links hide below 820px. The button never hides |
-| Hero | Your team already solved this. Nobody remembers where. | Lede, button, answer specimen with clickable citations and a source panel |
+| Header | none | Wordmark, three anchor links, "Open the demo". Links hide below 900px. The button never hides |
+| Hero | Your team already solved this. Nobody remembers where. | Lede, button, framed chat answer with the evidence panel floating over it. The phone uses a phone capture and drops the float |
 | Problem | The ticket survives. The reasoning doesn't. | A "Done" ticket beside the four things it lost, all from the recurring invoices case |
-| Two memories | Cases say what happened. / Documents say what is required. | Two full-bleed fields, stacked on phones |
+| Two memories | Cases say what happened. / Documents say what is required. | Two tinted panels, each with a cropped case or document page, stacked on phones |
 | Engine | Follow one question through the engine. | Interactive diagram below |
-| Honesty | When they differ, you get both sides. | Difference specimen and three rules |
+| Workspace | See what the team knows, and where it's thin. | Knowledge Hub and Dashboard frames. The Dashboard keeps its Sample data label |
+| Honesty | When they differ, you get both sides. | Real answer crop and four rules |
 | Close | Ask the demo workspace a real question. | States that Northwind Ledger is fictional. Button, full-width wordmark |
 
-## Sources for the specimen
+## Product screens
 
-The question comes from the `process-plus-case` scenario in `evals/text/scenarios.json`. Titles, numbers, and the release procedure version come from `evals/demo/product-cases.ts` and `evals/demo/process/release.ts`. The answer text is composed from that seed, not copied from a saved run. The `4 found` count is illustrative. The [evaluation record](../../reference/evaluation.md) says this scenario cited four cases.
+Captures live in `public/landing/`, taken at 2x from the local demo workspace (3x for the phone). The answer is a real saved run of the `process-plus-case` question from `evals/text/scenarios.json`, which returned `19 cases found · 5 documents found` and cited three cases and the release procedure. Frames follow a tinted panel, 12px radius, and a soft shadow, cropped at the bottom edge.
+
+| File | Used in |
+|---|---|
+| `chat-answer.png`, `chat-answer-phone.png`, `evidence-panel.png` | Hero |
+| `case-page.png`, `document-page.png` | Two memories |
+| `knowledge-hub.png`, `dashboard.png` | Workspace |
+| `answer-differ.png` | Honesty |
+| `citation-evidence.png` | Source of `evidence-panel.png` |
+
+The local workspace holds leftover e2e data, so the capture hid those rows in the sidebar and Knowledge Hub, the Hub's case count, and the dev badge. Nothing else on screen was changed, and no seed content was edited. Lazy-load the images below the hero in the build.
 
 ## Engine timeline
 
@@ -45,7 +56,9 @@ const runs: Run[] = [
 ];
 ```
 
-Timing: 2.2s hold on a node, 0.85s along an edge, 1.6s along the dashed trace. The note, the progress bar, and the answer panel change on arrival, in one render, so they cannot drift from the token.
+Timing: 1.25s hold, 1s along an edge with cubic ease in and out, 1.7s along the dashed trace, 0.45s rest. One `requestAnimationFrame` clock drives the token transform and edge fill, and arrival calls one render for the note, progress, and answer panel, so they cannot drift. Node activation and the receding branch are CSS transitions off that render. The token passes under node boxes and parks 12 units outside the next node, so it never covers a label.
+
+Geometry: the wide map has five columns, with Question and Admission stacked left and Write, Check citations, and Save stacked right. That gives each node 176 units instead of squeezing eight columns.
 
 Mapping to the product: `search`, `rc`, and `rd` are the `search_knowledge`, `read_case`, and `read_document` tool events. `admit` is the intake stage, `check` is the validation stage, and the codes follow [system contracts](../../reference/system-contracts.md). The diagram simplifies the agent loop to one pass. A real run can search and read several times, and search can repeat.
 
@@ -63,7 +76,7 @@ Mapping to the product: `search`, `rc`, and `rd` are the `search_knowledge`, `re
 | Dependencies | None. SVG, CSS, one client component | `getPointAtLength` covers the token |
 | Header action | Always `/login`, labelled "Open the demo" | Signed-in users never see this page |
 | Colour on scroll | None. Fields are fixed per section | The Engine is the one moving thing on the page |
-| Pictures | Product fragments only | Stock images would claim a world the demo does not have |
+| Pictures | Real product captures only | The owner asked for real product imagery, framed in the style of reorc.com without copying it |
 
 ## Signed-in redirect
 
@@ -73,9 +86,8 @@ Mapping to the product: `search`, `rc`, and `rd` are the `search_knowledge`, `re
 
 - `src/app/page.tsx`: redirect, composition.
 - `src/components/landing/site-header.tsx`: sticky bar.
-- `src/components/landing/answer-specimen.tsx`: client component, citation state.
 - `src/components/landing/engine.tsx`: client component, playback.
 - `src/components/landing/engine-timeline.ts`: timeline and layouts.
 - Other sections stay server-rendered in `src/components/landing/sections.tsx`.
 
-Use `prefers-reduced-motion` and the 820px breakpoint through `matchMedia` in the Engine. Keep the frame-independent fallback in `animate`, so a dropped animation frame cannot stall the timeline.
+Use `prefers-reduced-motion` and the 900px breakpoint through `matchMedia` in the Engine. The clock caps each frame's delta at 50ms and pauses while the board is off screen or the tab is hidden.
