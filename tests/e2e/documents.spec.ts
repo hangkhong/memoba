@@ -34,3 +34,39 @@ test("a document that cannot be indexed is not saved and says so", async ({ page
   expect(offline.status()).toBe(503);
   expect(z.object({ error: z.string() }).parse(await offline.json()).error).toContain("Nothing was saved");
 });
+
+test("an older version opens read only and links to the current one", async ({ page }) => {
+  await signIn(page.request);
+  await page.goto("/workspace/knowledge?tab=documents");
+  const link = page.getByRole("link", { name: "Price change policy", exact: true });
+  test.skip(await link.count() === 0, "needs the demo documents (npm run db:seed -- --demo)");
+  await link.click();
+  await expect(page).toHaveURL(/\/workspace\/knowledge\/documents\/[0-9a-f-]+$/);
+  const current = page.url();
+  await expect(page.getByRole("button", { name: "Edit document" })).toBeVisible();
+  await expect(page.getByText("Version 2", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("Notice raised from 30 to 90 days", { exact: false })).toBeVisible();
+  await page.getByRole("link", { name: "Version 1", exact: true }).click();
+  await expect(page).toHaveURL(/\?version=1$/);
+  await expect(page.getByRole("note")).toContainText("earlier version that is read only");
+  await expect(page.getByText("at least 30 days", { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Edit document" })).toHaveCount(0);
+  await page.getByRole("link", { name: /Open the current version/ }).click();
+  await expect(page).toHaveURL(current);
+  // The page streams behind a loading state, so a missing version shows the not-found page rather than a 404 status.
+  await page.goto(`${current}?version=99`);
+  await expect(page.getByText("could not be found", { exact: false }).first()).toBeVisible();
+});
+
+test("the edit form asks for a change note", async ({ page }) => {
+  await signIn(page.request);
+  await page.goto("/workspace/knowledge?tab=documents");
+  const link = page.getByRole("link", { name: "Price change policy", exact: true });
+  test.skip(await link.count() === 0, "needs the demo documents (npm run db:seed -- --demo)");
+  await link.click();
+  await page.getByRole("button", { name: "Edit document" }).click();
+  const dialog = page.getByRole("dialog", { name: "Edit document" });
+  await dialog.getByRole("button", { name: "Save new version" }).click();
+  await expect(dialog.getByText("Describe what changed and why.")).toBeVisible();
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+});

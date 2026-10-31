@@ -22,7 +22,7 @@ Cases record what happened and documents say what is required. They are separate
 
 ## Storage and execution
 
-Concepts and typed case links use Postgres. Content revisions are immutable. A new revision becomes published only after its nonempty sections are indexed. An unfinished edit cannot replace the published source used by retrieval. A document has no index state: `publish_document` embeds first and then stores and publishes the revision in one transaction, so a document is either searchable or absent.
+Concepts and typed case links use Postgres. Content revisions are immutable. A new revision becomes published only after its nonempty sections are indexed. An unfinished edit cannot replace the published source used by retrieval. A document has no index state: `publish_document` embeds first and then stores and publishes the revision in one transaction, so a document is either searchable or absent. Each revision has a stored version number and a change note; citations keep the version they cited.
 
 The persisted admission deadline bounds model calls, tool work, and citation correction. The Vercel route also applies a request-entry cutoff with headroom for setup and persistence. The hosted cutoff and synthesis reserve are runtime policies to verify with a deployment, not proof of hosted behavior. The app stores terminal state and reconciles expired runs on later reads; it does not resume interrupted generation.
 

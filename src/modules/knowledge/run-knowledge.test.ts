@@ -239,7 +239,7 @@ it("reads whole blocks, pins the revision, and returns markers only from reads",
 
 it("delivers a block whole or lists it as omitted, with CONTEXT_LIMIT", async () => {
   const small = documentSection(1, "Give 90 days' notice.");
-  const huge = [documentSection(2, "漢".repeat(4000)), documentSection(2, "漢".repeat(4000)), documentSection(2, "漢".repeat(4000))];
+  const huge = Array.from({ length: 6 }, () => documentSection(2, "漢".repeat(4000)));
   const knowledge = createRunKnowledge(store({ readDocument: async () => ({ kind: "success", items: [small, ...huge] }) }), runId);
   const result = await knowledge.readDocument(documentId, []);
   expect(result).toMatchObject({ kind: "partial", reason: "CONTEXT_LIMIT", omittedBlocks: [2] });

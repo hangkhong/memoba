@@ -306,3 +306,10 @@ it("repairs a misplaced citation once", async () => {
   const stuck = await runTextAnalysis(question, { generate: async () => ({ text: misplaced, usage }), repair: async () => ({ text: misplaced, usage }), disclosed: () => [{ marker: documentMarker, evidence: documentItem }, { marker: caseMarker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async () => null });
   expect(stuck).toMatchObject({ status: "failed", code: "MISPLACED_CITATION" });
 });
+
+it("drops private-use characters a model wraps around citations", async () => {
+  const saved: string[] = [];
+  const marker = `[S:${runId}:1]`;
+  await runTextAnalysis(question, { generate: async () => ({ text: `Pilot \uE200cite\uE202${marker}\uE201.`, usage }), repair: async () => { throw new Error("unexpected repair"); }, disclosed: () => [{ marker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async (_state, answer) => { saved.push(answer?.text ?? ""); return crypto.randomUUID(); } });
+  expect(saved[0]).toBe(`Pilot cite${marker}.`);
+});
