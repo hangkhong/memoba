@@ -2,7 +2,7 @@ import { isDocumentEvidence, type EvidenceItem } from "@/modules/knowledge/contr
 import { sectionLabels } from "@/modules/cases/presentation";
 
 export type SourceTag = { label: string; evidence: EvidenceItem };
-export type SourceGroup = { key: string; kind: "case" | "process"; title: string; tags: SourceTag[] };
+export type SourceGroup = { key: string; kind: "case" | "document"; title: string; tags: SourceTag[] };
 
 // A document heading can be a path such as "Notice > How notice is sent". The tag keeps the last step.
 export const documentTagLabel = (heading: string) => heading.split(">").map((part) => part.trim()).filter(Boolean).at(-1) ?? heading;
@@ -17,7 +17,7 @@ export function groupEvidenceSources(evidence: readonly EvidenceItem[]): SourceG
     seen.add(item.evidenceId);
     const document = isDocumentEvidence(item);
     const key = document ? `document:${item.documentId}` : `case:${item.caseId}`;
-    const group = groups.get(key) ?? { key, kind: document ? "process" : "case", title: document ? item.documentTitle : item.caseTitle, tags: [] };
+    const group = groups.get(key) ?? { key, kind: document ? "document" : "case", title: document ? item.documentTitle : item.caseTitle, tags: [] };
     group.tags.push({ label: tagLabel(item), evidence: item });
     groups.set(key, group);
   }

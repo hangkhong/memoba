@@ -10,8 +10,8 @@ it("groups sections under their case or document and keeps the two kinds apart",
   const groups = groupEvidenceSources([caseItem(1, 1, "lessons"), docItem(2, 1, "Notice > How notice is sent"), caseItem(3, 1, "context"), docItem(4, 2, "Refunds")]);
   expect(groups.map((group) => [group.kind, group.title, group.tags.map((tag) => tag.label)])).toEqual([
     ["case", "Case 1", ["Lessons and applicability", "Context"]],
-    ["process", "Doc 1", ["How notice is sent"]],
-    ["process", "Doc 2", ["Refunds"]],
+    ["document", "Doc 1", ["How notice is sent"]],
+    ["document", "Doc 2", ["Refunds"]],
   ]);
 });
 it("numbers only the tags whose labels collide, and drops repeated evidence", () => {

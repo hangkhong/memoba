@@ -21,8 +21,7 @@ import { isDocumentEvidence, type DocumentEvidence, type EvidenceItem } from "@/
 import { documentTypeLabels } from "@/modules/documents/presentation";
 
 export const evidenceTitle = (item: EvidenceItem) => isDocumentEvidence(item) ? item.documentTitle : item.caseTitle;
-// A document section reads as part of the process, a case section as a part of the case.
-export const evidenceLabel = (item: EvidenceItem) => isDocumentEvidence(item) ? `Process · ${item.heading}` : `Case · ${sectionLabels[item.sectionKey]}`;
+export const evidenceLabel = (item: EvidenceItem) => isDocumentEvidence(item) ? `Document · ${item.heading}` : `Case · ${sectionLabels[item.sectionKey]}`;
 
 const EvidenceContext = createContext<((item: EvidenceItem) => void) | null>(null);
 function subscribe(callback: () => void) { const media = window.matchMedia("(min-width: 1280px)"); media.addEventListener("change", callback); return () => media.removeEventListener("change", callback); }
@@ -87,7 +86,7 @@ export function EvidenceSources({ evidence }: { evidence: readonly EvidenceItem[
   const groups = groupEvidenceSources(evidence);
   if (!groups.length) return null;
   return <Trace className="mt-6"><TraceCollapsible><TraceCollapsibleTrigger><TraceLine><TraceIcon><BookOpen/></TraceIcon><TraceTitle>{groups.length} {groups.length === 1 ? "source" : "sources"} from your Knowledge Hub</TraceTitle></TraceLine></TraceCollapsibleTrigger><TraceCollapsibleContent keepMounted><ul className="mt-2 space-y-3 pl-6">{groups.map((group) => <li key={group.key}>
-    <p className="text-sm leading-5"><span className="mr-2 text-xs text-muted-foreground">{group.kind === "case" ? "Case" : "Process"}</span>{group.title}</p>
+    <p className="text-sm leading-5"><span className="mr-2 text-xs text-muted-foreground">{group.kind === "case" ? "Case" : "Document"}</span>{group.title}</p>
     <div className="mt-1.5 flex flex-wrap gap-1.5">{group.tags.map((tag) => <TagButton key={tag.evidence.evidenceId} aria-label={`Open ${tag.label} from ${group.title}`} onClick={() => open?.(tag.evidence)}>{tag.label}</TagButton>)}</div>
   </li>)}</ul></TraceCollapsibleContent></TraceCollapsible></Trace>;
 }
