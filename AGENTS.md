@@ -23,7 +23,7 @@ The Supabase native stack is an explicit experimental exception. Pin CLI `2.122.
 
 ## Keep the module boundaries
 
-Put product modules in `src/modules/cases`, `src/modules/documents`, `src/modules/knowledge`, `src/modules/analysis`, and `src/modules/briefs`. Put UI pieces that cases and documents share in `src/components`.
+Put product modules in `src/modules/cases`, `src/modules/documents`, `src/modules/knowledge`, `src/modules/analysis`, `src/modules/briefs`, and `src/modules/dashboard`. Put UI pieces that cases and documents share in `src/components`.
 Keep route handlers and UI components thin. Put business rules in typed functions and services.
 Make agent tools call the knowledge service.
 Keep SDK and database types behind adapters. Use domain contracts between modules.

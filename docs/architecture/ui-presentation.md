@@ -38,4 +38,10 @@ Record, Edit, Import, and Archive open in `Dialog`. `/workspace/knowledge/new` r
 
 A conversation's author sees a trash action on its sidebar row (shown on hover, always visible on touch widths). It opens a confirmation `Dialog` with the title, and a failed delete shows its error inside the dialog. After a delete the sidebar refreshes, and an open conversation goes to `/workspace/chat`. The delete is permanent.
 
+## Dashboard
+
+`/workspace/dashboard` answers whether the knowledge base works and what the PM should do next. Its design and rationale are in the [Dashboard design](../superpowers/specs/2026-10-31-dashboard-design.md). The page title states the finding, and `PageBar` carries a `Sample data` pill while `getDashboardSnapshot()` in `src/modules/dashboard/service.ts` returns the sample in `sample-snapshot.ts`. Thresholds and the queue weighting are constants in `snapshot.ts`; `metrics.ts` derives every figure from the snapshot rows and `buildAttentionQueue` in `attention.ts` ranks the queue.
+
+The page frame is `PageFrame` and `PageBar` without `PageBody`, and the layout follows the width of the content area (`@container`, with `@max-[1000px]` and `@max-[640px]`), not the viewport, because the sidebar changes the space. Sample titles resolve to real case and document IDs at render time; a row that does not resolve prints no action. Metric help is a `Popover` opened by an info button, so it works by touch and keyboard. The sidebar lists New chat, Dashboard, and Knowledge Hub, and puts a disabled Roadmap item with a "Soon" label above Sign out.
+
 Domain, access, and persistence rules remain in [system contracts](../reference/system-contracts.md). The [Eve integration record](eve-chat-integration.md) describes the earlier viewport implementation, replaced by Message Scroller.
