@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { caseRows } from "./case-rows";
-import { caseStatus, relativeDate } from "./presentation";
+import { caseStatus } from "./presentation";
+import { relativeDate } from "@/lib/relative-date";
 import type { listCases } from "./repository";
 
 const id = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;

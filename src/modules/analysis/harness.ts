@@ -29,16 +29,18 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
   try {
     await event("intake", "completed");
     await event("reasoning", "started");
-    let output = await budget.run(() => deps.generate(request, budget, deps.draft));
+    // Some models wrap citations in private-use characters that no font draws; they carry no meaning, so they never reach a saved answer.
+    const clean = (value: { text: string; usage: ModelUsage }) => ({ ...value, text: value.text.replace(/[\uE000-\uF8FF]/g, "") });
+    let output = clean(await budget.run(() => deps.generate(request, budget, deps.draft)));
     usage = output.usage;
     await event("reasoning", "completed");
     await event("validation", "started");
     let checked = await budget.run(() => validateTextAnswer({ text: output.text, disclosed: deps.disclosed(), canRead: deps.canRead }));
     deps.trace?.({ kind: "validation", result: checked.kind, code: checked.kind === "invalid" ? checked.code : null });
-    if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA")) {
+    if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA" || checked.code === "MISPLACED_CITATION")) {
       const validationCode = checked.code;
       deps.trace?.({ kind: "correction", state: "started" });
-      output = await budget.run(() => { deps.draft?.({ kind: "reset" }); return deps.repair(request, output.text, validationCode, budget, deps.draft); });
+      output = await budget.run(() => { deps.draft?.({ kind: "reset" }); return deps.repair(request, output.text, validationCode, budget, deps.draft).then(clean); });
       deps.trace?.({ kind: "correction", state: "completed" });
       usage = { inputTokens: usage.inputTokens === null || output.usage.inputTokens === null ? null : usage.inputTokens + output.usage.inputTokens, outputTokens: usage.outputTokens === null || output.usage.outputTokens === null ? null : usage.outputTokens + output.usage.outputTokens, totalTokens: usage.totalTokens === null || output.usage.totalTokens === null ? null : usage.totalTokens + output.usage.totalTokens };
       checked = await budget.run(() => validateTextAnswer({ text: output.text, disclosed: deps.disclosed(), canRead: deps.canRead }));
@@ -51,7 +53,7 @@ export async function runTextAnalysis(request: TextRunInput, deps: TextDependenc
     return { status: "complete", briefId, code: null } as const;
   } catch (error) {
     const status = error instanceof BudgetError ? error.code === "TIMED_OUT" ? "timed_out" : error.code === "CANCELLED" ? "cancelled" : "failed" : "failed";
-    const allowedCodes = ["INVALID_SCHEMA", "INVALID_CITATION", "SOURCE_ACCESS_DENIED", "SOURCE_ACCESS_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_UNAVAILABLE", "MODEL_FAILED"];
+    const allowedCodes = ["INVALID_SCHEMA", "INVALID_CITATION", "MISPLACED_CITATION", "SOURCE_ACCESS_DENIED", "SOURCE_ACCESS_UNAVAILABLE", "MODEL_RATE_LIMITED", "MODEL_UNAVAILABLE", "MODEL_FAILED"];
     const code = error instanceof BudgetError ? error.code : error instanceof Error && allowedCodes.includes(error.message) ? error.message : "ANALYSIS_FAILED";
     await deps.finish(status, null, [], code, usage);
     return { status, briefId: null, code };

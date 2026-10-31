@@ -5,7 +5,7 @@ import { Archive as ArchiveIcon } from "lucide-react";
 import { savedCaseSchema } from "./contracts";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CaseDialog } from "./case-dialog";
+import { FormDialog } from "@/components/dialog-frame";
 import { CaseForm } from "./case-form";
 import type { CaseInput } from "./schema";
 
@@ -21,9 +21,9 @@ export function CaseHeaderActions({ caseId, title, initial, concepts, defaultEdi
   }
   return <>
     <div className="flex shrink-0 gap-2"><Button variant="outline" aria-label="Archive" onClick={() => setPanel("archive")}><ArchiveIcon aria-hidden="true" className="md:hidden"/><span className="hidden md:inline">Archive</span></Button><Button onClick={() => setPanel("edit")}>Edit case</Button></div>
-    <CaseDialog open={panel === "edit"} onOpenChange={(next) => { if (!next) close(); }} title="Edit case" description="Saving creates a new version. Earlier versions and their citations stay as they were.">
+    <FormDialog open={panel === "edit"} onOpenChange={(next) => { if (!next) close(); }} title="Edit case" description="Saving creates a new version. Earlier versions and their citations stay as they were.">
       <CaseForm initial={initial} caseId={caseId} concepts={concepts} onCancel={close} onSaved={() => { close(); router.refresh(); }}/>
-    </CaseDialog>
+    </FormDialog>
     <Dialog open={panel === "archive"} onOpenChange={(next) => { if (!next) close(); }}><DialogContent className="sm:max-w-md">
       <DialogHeader><DialogTitle className="text-base">Archive “{title}”?</DialogTitle><DialogDescription>It stops appearing in new answers. Its history and earlier citations stay available.</DialogDescription></DialogHeader>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

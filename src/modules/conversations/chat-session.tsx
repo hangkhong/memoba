@@ -29,7 +29,7 @@ export function ChatSession({ children }: { children: ReactNode }) {
       const response = await fetch(`/api/conversations/${conversationId}/turns/${turnId}/analyses`, { method: "POST", headers: { "Idempotency-Key": key }, signal: abort.signal });
       if (!response.ok) {
         const parsed = errorSchema.safeParse(await response.json());
-        setState((current) => current && { ...current, message: parsed.success ? parsed.data.error : "Analysis unavailable. Your question remains saved." });
+        setState((current) => current && { ...current, message: parsed.success ? parsed.data.error : "Memoba is unavailable right now. Your question is saved." });
         return;
       }
       if (!response.body) throw new Error("Missing stream");
@@ -49,7 +49,7 @@ export function ChatSession({ children }: { children: ReactNode }) {
     } catch {
       const userRequested = abort.signal.aborted;
       abort.abort();
-      if (controller.current === abort) setState((current) => current && { ...current, message: userRequested ? "Stop requested. Checking the saved analysis state. Your question is saved." : "Connection interrupted. Reload to read the saved run; generation does not automatically resume." });
+      if (controller.current === abort) setState((current) => current && { ...current, message: userRequested ? "Stopped. Your question is saved." : "Connection interrupted. Reload to see what was saved; the response does not resume by itself." });
     } finally {
       draft.flush();
       if (controller.current === abort) {
@@ -58,7 +58,7 @@ export function ChatSession({ children }: { children: ReactNode }) {
       }
     }
   }
-  // The question shows at once; the save runs in the background and the analysis starts once it is stored.
+  // The question shows at once; the save runs in the background and the agent starts once it is stored.
   function submitAsk(input: Pick<Ask, "conversationId" | "key" | "message" | "parentTurnId" | "isNew">) {
     const base = { ...input, turnId: null, error: "" };
     setAsk({ ...base, status: "saving" });

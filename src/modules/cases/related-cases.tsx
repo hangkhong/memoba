@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LinkDialog, RemoveLinkDialog, type RelatedLink } from "./link-dialog";
-import { RailSection } from "./case-rail";
+import { RailSection } from "@/components/rail";
 import { relationLabels } from "./presentation";
 
 type Panel = { kind: "add" } | { kind: "edit" | "remove"; link: RelatedLink } | null;

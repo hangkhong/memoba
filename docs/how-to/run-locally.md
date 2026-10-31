@@ -24,13 +24,15 @@ Run plain `npx supabase` commands with `--stack-id` or `--db-url`. Without them 
 
 `db:seed` creates the local workspace, its member, a nonmember test account, and fixed concepts. It preserves existing users and passwords. It does not call a model by default.
 
-To load the demo company's 20 cases, run `npm run db:seed -- --demo`. It calls the embedding provider only for cases that are not already indexed. To remove visitor cases and conversations and restore the seed corpus, run `npm run demo:reset`.
+To load the demo company's 20 cases and five process documents, run `npm run db:seed -- --demo`. It calls the embedding provider only for cases and documents that are not already indexed, and fails when no embedding model is configured. To remove visitor cases, documents, and conversations and restore the seed corpus, run `npm run demo:reset`; it publishes the demo documents again.
 
 After sign-in, Chat opens by default. Enter a question and add context in **Request details**. Conversations persist even without model access. Follow-up turns retain the confirmed request state, and reload does not restart analysis.
 
 Press Enter to send a question or Shift+Enter to add a line. During an active analysis, choose **Stop analysis** in the composer. Scroll upward to read earlier turns, then choose **Scroll to latest message** to follow new content again. Expand **Activity** to inspect actual stage and tool events.
 
 Open **Knowledge Hub** in the sidebar and select **Record a case** to open a dialog and enter a case through either fixed template, or choose **Import from notes** to draft one from pasted text in its own dialog. Review every field before saving; document files in Import are a preview and are not read. **Edit case** and **Archive** on a case page also open dialogs. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
+
+Open the **Documents** tab of the Knowledge Hub and select **Add document** to publish a policy, procedure, or guideline: name it, say when to use it, paste Markdown or choose a `.md` or `.txt` file, and set its type, area, owner, and effective date. The preview shows the blocks the agent will read. A document is embedded and published in one step, so with no embedding model the save fails and nothing is stored. **Edit document** publishes a new version.
 
 If the native project changes, rerun `db:configure` and restart Next.js. Do not run another native Supabase project concurrently. `npx supabase stack list` shows every stack and its branch.
 

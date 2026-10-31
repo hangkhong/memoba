@@ -7,7 +7,7 @@ import { requestSchema, storedRunInputSchema, textRunInputSchema, type StoredRun
 import { eventSchema, terminalSchema, type AnalysisEvent, type Terminal } from "./events";
 import type { ModelUsage } from "./harness";
 import type { StoredAnswer } from "@/modules/briefs/schema";
-import type { EvidenceItem } from "@/modules/knowledge/contracts";
+import { isCaseEvidence, isDocumentEvidence, type EvidenceItem } from "@/modules/knowledge/contracts";
 const admissionSchema = z.discriminatedUnion("kind", [z.object({ kind: z.literal("admitted"), runId: z.uuid(), deadlineAt: z.iso.datetime({ offset: true }), input: textRunInputSchema }), z.object({ kind: z.literal("duplicate"), runId: z.uuid() }), z.object({ kind: z.literal("quota") }), z.object({ kind: z.literal("conflict") })]);
 export class AdmissionContextOverflow extends Error {}
 export const runSchema = z.object({ id: z.uuid(), request: requestSchema, status: z.enum(["running", ...terminalSchema.options]), events: z.array(eventSchema), created_at: z.iso.datetime({ offset: true }), deadline_at: z.iso.datetime({ offset: true }), finished_at: z.iso.datetime({ offset: true }).nullable(), error_code: z.string().nullable(), usage: z.object({ inputTokens: z.number().nullable(), outputTokens: z.number().nullable(), totalTokens: z.number().nullable() }).nullable() });
@@ -31,17 +31,33 @@ export function analysisRepository(client: SupabaseClient<Database>, context: Wo
       return z.uuid().nullable().parse(result.data);
     },
     async canRead(item: EvidenceItem) {
+      if (isDocumentEvidence(item)) {
+        const result = await client.from("document_sections").select("id").eq("workspace_id", context.workspaceId).eq("id", item.sectionId).eq("revision_id", item.revisionId).eq("kind", "body").abortSignal(AbortSignal.timeout(5000)).maybeSingle();
+        if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
+        return z.object({ id: z.uuid() }).nullable().parse(result.data) !== null;
+      }
       const result = await client.from("case_sections").select("id").eq("workspace_id", context.workspaceId).eq("id", item.sectionId).eq("revision_id", item.revisionId).eq("section_key", item.sectionKey).abortSignal(AbortSignal.timeout(5000)).maybeSingle();
       if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
       return z.object({ id: z.uuid() }).nullable().parse(result.data) !== null;
     },
-    // One query for all items; each must match a readable section on id, revision and key, as canRead does.
+    // One query per source for all items; each must match a readable section on id and revision, as canRead does.
+    // Archived documents and cases stay readable here: a saved citation keeps its source.
     async canReadAll(items: EvidenceItem[]) {
       if (items.length === 0) return true;
-      const result = await client.from("case_sections").select("id,revision_id,section_key").eq("workspace_id", context.workspaceId).in("id", [...new Set(items.map((item) => item.sectionId))]).abortSignal(AbortSignal.timeout(5000));
-      if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
-      const readable = new Set(z.array(z.object({ id: z.uuid(), revision_id: z.uuid(), section_key: z.string() })).parse(result.data).map((row) => `${row.id}:${row.revision_id}:${row.section_key}`));
-      return items.every((item) => readable.has(`${item.sectionId}:${item.revisionId}:${item.sectionKey}`));
+      const cases = items.filter(isCaseEvidence); const documents = items.filter(isDocumentEvidence);
+      if (cases.length) {
+        const result = await client.from("case_sections").select("id,revision_id,section_key").eq("workspace_id", context.workspaceId).in("id", [...new Set(cases.map((item) => item.sectionId))]).abortSignal(AbortSignal.timeout(5000));
+        if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
+        const readable = new Set(z.array(z.object({ id: z.uuid(), revision_id: z.uuid(), section_key: z.string() })).parse(result.data).map((row) => `${row.id}:${row.revision_id}:${row.section_key}`));
+        if (!cases.every((item) => readable.has(`${item.sectionId}:${item.revisionId}:${item.sectionKey}`))) return false;
+      }
+      if (documents.length) {
+        const result = await client.from("document_sections").select("id,revision_id").eq("workspace_id", context.workspaceId).eq("kind", "body").in("id", [...new Set(documents.map((item) => item.sectionId))]).abortSignal(AbortSignal.timeout(5000));
+        if (result.error) throw new Error("SOURCE_ACCESS_UNAVAILABLE");
+        const readable = new Set(z.array(z.object({ id: z.uuid(), revision_id: z.uuid() })).parse(result.data).map((row) => `${row.id}:${row.revision_id}`));
+        if (!documents.every((item) => readable.has(`${item.sectionId}:${item.revisionId}`))) return false;
+      }
+      return true;
     },
   };
 }

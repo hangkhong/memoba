@@ -39,7 +39,7 @@ The first run (`2bc69604-6f35-4bfe-a725-43ef1e67dc31`) called `search_cases` and
 
 The runs reported 513 and 491 output tokens, below the current per-call cap. Neither approached the deadline or exercised the final 60-second synthesis reserve. These observations do not establish that the model-step, tool-call, context, or output caps are sufficient for more complex cases.
 
-[`evals/text/scenarios.json`](../../evals/text/scenarios.json) defines eight synthetic scenarios. They cover a direct precedent, complementary and conflicting cases, a failure, changed conditions, no precedent, ambiguity, and a referential follow-up. The expected source slugs and review points are proposed fixtures. They have not been reviewed by the user and are not calibrated scores. Source expectations assume that the 24-case challenge corpus is published and indexed.
+[`evals/text/scenarios.json`](../../evals/text/scenarios.json) defines eight synthetic scenarios over the challenge corpus and four over the demo corpus and documents. They cover a direct precedent, complementary and conflicting cases, a failure, changed conditions, no precedent, ambiguity, and a referential follow-up. The expected source slugs and review points are proposed fixtures. They have not been reviewed by the user and are not calibrated scores. Source expectations assume that the 24-case challenge corpus is published and indexed.
 
 The runner executes one named scenario per invocation against a local running app. It needs the demo credentials in ignored `.env.local`, a configured real model, and indexed synthetic cases. Seeding the challenge corpus uses the real embedding provider. Each run creates a conversation in the demo workspace and does not delete it.
 
@@ -128,6 +128,46 @@ The coverage line is now derived by the app from tool results and saved with the
 The "before" column is the previous restructured-instructions run and the "after" column is a new run, so cases read differ between runs as well as the counts. The computed denominators are the real preview counts, which the model's own "matching" count understated in six of seven questions. Two things to know: the list is capped at 10 titles, so it can be shorter than the unread count; and the Singapore question previews two nearest-neighbour cases that the model judged irrelevant, so the line says "Found 2 cases, none read" next to prose saying no recorded case matched. Search returns the nearest cases under a similarity threshold, so a "found" count is not a relevance judgment.
 
 Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
+
+## Process documents on 2026-10-31
+
+These are individual local observations with `gpt-6-luna` and `text-embedding-3-small` against the 20-case demo corpus and the five full-length seed documents in [`evals/demo/documents.ts`](../../evals/demo/documents.ts): 7,100 to 10,300 characters each in their current version, 11 to 18 blocks, with version histories (release procedure 3 versions, price policy 2, incident communication 2, refunds guideline 2, data deletion 1). They are not quality scores, and no hosted run has happened. The scenarios in [`evals/text/scenarios.json`](../../evals/text/scenarios.json) with `corpus: "demo"` run through `--trace-live`: process plus case, process only, process against case, a predating case, and procedure completeness. Each run was a single in-process trace.
+
+An earlier pass against five short documents (about 2,000 characters each) is superseded; the numbers below are for the full-length documents.
+
+| Measurement | Result | Limit | Decision |
+|---|---|---|---|
+| Document search cards with outlines | 390 to 550 tokens each; five cards about 2,400 | `documentPreviewTokens` 3,000 | Kept. All five fit, with about 20% headroom, so a workspace with many more documents would need a larger pool |
+| Reading one document in full | 11 to 18 body sections and 5,000 to 7,200 tokens (price policy 15 sections, 6,500 tokens) | `documentContextSections` and `documentContextTokens` | **Raised from 24 sections and 12,000 tokens to 48 and 20,000.** At 24, the conflict scenario read the price policy in full and then lost one block of the release procedure with `CONTEXT_LIMIT`; two full documents need about 33 sections and 12,500 tokens |
+| Output of a five-section answer | 695 to 1,947 tokens across the five scenarios; the two procedure answers reached 1,926 and 1,947 | `outputTokens` | **Raised from 2,000 to 3,000.** A run at 97% of the cap is one longer answer away from a `length` finish, which fails the run. This limit is shared with cases |
+| Search recall at `cosine<0.65` | Every on-topic query returned the expected document, and the unrelated query returned none. Broad queries also return up to four other documents, because long documents match many topics through some block | 0.65 | Kept. Precision is the model's job, and cards name the matched headings |
+
+After the change, no scenario hit `CONTEXT_LIMIT`; runs used 15,100 to 26,800 total tokens and took 14 to 28 seconds. Input per run was at most 25,100 tokens, against a model ceiling of 64,000.
+
+Completeness. Asked for a full walk-through, the answer listed all six prerequisites and the named roles, the four rollout steps in order with their holds (1 hour, 3 business days, 3 business days, 5 business days of watching), every stop condition with its action, the escalation times, and the extra checks for tax and totals, and it named version 3 and the effective date. It did not mention hotfixes, which the question did not ask about. The answer to a narrower question read only the blocks named in the card outline (for example blocks 3 to 10) and left the rest. When the read pool was too small the answer said it could not read the missing block, which is the intended behavior.
+
+What the answers showed, each a review point for a person and not a score. Process plus case put the release procedure under the process heading with its version, cited four cases under the cases heading, and started its next step from the process. Process only said no recorded case matched, followed the deletion steps in order, and cited the process in the next step. The conflict answer reported the 60-day Starter case against the 90-day policy without calling it a violation. The predating answer treated the policy as today's requirement and did not say that the Starter case predates it, which the prompt permits only where the case text gives a date. In the completeness run, "Where practice and process differ" was filled with a weak difference (the tax-engine shadow period against the procedure's wording); the prompt asks for that heading only when a case and a document actually differ, so this is a model-compliance issue to watch. No correction was needed, so `MISPLACED_CITATION` was exercised only by unit tests.
+
+In the running app: a new document published at version 1; an edit without a note was refused with a 400 and one with a note became version 2; an answer cited version 1; after version 2 the same saved answer's evidence panel read `Version 1 · Effective 1 Oct 2026`, "A newer version exists (version 2). The cited text below is from version 1.", and still showed the version 1 text; `?version=1` showed the earlier text under a read-only banner, with the version history listing both versions with date, author and note. A model wrapped some citations in private-use characters that no font draws, and they showed as empty boxes; the harness now removes them.
+
+### Reviewed system prompt on 2026-10-31
+
+The prompt was replaced with a reviewed text (direct opening sentence, candidate-not-match search rule, silence, conflict and exception rules, a stricter "Where practice and process differ"). Ten single in-process traces ran against the seeded local stack. The owner asked that three of them be read in full; the others were checked for tool results and size only. These are observations, not scores. No run was corrected, none hit `CONTEXT_LIMIT`, and every run finished complete.
+
+| Scenario | Output tokens | Input tokens | Behavior |
+|---|---|---|---|
+| Process plus case | 2,149 | 38,438 | Not read in full; five sections |
+| Process only | 613 | 16,001 | Not read in full |
+| Conflict (60-day case, 90-day policy) | 1,251 | 23,992 | Not read in full |
+| Predating case | 1,448 | 22,909 | Not read in full |
+| Full procedure walk-through | 1,960 | 22,174 | Not read in full |
+| No difference (duplicate-charge approvals) | 465 | 17,939 | Read: the heading "Where practice and process differ" was absent, and the opening sentence answered the question |
+| Cannot meet a requirement (30 days' notice) | 1,460 | 21,767 | Read: said "No" first, named the 90-day requirement, and gave the exception route (written VP Finance and CEO approval with Legal's confirmation, not for convenience) |
+| Process silent (app store review) | 831 | 25,195 | Read: said the procedure does not describe app-store review, did not infer a rule, and named Platform Engineering as the owner to ask |
+| Neither source (Singapore data center) | 299 | 10,705 | Not read in full |
+| Case only (helpdesk migration) | 1,237 | 18,128 | Not read in full; it still read a process document that does not apply, so "ignore cards that do not apply" held only partly |
+
+Notes from the three read answers. The cannot-meet answer filled the differences heading with the 10-day Pro case against the 90-day requirement, which is a specific difference, and it said the case predates the policy version; the case text gives no year, so the year is the model's inference. The process-silent answer also cited a case that does not address app-store review and said so. Input cost rose: the process-plus-case run used 38,400 input tokens against 25,100 before the change, because the prompt tells the model to read whole documents unless only parts matter, and the longest answer reached 2,149 output tokens, above the previous 2,000 cap, which the raised 3,000 cap covers. No wording was changed from the reviewed text.
 
 ## Deterministic checks and remaining work
 

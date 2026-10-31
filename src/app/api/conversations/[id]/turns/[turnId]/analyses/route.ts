@@ -27,7 +27,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     setupSignal.throwIfAborted();
     const row = storedTurnSchema.extend({ conversations: z.object({ author_id: z.uuid() }) }).nullable().parse(result.data);
     if (result.error || !row || row.conversations.author_id !== context.userId) return privateJson({ error: "Conversation unavailable." }, 404);
-    if (readAIConfig(process.env).kind !== "configured") return privateJson({ code: "AI_UNAVAILABLE", error: "AI analysis is unavailable. Your question is saved; no model was called." }, 503);
+    if (readAIConfig(process.env).kind !== "configured") return privateJson({ code: "AI_UNAVAILABLE", error: "Memoba is unavailable right now. Your question is saved." }, 503);
     const run = await prepareAnalysis(context, row.request, key.data, row.id, handlerStartedAt, setupSignal);
     if (run.kind === "conflict") return privateJson({ error: "Conversation changed or this turn is already answered. Refresh before retrying." }, 409);
     if (run.kind === "duplicate") return privateJson({ error: "This attempt already exists.", runId: run.runId }, 409);

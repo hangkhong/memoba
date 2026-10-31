@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { relativeDate } from "./presentation";
+import { relativeDate } from "@/lib/relative-date";
 
 export function RelativeDate({ iso }: { iso: string }) {
   const [now] = useState(() => Date.now());

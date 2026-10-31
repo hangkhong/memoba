@@ -20,7 +20,7 @@ test("chat persists two turns and explicit constraints without model access", as
   expect((await analysis).status()).toBe(503);
   releaseNavigation();
   await expect(page).toHaveURL(/\/workspace\/chat\/[0-9a-f-]+$/);
-  await expect(page.getByRole("status")).toContainText("Your question is saved; no model was called.");
+  await expect(page.getByRole("status")).toContainText("Memoba is unavailable right now. Your question is saved.");
   const id = new URL(page.url()).pathname.split("/").pop();
   const firstResponse = await page.request.get(`/api/conversations/${id}`);
   expect(firstResponse.headers()["cache-control"]).toContain("no-store");
@@ -30,7 +30,7 @@ test("chat persists two turns and explicit constraints without model access", as
   await page.getByLabel("Follow-up question", { exact: true }).fill("Only one operator is available.");
   await page.getByRole("button", { name: "Send question", exact: true }).click();
   await expect(page.getByRole("region", { name: "Turn 2", exact: true })).toContainText("Only one operator is available.");
-  await expect(page.getByRole("status")).toContainText("Your question is saved; no model was called.");
+  await expect(page.getByRole("status")).toContainText("Memoba is unavailable right now. Your question is saved.");
   const second = conversationDetailSchema.parse(await (await page.request.get(`/api/conversations/${id}`)).json());
   expect(second.turns).toHaveLength(2);
   expect(second.turns[0]?.request).toEqual(first.turns[0]?.request);
@@ -39,6 +39,11 @@ test("chat persists two turns and explicit constraints without model access", as
   page.on("request", (request) => { if (request.method() === "POST" && request.url().endsWith("/analyses")) analysisCalls++; });
   await page.reload();
   await expect(page.getByRole("region", { name: "Turn 2", exact: true })).toBeVisible();
+  // An unanswered turn offers a retry only on the latest turn, only after the failure, and never starts the agent by itself.
+  await expect(page.getByRole("region", { name: "Turn 1", exact: true })).toContainText("No response");
+  await expect(page.getByRole("region", { name: "Turn 2", exact: true })).toContainText("Memoba could not respond.");
+  await expect(page.getByRole("button", { name: "Try again", exact: true })).toHaveCount(1);
+  await expect(page.getByText(/analysis/i)).toHaveCount(0);
   expect(analysisCalls).toBe(0);
   await page.getByRole("link", { name: "Knowledge Hub", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Knowledge Hub", exact: true })).toBeVisible();

@@ -1,9 +1,13 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "cn";
-import { Pill, Tag } from "./case-badges";
+import { Pill, Tag } from "./badges";
 import { RevisionTime } from "./revision-time";
-import type { VersionRow, VersionState } from "./revision-history";
-import type { Tone } from "./presentation";
+import type { Tone } from "./tone";
+
+export type VersionState = "live" | "preparing" | "failed";
+// `note` and `author` are shown when a version records them; `href` makes the row a link and `selected` marks the one on screen.
+export type VersionRow = { id: string; number: number; state: VersionState | null; createdAt: string; summary: string; author?: string; href?: string; selected?: boolean };
 
 export function RailLayer({ label, children }: { label: string; children: ReactNode }) {
   return <section aria-label={label} className="rounded-xl border bg-background">{children}</section>;
@@ -21,8 +25,8 @@ export function VersionHistory({ rows }: { rows: VersionRow[] }) {
   return <ol className="text-sm">{rows.map((row, index) => { const state = row.state && versionStates[row.state]; return <li key={row.id} className={cn("relative pl-5", index < rows.length - 1 && "pb-4")}>
     <span aria-hidden="true" className={cn("absolute top-[7px] left-[3px] size-[7px] rounded-full", row.state === "live" ? "bg-emerald-600" : "bg-input")}/>
     {index < rows.length - 1 && <span aria-hidden="true" className="absolute top-[18px] -bottom-1 left-[6px] w-px bg-border"/>}
-    <div className="flex items-center justify-between gap-2"><span className="font-medium">Version {row.number}</span>{state && <Pill tone={state.tone}>{state.label}</Pill>}</div>
-    <p className="text-xs leading-4 text-muted-foreground"><RevisionTime iso={row.createdAt}/></p>
+    <div className="flex items-center justify-between gap-2">{row.href && !row.selected ? <Link href={row.href} prefetch={false} className="font-medium underline-offset-4 hover:underline">Version {row.number}</Link> : <span className={cn("font-medium", row.selected && "text-[var(--evidence-accent)]")} aria-current={row.selected ? "page" : undefined}>Version {row.number}</span>}{state && <Pill tone={state.tone}>{state.label}</Pill>}</div>
+    <p className="text-xs leading-4 text-muted-foreground"><RevisionTime iso={row.createdAt}/>{row.author ? ` · ${row.author}` : ""}</p>
     <p className="text-xs leading-4 text-muted-foreground">{row.summary}</p>
   </li>; })}</ol>;
 }

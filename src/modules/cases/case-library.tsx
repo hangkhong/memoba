@@ -9,10 +9,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { OptionSelect, type Option } from "@/components/option-select";
 import { cn } from "cn";
-import { OutcomePill, StatusDot, Tag, TemplateChip } from "./case-badges";
+import { OutcomePill, TemplateChip } from "./case-badges";
+import { StatusDot, Tag } from "@/components/badges";
 import type { CaseRow } from "./case-rows";
 import { outcomeLabels, templateLabels } from "./presentation";
-import { RelativeDate } from "./relative-date";
+import { RelativeDate } from "@/components/relative-date";
 
 const templateOptions: Option<string>[] = [{ value: "all", label: "All templates" }, ...Object.entries(templateLabels).map(([value, label]) => ({ value, label }))];
 const outcomeOptions: Option<string>[] = [{ value: "all", label: "All outcomes" }, ...Object.entries(outcomeLabels).map(([value, label]) => ({ value, label }))];

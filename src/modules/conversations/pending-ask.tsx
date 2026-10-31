@@ -9,7 +9,7 @@ import { useChatSession, type Ask } from "./chat-session";
 export function PendingQuestion({ ask }: { ask: Ask }) {
   return <section aria-label="Your question" aria-busy={ask.status === "saving"}>
     <Message align="end"><MessageContent><Bubble align="end" variant="muted" className="max-w-xl"><BubbleContent className="rounded-2xl px-4 py-2.5 text-base leading-7"><p className="whitespace-pre-wrap break-words">{ask.message}</p></BubbleContent></Bubble></MessageContent></Message>
-    <p role="status" className="mt-4 text-sm text-muted-foreground">{ask.status === "saving" ? "Saving your question…" : "Starting the analysis…"}</p>
+    <p role="status" className="mt-4 text-sm text-muted-foreground">{ask.status === "saving" ? "Saving your question…" : "Getting your answer…"}</p>
   </section>;
 }
 

@@ -2,6 +2,8 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vitest";
 import { parseEventBlock, readEvents } from "./runner.mjs";
 import { challengeCases } from "../local-v0/corpus";
+import { demoCases } from "../demo/corpus";
+import { demoDocuments } from "../demo/documents";
 
 describe("evaluation stream records", () => {
   it("reads actual events across byte boundaries", async () => {
@@ -16,12 +18,17 @@ describe("evaluation stream records", () => {
     expect(() => parseEventBlock("data: {bad}")).toThrow();
   });
   it("defines the planned use cases without treating expectations as reviewed", async () => {
-    const cases: { id: string; messages: string[]; expectedSources: string[]; reviewFor: string[] }[] = JSON.parse(await readFile(new URL("./scenarios.json", import.meta.url), "utf8"));
-    expect(cases.map(({ id }) => id)).toEqual(["direct-precedent", "complementary-cases", "failed-precedent", "changed-conditions", "conflicting-cases", "no-precedent", "ambiguous", "referential-follow-up"]);
+    const cases: { id: string; corpus?: "challenge" | "demo"; messages: string[]; expectedSources: string[]; expectedDocuments?: string[]; reviewFor: string[] }[] = JSON.parse(await readFile(new URL("./scenarios.json", import.meta.url), "utf8"));
+    expect(cases.map(({ id }) => id)).toEqual(["direct-precedent", "complementary-cases", "failed-precedent", "changed-conditions", "conflicting-cases", "no-precedent", "ambiguous", "referential-follow-up", "process-plus-case", "process-only", "process-case-conflict", "predating-case", "procedure-completeness", "no-difference", "cannot-meet", "process-silent", "neither-source", "case-only"]);
     expect(cases.find(({ id }) => id === "referential-follow-up")?.messages).toHaveLength(2);
     expect(cases.every(({ reviewFor }) => reviewFor.length > 0)).toBe(true);
-    const slugs = new Set(challengeCases.map((item) => item.slug));
-    for (const scenario of cases) for (const slug of scenario.expectedSources) expect(slugs.has(slug), slug).toBe(true);
+    const slugs = { challenge: new Set(challengeCases.map((item) => item.slug)), demo: new Set(demoCases.map((item) => item.slug)) };
+    const documentSlugs = new Set(demoDocuments.map((item) => item.slug));
+    for (const scenario of cases) {
+      for (const slug of scenario.expectedSources) expect(slugs[scenario.corpus ?? "challenge"].has(slug), slug).toBe(true);
+      for (const slug of scenario.expectedDocuments ?? []) expect(documentSlugs.has(slug), slug).toBe(true);
+    }
+    expect(cases.filter(({ expectedDocuments }) => expectedDocuments?.length).map(({ id }) => id)).toEqual(["process-plus-case", "process-only", "process-case-conflict", "predating-case", "procedure-completeness", "no-difference", "cannot-meet", "process-silent"]);
   });
 });
 
