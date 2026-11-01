@@ -26,16 +26,38 @@ test("the header button stays visible on a phone", async ({ page }) => {
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(390);
 });
 
-test("the engine plays one chosen outcome, pauses, and steps", async ({ page }) => {
+test("the engine plays five steps, pauses, and steps", async ({ page }) => {
   await page.goto("/");
   const engine = page.locator("#engine");
-  await page.getByRole("button", { name: "Could not search" }).click();
-  await expect(engine).toHaveAttribute("data-run", "failed");
-  await page.getByRole("button", { name: "Pause" }).click();
-  await page.getByRole("button", { name: "Next step" }).click();
+  await engine.scrollIntoViewIfNeeded();
+  await page.getByRole("button", { name: "Step 1: A chatbot" }).click();
   await expect(engine).toHaveAttribute("data-step", "1");
+  await page.getByRole("button", { name: "Next step" }).click();
+  await expect(engine).toHaveAttribute("data-step", "2");
   await page.getByRole("button", { name: "Previous step" }).click();
-  await expect(engine).toHaveAttribute("data-step", "0");
+  await expect(engine).toHaveAttribute("data-step", "1");
+  await page.getByRole("button", { name: "Play" }).click();
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+  await page.getByRole("button", { name: "Step 5: Room to grow" }).click();
+  await expect(page.locator(".tagp").first()).toHaveText("PLANNED");
+});
+
+test("with reduced motion the engine shows the full picture and the five steps as a list", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const engine = page.locator("#engine");
+  await expect(engine).toHaveAttribute("data-step", "5");
+  await expect(engine.getByRole("button", { name: "Next step" })).toBeHidden();
+  await expect(engine.locator(".all li")).toHaveCount(5);
+  await expect(engine.locator(".all li").first()).toBeVisible();
+});
+
+test("the section tags use reader-facing names", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".tag").allTextContents()).resolves.toEqual([
+    "01 / 07Overview", "02 / 07The problem", "03 / 07Two memories", "04 / 07How it answers", "05 / 07Workspace", "06 / 07What it won't say", "07 / 07Try it",
+  ]);
 });
 
 test("a signed-in user visiting the landing page lands in chat", async ({ page }) => {
