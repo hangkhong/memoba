@@ -14,6 +14,7 @@ Memoba is one Next.js application, one Supabase database, and one AI SDK agent. 
 | `src/modules/briefs` | Citation validation, saved answers, and evidence display |
 | `src/modules/conversations` | Ordered turns, input snapshots, and the chat connection |
 | `src/modules/dashboard` | The Dashboard, on sample data |
+| `src/modules/docs` | The in-app Docs: reads `docs/product` and `docs/engine`, and serves them at `/docs` and `/workspace/docs` |
 | `src/components` | UI shared by cases and documents, and the landing page |
 | `src/lib/contracts/limits.ts` | Every runtime and input limit |
 | `supabase/migrations` | Schema, row-level security, and the RPCs that enforce access |
