@@ -1,5 +1,5 @@
-/** The five steps of the engine diagram and every string it shows. Coordinates live in engine-layout.ts.
- *  Each step adds one layer to the same canvas. Nothing here carries a number: the marks and the gauge are illustrations. */
+/** The five steps of the engine diagram, its clock, and every string it shows. The scene that draws them is engine-scene.ts.
+ *  Each step adds one layer to the same picture. Nothing here carries a number the reader could mistake for a measurement: the marks are illustrations. */
 
 export type StepId = 1 | 2 | 3 | 4 | 5;
 
@@ -15,11 +15,11 @@ export const steps: readonly Step[] = [
 
 export const lastStep: StepId = 5;
 
-/** One clock. Step 3 has two sub-moments: the short list, then the opened sources. */
+/** One clock. Step 3 has two moments inside it: the short list forms, then the sources open. Both windows are fractions of the step's length. */
 export const timing = {
   stepMs: { 1: 5500, 2: 5500, 3: 8400, 4: 7000, 5: 6000 } as Record<StepId, number>,
-  /** Elapsed time in step 3 at which the short list forms and the sources open. */
-  filterAt: [0, 2800, 5600] as readonly number[],
+  shortListWindow: [0.22, 0.4] as readonly [number, number],
+  openWindow: [0.56, 0.74] as readonly [number, number],
 };
 
 export const text = {
