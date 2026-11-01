@@ -85,6 +85,8 @@
   --sidebar-ring: #1b6c80;
   --radius: 0.5rem;
   --evidence-accent: #1b6c80;
+  /* Cool to warm, anchored to --chart-1, --chart-2, --chart-3. Interpolated in oklch so the blue-to-amber leg runs through magenta and red instead of a grey midpoint. Landing only: hero steps, top line, Close band. */
+  --gradient-cool-warm: linear-gradient(100deg in oklch, var(--chart-1), var(--chart-2) 40%, var(--chart-3));
   --transcript-width: 48.5rem;
 }
 
