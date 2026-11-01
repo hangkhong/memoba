@@ -22,6 +22,8 @@ RAG works well for "what does this document say?". Reusing past work is a harder
 
 The idea is simple to state. A chatbot answers from what it is given. Memoba goes and reads.
 
+<!-- diagram: pipeline-vs-agent -->
+
 | Weakness | What Memoba does |
 |---|---|
 | Searches once | The agent decides what to search, and searches again with different wording, including for failures |

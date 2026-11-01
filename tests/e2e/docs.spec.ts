@@ -76,3 +76,53 @@ test("on a phone a member opens Docs from the sidebar drawer", async ({ page }) 
   await expect(page).toHaveURL(/\/workspace\/docs\/why-teams-start-from-scratch$/);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Why teams start from scratch");
 });
+
+const engineDiagrams = [
+  ["why-search-alone-is-not-enough", /^Two ways to answer/],
+  ["how-memoba-finds-past-work", /^One question run through keyword search/],
+  ["how-the-agent-answers", /^One run from question to saved answer/],
+  ["how-an-answer-stays-checkable", /^Three nested sets/],
+  ["how-an-answer-stays-checkable", /^Three outcomes of searching/],
+  ["how-knowledge-gets-in", /^Two paths/],
+  ["how-knowledge-gets-in", /^What is stored and what answers use/],
+] as const;
+
+for (const [width, label] of [[1440, "desktop"], [390, "phone"]] as const) {
+  test(`every engine diagram renders at ${label} width without a sideways scroll`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    for (const [slug, name] of engineDiagrams) {
+      await page.goto(`/docs/${slug}`);
+      await expect(page.getByRole("group", { name })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `${slug} at ${width}`).toBe(true);
+    }
+  });
+}
+
+test("the interactive diagrams work from the keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/docs/how-an-answer-stays-checkable");
+  const sets = page.getByRole("group", { name: /^Three nested sets/ });
+  await sets.getByRole("button", { name: /^Pricing change rollout/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(sets.getByText("Blocked: Pricing change rollout")).toBeVisible();
+  await sets.getByRole("button", { name: /^Rollback checklist/ }).focus();
+  await page.keyboard.press("Enter");
+  await expect(sets.getByText("Allowed: Rollback checklist")).toBeVisible();
+  await sets.getByRole("button", { name: "How similar cases went" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(sets.getByText("Blocked: Rollback checklist")).toBeVisible();
+
+  await page.goto("/docs/how-knowledge-gets-in");
+  const edit = page.getByRole("group", { name: /^What is stored and what answers use/ });
+  await edit.getByRole("button", { name: "Document" }).focus();
+  await page.keyboard.press("Enter");
+  await edit.getByRole("button", { name: "Fails" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(edit.getByText("The save failed, so nothing was stored.")).toBeVisible();
+
+  await page.goto("/docs/how-memoba-finds-past-work");
+  const searches = page.getByRole("group", { name: /^One question run through keyword search/ });
+  await searches.getByRole("button", { name: "Different words" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(searches.getByText("No section contains all of these words.")).toBeVisible();
+});

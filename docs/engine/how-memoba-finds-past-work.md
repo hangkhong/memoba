@@ -20,6 +20,8 @@ Its weakness is the reverse. It is vague about exact terms, and it always return
 
 The two searches produce scores on different scales, so the scores can't be added. Memoba uses reciprocal rank fusion, which ignores the scores and looks only at positions. A section near the top of either list does well. A section near the top of both does best.
 
+<!-- diagram: two-searches -->
+
 This has a useful effect. An exact match that search by meaning misses still gets in, and a paraphrase that keyword search misses still gets in. Neither method needs tuning against the other.
 
 The ranking lives in SQL: [`search_knowledge`](../../supabase/migrations/202610300002_search_diversity.sql) for cases and [`search_knowledge_documents`](../../supabase/migrations/20261031010000_process_documents.sql) for documents. Both search only active, published sources in your workspace, indexed with the current embedding model.

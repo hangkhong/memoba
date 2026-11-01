@@ -18,7 +18,7 @@ function textOf(node: MdNode): string {
   return (node.children ?? []).filter(isNode).map(textOf).join("");
 }
 
-// Gives each heading its GitHub-style id and turns diagram markers into <docs-diagram name="..."> elements.
+// Gives each heading its GitHub-style id and turns diagram markers into <docs-diagram diagram="..."> elements.
 // It depends on the Markdown alone: the Markdown pipeline may reuse its output across pages, so nothing page-specific belongs here.
 // Links are resolved at render time instead (see docs-article.tsx).
 export function docsRemarkPlugin() {
@@ -31,7 +31,7 @@ export function docsRemarkPlugin() {
         if (name !== null) {
           node.type = "docsDiagram";
           node.value = undefined;
-          node.data = { hName: "docs-diagram", hProperties: { name } };
+          node.data = { hName: "docs-diagram", hProperties: { diagram: name } };
         }
       }
       node.children?.filter(isNode).forEach(visit);

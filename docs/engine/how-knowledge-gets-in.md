@@ -22,6 +22,8 @@ Writing a case from a blank form is the most expensive step in the loop, so Impo
 
 A person then reviews the draft and saves it through the normal form. That step is the rule that keeps invented experience out of the team's memory. Import reduces the typing. It does not reduce the responsibility.
 
+<!-- diagram: memory-door -->
+
 Choosing a file in Import is only a preview: the name is listed and the content is not read.
 
 ## A process document says what is required now
@@ -43,6 +45,8 @@ The agent reads whole blocks, and each document also gets a searchable summary b
 A document has no pending state. `publish_document` embeds first, then stores the version, its sections, and the published pointer in one transaction. A document is either searchable or absent, and without an embedding model the save fails with nothing stored.
 
 Cases and documents take different paths here because their edits differ. A case is a record that someone may save with a retry later. A document is a rule, and a half-published rule is worse than none.
+
+<!-- diagram: edit-goes-live -->
 
 ## Archiving keeps history
 
