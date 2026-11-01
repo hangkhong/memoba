@@ -16,14 +16,14 @@ Take every string from the prototype. The structure is:
 | Hero | Your team already solved this. Nobody remembers where. | Lede, button, framed chat answer with the evidence panel floating over it. The phone uses a phone capture and drops the float |
 | Problem | The ticket survives. The reasoning doesn't. | Framed capture of the real recurring invoices case with a small illustrative "Done" ticket floating over it, then a four-column list of what the ticket lost. The caption says the ticket is an illustration |
 | Two memories | Cases say what happened. / Documents say what is required. | Two ruled cells, each with a cropped case or document page, stacked on phones |
-| Engine | Follow one question through the engine. | Interactive diagram below |
+| Engine | A chatbot answers from what it's given. Memoba goes and reads. | One diagram in five steps. See [Engine diagram](#engine-diagram) |
 | Workspace | See what the team knows, and where it's thin. | Knowledge Hub and Dashboard frames. The Dashboard keeps its Sample data label |
 | Honesty | When they differ, you get both sides. | Real answer crop and four rules |
 | Close | Ask the demo workspace a real question. | States that Northwind Ledger is fictional. Button, full-width wordmark |
 
 ## Visual style
 
-The first restyle was too round and too loose for a product made of square tables and documents. This system replaces it. Copy and section order do not change. The only additions are a mono index (`01 / 07`) and a short eyebrow taken from the section names above.
+The first restyle was too round and too loose for a product made of square tables and documents. This system replaces it. Copy and section order do not change. The only additions are a mono index (`01 / 07`) and a short eyebrow. The eyebrows are, in order: Overview, The problem, Two memories, How it answers, Workspace, What it won't say, Try it. They are reader-facing names, never internal ones.
 
 | Area | Rule |
 |---|---|
@@ -31,9 +31,9 @@ The first restyle was too round and too loose for a product made of square table
 | Type | The system font for text. IBM Plex Mono (400, 500) loads through `next/font/google` in `src/app/page.tsx`, so the workspace never loads it. Mono is 12px uppercase with 0.06em tracking for eyebrows, buttons, nav, the section index, and Engine controls. H1 is at most 56px and H2 at most 48px, weight 500, tracking -0.03em, line-height 1.1. Body is 16px |
 | Frame | One column of at most 1360px between 1px rails. Sections end in a 1px line instead of a filled block. Adjacent cells have no gap and meet on a line. The Problem list is a four-cell table and the Honesty rules are a ruled list |
 | Spacing | A section heading takes at most 64px above and 56px below it. A stage sits on the line under its heading. No padding passes 64px |
-| Colour | `--case` teal and `--doc` ink are unchanged. `--gradient-cool-warm` in `globals.css` runs `--chart-1`, `--chart-2`, `--chart-3` in oklch, so the blue-to-amber leg passes through magenta and red instead of a grey midpoint. It paints only the hero staircase, the line at the top of the page, and the Close band, never text or a product capture |
-| Hero | Left aligned. A square staircase block with the gradient sits behind the capture. It is `aria-hidden`, decorative, and does not animate |
-| Engine | `.engine` CSS only loses its radii and tinted fill. The diagram's own geometry is unchanged |
+| Colour | `--case` teal and `--doc` ink are unchanged. No background is a gradient. Surfaces use flat tints of `--case` (`color-mix` with white) and a 24px hairline grid on stages and the Engine board. The only gradient is the accent stroke inside the Engine diagram, which runs `--chart-1`, `--chart-2`, `--chart-3` |
+| Hero | Left aligned. A square two-tint staircase behind the capture, flat colour, `aria-hidden`, decorative, no animation. The Close band repeats the same stair as a flat strip |
+| Engine | See [Engine diagram](#engine-diagram) |
 
 ## Product screens
 
@@ -50,47 +50,49 @@ Captures live in `public/landing/`, taken at 2x from the local demo workspace (3
 
 The local workspace holds leftover e2e data, so the capture hid those rows in the sidebar and Knowledge Hub, the Hub's case count, and the dev badge. Nothing else on screen was changed, and no seed content was edited. Lazy-load the images below the hero in the build.
 
-## Engine timeline
+## Engine diagram
 
-Keep this as data in `src/components/landing/engine-timeline.ts`, and keep layout coordinates apart from it. The prototype's `VAR`, `COMMON`, and `LAYOUT` hold the exact strings and geometry.
+The section answers one question for a PM: how does the agent find the right information without being stuffed and without bluffing like a chatbot? The reader should leave with this: a chatbot answers from what it is given. Memoba goes and finds it, reads only what is relevant, and can cite only what it read. The application holds the limits, so the design scales. The diagram is there to make that visible. It is not a specification.
 
-```ts
-type NodeId = "q" | "admit" | "search" | "cp" | "dp" | "rc" | "rd" | "write" | "check" | "save";
-type Run = {
-  id: "found" | "none" | "failed";
-  code: string;            // the real search event code
-  path: NodeId[];          // nodes the token visits, in order
-  recedes: `${NodeId}>${NodeId}`[]; // unchosen edges
-  documentState: "found" | "none" | "failed";
-  answerProcessText: string;
-};
-const runs: Run[] = [
-  { id: "found", code: "cases:found:4;documents:found:1", path: ["q","admit","search","cp","rc","rd","write","check","save"], recedes: ["rc>write"], documentState: "found", answerProcessText: "..." },
-  { id: "none", code: "cases:found:4;documents:none:0", path: ["q","admit","search","cp","rc","write","check","save"], recedes: ["rc>rd","rd>write","dp>rd"], documentState: "none", answerProcessText: "..." },
-  { id: "failed", code: "cases:found:4;documents:failed:0", path: ["q","admit","search","cp","rc","write","check","save"], recedes: ["rc>rd","rd>write","dp>rd"], documentState: "failed", answerProcessText: "..." },
-];
-```
+One canvas, five steps. Each step adds one layer, and the layer just added carries the accent stroke. Case is a circle, document is a square. Nothing shows a number, a function name, or a ranking method. The solution sheet and storyboard behind it are working notes and are not committed.
 
-Timing: 1.25s hold, 1s along an edge with cubic ease in and out, 1.7s along the dashed trace, 0.45s rest. One `requestAnimationFrame` clock drives the token transform and edge fill, and arrival calls one render for the note, progress, and answer panel, so they cannot drift. Node activation and the receding branch are CSS transitions off that render. The token passes under node boxes and parks 12 units outside the next node, so it never covers a label.
+| Step | Adds | Caption |
+|---|---|---|
+| 1 A chatbot | Question, Model, Answer, a full "what the model is holding" gauge | A chatbot answers from whatever text is pushed into it, so the model is full and the answer can't be opened to check. |
+| 2 Give it a tool | Search and the team's cases and documents | Give the same model a search tool and it goes to the team's cases and documents itself, by keyword and by meaning. |
+| 3 Filter before reading | Short list, opened and read, citations on the Answer. The gauge drops to the few sources read | Many sources shrink to a short list and only a few are opened, so the model holds just what it read. |
+| 4 The application keeps the rules | A frame, a stop limit, a read limit, a citation check. A citation to something unread is blocked | The model decides what to look at. The application decides how far it may look, when it stops, and checks every citation. |
+| 5 Room to grow | Three dashed sockets tagged Planned: MCP, Skills, Permission | The same frame has room to grow: three planned sockets for tools, working methods and permissions. |
 
-Geometry: the wide map has five columns, with Question and Admission stacked left and Write, Check citations, and Save stacked right. That gives each node 176 units instead of squeezing eight columns.
+What the page must not say: no claim that a citation proves an answer correct, no "no hallucination", and nothing that suggests the three sockets exist. The found, none and failed search states and the run data are not in the diagram. The Honesty section owns that rule.
 
-Mapping to the product: `search`, `rc`, and `rd` are the `search_knowledge`, `read_case`, and `read_document` tool events. `admit` is the intake stage, `check` is the validation stage, and the codes follow [system contracts](../../reference/system-contracts.md). The diagram simplifies the agent loop to one pass. A real run can search and read several times, and search can repeat.
+Code, in `src/components/landing/`:
+
+| File | Owns |
+|---|---|
+| `engine-timeline.ts` | The five steps, every string, the timing, and the illustrative marks (24, 6, 3). No coordinates |
+| `engine-layout.ts` | Hand-placed geometry for the wide layout and the vertical phone layout |
+| `engine-edges.ts` | The connections and the step that adds each |
+| `engine-board.tsx` | The SVG for one layout at one step |
+| `engine.tsx` | The clock, the controls, and the fallback list |
+
+Geometry: nodes are square and edges are orthogonal. The wide layout is the five steps on a canvas of 1200 by 670. Below 900px a separate vertical layout is rebuilt for 360 wide, and both SVGs are in the page with CSS choosing one, so nothing flips on hydration. The gauge is an illustration of how much the model carries and has no scale.
+
+Playback: one `requestAnimationFrame` clock moves the step. It starts when 35% of the board is visible, stops when it leaves or the tab is hidden, loops after step 5, and caps each frame's delta at 50ms. Step 3 has two moments inside it: the short list forms, then the sources open. Layers fade in, new edges draw in, and marks move by CSS transition off the step state. No looping animation runs, so at most the edges added in one step move at once, well under 12. Controls are Back, Play or Pause, Next, and five step buttons, with Back and Next pausing. Phones hide the step buttons and pin the caption and controls to the bottom edge while the board scrolls.
+
+Reduced motion and no JavaScript: the board rests on step 5 and the five steps are rendered as a list. The server renders that same state. With JavaScript and motion allowed, the board snaps to step 1 when it first scrolls into view.
 
 ## Decisions
 
 | Decision | Choice | Reason |
 |---|---|---|
-| Playback | Starts when 35% of the board is visible, pauses when it leaves, and loops through the three outcomes | The diagram needs no click to make sense, and it does not run unseen |
-| Controls | Outcome buttons, Pause, Back, Next, Replay | Moving content needs a pause control. Picking an outcome plays it once and stops |
-| One token | Token visits cases, then documents | Searches really settle separately, but the owner asked for one token. Both lanes' states appear when the token reaches search |
-| Decision point | After `read_case`, the document path or the direct path recedes | The choice is visible, and the three outcomes share one diagram |
-| Dashed trace | Returns to the question, labelled as a record you can reopen | Saved answers do not enter the knowledge base, so the note says this and the trace never reaches the sources |
-| Reduced motion | No token and no autoplay. Final state of the selected outcome, plus all three outcomes as lists | Complete information without travel. Without JavaScript the lists are the fallback, so render them on the server |
-| Phone | Vertical map with the lanes side by side, and the note pinned under the header | A shrunken wide map is unreadable, and a note below the map would fall out of step |
-| Dependencies | None. SVG, CSS, one client component | `getPointAtLength` covers the token |
+| Story | Five layers on one canvas, starting from a chatbot | The difference is the added structure, so the reader sees it appear |
+| Accent | The newly added layer only | Shows what changed without a legend |
+| Hold gauge | Appears in steps 1, 3, 4, 5 as an unlabelled-quantity illustration | Full against small is the contrast. A number would invite a question about it |
+| Search states | Not in the diagram | Rule lives in the Honesty section. Showing it here added load |
+| Planned work | Dashed sockets tagged Planned, drawn unlike the solid frame | It must not read as built |
+| Colour | No gradient backgrounds. Gradient only as the diagram accent | Flat tints and a hairline grid keep the page calm without looking raw |
 | Header action | Always `/login`, labelled "Open the demo" | Signed-in users never see this page |
-| Colour on scroll | None. Fields are fixed per section | The Engine is the one moving thing on the page |
 | Pictures | Real product captures only | The owner asked for real product imagery, framed as flat stages on lines in the manner of llamaindex.ai without copying its identity |
 
 ## Signed-in redirect
@@ -101,8 +103,7 @@ Mapping to the product: `search`, `rc`, and `rd` are the `search_knowledge`, `re
 
 - `src/app/page.tsx`: redirect, composition.
 - `src/components/landing/site-header.tsx`: sticky bar.
-- `src/components/landing/engine.tsx`: client component, playback.
-- `src/components/landing/engine-timeline.ts`: timeline and layouts.
+- `src/components/landing/engine*.ts(x)`: the Engine diagram. See [Engine diagram](#engine-diagram) for the files.
 - Other sections stay server-rendered in `src/components/landing/sections.tsx`.
 
-Use `prefers-reduced-motion` and the 900px breakpoint through `matchMedia` in the Engine. The clock caps each frame's delta at 50ms and pauses while the board is off screen or the tab is hidden.
+The Engine reads `prefers-reduced-motion` through `matchMedia`. The 900px switch between layouts is CSS.
