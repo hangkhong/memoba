@@ -119,3 +119,10 @@
   .evidence-markdown ul { @apply my-2 list-disc space-y-1.5 pl-5; }
   .evidence-markdown ol { @apply my-2 list-decimal space-y-1.5 pl-5; }
 }
+
+/* Long-form reading: a page title, roomier sections, and anchors that clear the sticky 48px bar.
+   Unlayered on purpose: Streamdown's own heading utilities sit in the utilities layer and would otherwise win. */
+.docs-article h1 { margin: 0 0 1.5rem; font-size: 1.75rem; line-height: 1.2; font-weight: 600; letter-spacing: -0.02em; }
+.docs-article h2 { margin: 2.5rem 0 0.75rem; font-size: 1.25rem; line-height: 1.35; font-weight: 600; scroll-margin-top: 5rem; }
+.docs-article h3 { scroll-margin-top: 5rem; }
+.docs-article :not(pre) > code { border-radius: 0.25rem; background: var(--muted); padding: 0.1rem 0.3rem; font-size: 0.9em; }
