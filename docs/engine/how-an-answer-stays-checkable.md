@@ -8,13 +8,13 @@ The thinking here owes something to knowledge tools such as GBrain: where a fact
 
 The agent sees a lot and reads little. Search previews are short excerpts, and a document card is an outline. Neither can be cited.
 
-A section earns a citation only when `read_case` or `read_document` delivers it during the run. At that moment the application creates a marker for it, such as `[S:run:12]`, tied to that run and that section. The model copies the marker next to the statement it supports. It can't make a valid marker up, because a marker exists only if the application issued it. Markers from an earlier run don't resolve, so old answers can't be recycled as evidence. Earlier assistant text in a conversation is context, and the agent must read a source again to rely on it.
+A section earns a citation only when a read delivers it during the run. At that moment the application creates a marker for it, tied to that run and that section. The model copies the marker next to the statement it supports. It can't make a valid marker up, because a marker exists only if the application issued it. Markers from an earlier run don't resolve, so old answers can't be recycled as evidence. Earlier assistant text in a conversation is context, and the agent must read a source again to rely on it.
 
 <!-- diagram: seen-read-cited -->
 
 ## What gets checked after writing
 
-When the draft is finished, [`validateTextAnswer`](../../src/modules/briefs/validation.ts) checks it:
+When the draft is finished, Memoba checks it:
 
 1. Every marker matches a section disclosed in this run.
 2. You are still allowed to read that source.
@@ -54,4 +54,4 @@ The activity view shows real tool events too. It doesn't narrate reasoning that 
 
 A valid citation proves that the agent read that section. It does not prove that the section supports the sentence beside it, or that the advice fits your situation.
 
-We could hide this behind a confidence score. We don't, because a score would be the model grading itself. What Memoba gives you is a cheap way to check: open the citation, read the section, judge. Measuring semantic support across many answers is [still open](../reference/evaluation.md#not-established).
+We could hide this behind a confidence score. We don't, because a score would be the model grading itself. What Memoba gives you is a cheap way to check: open the citation, read the section, judge. Whether cited sections support the sentences beside them has not been measured across many answers.

@@ -1,16 +1,13 @@
 import { posix } from "node:path";
 import { findDocByFile, type DocPage } from "./registry";
 
-export const repositoryUrl = "https://github.com/hangkhong/memoba";
-
 export type ResolvedLink =
   | { kind: "anchor"; href: string }
   | { kind: "page"; href: string; page: DocPage; hash: string }
-  | { kind: "github"; href: string; repoPath: string; hash: string }
   | { kind: "external"; href: string };
 
-// A link written for GitHub (relative to the file it sits in) becomes an in-app route when it names another doc page,
-// and an absolute GitHub URL for anything else in the repository.
+// Reader pages link only to each other, to anchors in themselves, and to external sites. A relative link (written relative to the file it sits in)
+// becomes an in-app route when it names a registered page. Anything else throws: the pages are shown in the app, and a reader is never sent into the repository.
 export function resolveDocLink(href: string, fromFile: string, base: string): ResolvedLink {
   if (href.startsWith("#")) return { kind: "anchor", href };
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return { kind: "external", href };
@@ -20,7 +17,7 @@ export function resolveDocLink(href: string, fromFile: string, base: string): Re
   const repoPath = posix.normalize(posix.join("docs", posix.dirname(fromFile), path));
   const page = findDocByFile(repoPath);
   if (page) return { kind: "page", href: `${base}/${page.slug}${hash}`, page, hash };
-  return { kind: "github", href: `${repositoryUrl}/blob/main/${repoPath}${hash}`, repoPath, hash };
+  throw new Error(`${fromFile} links to ${href}, which is not a registered docs page. Reader pages must not link to repository files.`);
 }
 
 // Rewrites inline link destinations in the Markdown source, skipping fenced code. This happens before rendering because the Markdown pipeline

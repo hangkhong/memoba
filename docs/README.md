@@ -20,11 +20,12 @@ The engine is the product, so most of the explanation lives here.
 
 ## Look something up
 
-- [Architecture overview](architecture/overview.md): the modules, the decisions behind them, and the next step.
+- [Architecture overview](architecture/overview.md): the modules, the decisions behind them, and where each engine rule lives.
 - [System contracts](reference/system-contracts.md): data, tool, state, and API rules.
 - [Evaluation record](reference/evaluation.md): what was measured, with run results.
 - [UI presentation](reference/ui-presentation.md): how each screen is put together.
 - [`limits.ts`](../src/lib/contracts/limits.ts): every runtime limit. No other document repeats these values as rules.
 - [Run locally](how-to/run-locally.md) and [Deploy the demo](how-to/deploy-demo.md).
+- [`design/engine-diagram-options.html`](design/engine-diagram-options.html): three engine diagram directions. The landing page uses the Isometric world, and the file keeps the Radar and Poster machine directions for later.
 
 The code is the source of truth. If a page and the code disagree, the page is wrong.

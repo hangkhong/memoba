@@ -23,6 +23,26 @@ A question flows through `POST /api/conversations/:id/turns`, which saves it fir
 
 Runtime access is enforced twice. The server derives the user and workspace from the session, and row-level security and RPCs enforce the same boundary in SQL.
 
+## Where the engine rules live
+
+The reader pages in `docs/engine` describe the rules in plain words and name no code. This table points an engineer from each rule to its owner.
+
+| Rule | Owner |
+|---|---|
+| The agent's instructions | [`agent.ts`](../../src/modules/analysis/agent.ts) |
+| Every runtime and input limit | [`limits.ts`](../../src/lib/contracts/limits.ts) |
+| The three agent tools: `search_knowledge`, `read_case`, `read_document` | [`tools.ts`](../../src/modules/analysis/tools.ts), calling the knowledge service |
+| The citation marker, such as `[S:run:12]`, issued when a read delivers a section | [`service.ts`](../../src/modules/knowledge/service.ts) in `src/modules/knowledge` |
+| The check on a finished draft | `validateTextAnswer` in [`validation.ts`](../../src/modules/briefs/validation.ts) |
+| Case fields and template rules | `caseInputSchema` in [`schema.ts`](../../src/modules/cases/schema.ts), shared by the form and the route handlers |
+| Document splitting along headings | `splitDocument` in [`split.ts`](../../src/modules/documents/split.ts) |
+| Document publishing in one transaction | `publish_document` in [`20261031010000_process_documents.sql`](../../supabase/migrations/20261031010000_process_documents.sql) |
+| Hybrid ranking for cases | `search_knowledge` in [`202610300002_search_diversity.sql`](../../supabase/migrations/202610300002_search_diversity.sql) |
+| Hybrid ranking for documents | `search_knowledge_documents` in [`20261031010000_process_documents.sql`](../../supabase/migrations/20261031010000_process_documents.sql) |
+| Keyword ranking | Postgres `ts_rank_cd` over the `simple` text configuration, so words are not reduced to a root |
+| Data, tool, state, and API rules | [System contracts](../reference/system-contracts.md) |
+| What was measured | [Evaluation record](../reference/evaluation.md) |
+
 ## Decisions, and what would reopen them
 
 | Decision | Why | Rejected | Reopen when |
@@ -45,9 +65,4 @@ Vitest checks domain behavior, pgTAP checks SQL and access, and Playwright check
 
 ## The next engine step
 
-One run reads a handful of cases in full. That suits the demo corpus and not a question that has to compare many cases. Two options are ready when real questions need them:
-
-- **Batch reading.** Read groups of cases into short cited notes, then write one answer across the groups.
-- **Case cards.** Precompute a short summary per case, so that search covers more cases in less context.
-
-Both add model calls and cost. They wait until usage shows that the partial view is the real limit. The run already records how many sources it found and how many it read, which is the signal to watch.
+Batch reading and case cards are the two options for questions that compare many cases. [How the agent answers a question](../engine/how-the-agent-answers.md#the-next-engine-step) describes them for readers. Both wait until the run's record of sources found and sources read shows that the partial view is the real limit.

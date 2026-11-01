@@ -74,6 +74,7 @@ Report which checks ran and which checks remain blocked. Do not call planned che
 ## Keep the documents short
 
 Keep the why in `docs/product`, the how in `docs/engine`, setup steps in `docs/how-to`, contracts in `docs/reference`, and decisions in `docs/architecture`.
-Update a document when its command or contract changes. Use real paths, symbols, and scripts.
+`docs/product` and `docs/engine` are reader pages shown in the app. They do not link to repository files or name code symbols, and the docs tests fail if they do. Put a file pointer for an engine rule in `docs/architecture/overview.md`.
+Update a document when its command or contract changes. In `docs/architecture`, `docs/reference`, and `docs/how-to`, use real paths, symbols, and scripts.
 Do not add a second source for a limit or schema. Link to the owning document or code definition.
 Keep secrets in ignored local environment files. Do not commit credentials, `.superpowers`, build output, or dependency directories.
