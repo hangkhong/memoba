@@ -1,176 +1,137 @@
-# Evaluation status
+# Evaluation record
 
-The foundation is tested separately from live model quality. Gemini checks were paused on 2026-10-28 because requests were rate-limited. The user authorized a small OpenAI runtime check on 2026-10-29, without model comparison or a semantic evaluation campaign.
+This page records what was measured and what was not. Every result is an individual run against a synthetic corpus, reviewed by the person building the product. None of them is a quality score. A completed run or a valid citation does not prove that a source supports a claim.
 
-## Corpus and request fixtures
+Model quality is tested apart from the deterministic checks. `npm test`, `npm run test:db`, and `npm run test:e2e` run with model credentials disabled.
 
-[`evals/local-v0/corpus.ts`](../../evals/local-v0/corpus.ts) contains six local cases and an authored challenge corpus of 24 synthetic cases, split equally between the two templates. Cases include achieved, failed, unknown, and archived outcomes.
+## Corpora and scenarios
 
-[`evals/challenge/requests.ts`](../../evals/challenge/requests.ts) contains 12 requests with expected source slugs, required facets, expected gaps, and forbidden conclusions. The first two are local fixtures. Source slugs resolve to actual case/revision IDs in the ignored `.superpowers/evals/seed.json` manifest after seeding.
+| Fixture | Holds |
+|---|---|
+| [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts) | The 20 demo cases of Northwind Ledger, a fictional company |
+| [`evals/demo/documents.ts`](../../evals/demo/documents.ts) | The five demo process documents with version histories |
+| [`evals/demo/prompts.ts`](../../evals/demo/prompts.ts) | The three suggested prompts and the three seeded conversations |
+| [`evals/local-v0/corpus.ts`](../../evals/local-v0/corpus.ts) | Six local cases and the 24-case challenge corpus |
+| [`evals/challenge/requests.ts`](../../evals/challenge/requests.ts) | 12 requests with expected sources and gaps |
+| [`evals/text/scenarios.json`](../../evals/text/scenarios.json) | Named scenarios over the challenge and demo corpora |
 
-The fixture contract tests check counts, schemas, and source references. These authored expectations need human review before they can serve as calibrated ground truth. They are not model-generated evaluation scores.
+The expected sources are authored fixtures. They have not been calibrated as ground truth.
 
-## Gemini checkpoint on 2026-10-28
+## Run an evaluation
 
-- Direct Gemini embeddings returned two vectors with 1536 dimensions.
-- Six labelled cases were indexed with the real embedding provider before the rate limit.
-- A browser saved and published a real synthetic case and inspected its revision.
-- The first live analysis failed structured output validation. A later attempt failed during the provider call. That checkpoint did not establish a complete live brief or semantic acceptance.
-
-## OpenAI runtime checkpoint on 2026-10-29
-
-The browser saved and indexed a synthetic case using `text-embedding-3-small` at 1536 dimensions. A structured analysis using `gpt-6-luna` through Responses with low effort completed, executed `search_knowledge`, and persisted its brief. The user-visible citations opened, the authorized brief endpoint returned successfully, and refresh did not start another analysis.
-
-The completed run reported 8188 input tokens, 1395 output tokens, and 9583 total tokens. It completed in approximately 18.6 seconds within the existing deadline. The existing output budget was sufficient for this run. These observations establish runtime integration for one scenario, not semantic acceptance or general latency guarantees.
-
-The claim schema retains its literal `kind` variants and observed-reference requirements. It uses a Zod union so the emitted provider schema contains supported `anyOf`. The earlier SQL `oneOf` constraint remains equivalent because the kind literals make its branches mutually exclusive.
-
-## Foundation verification
-
-On 2026-10-29, the OpenAI integration passed lint, typecheck, production build, 65 Vitest tests, 94 native SQL assertions, and eight browser regression tests. Both provider credentials were disabled for offline tests.
-
-On 2026-10-28, the default suite passed 45 Vitest tests, 55 native SQL assertions, and five browser tests with model credentials disabled. Clean installation, lint, typecheck, production build, and security advisors also passed. These checks establish deterministic behavior; they do not measure model quality.
-
-## Text-agent evaluation
-
-On 2026-10-29, a local browser saved and indexed one synthetic case, asked a text question, opened its cited source, and submitted a referential follow-up. Both runs completed and both answers remained visible after refresh. The case recorded a controlled canary with rollback ready and an unknown outcome. Both answers distinguished that record from proposed steps and did not claim a successful historical outcome. The follow-up addressed the smaller-team request and retained the no-downtime constraint. This is one reviewed scenario, not a general quality score.
-
-The first run (`2bc69604-6f35-4bfe-a725-43ef1e67dc31`) called `search_cases` and `read_case`, used 4,226 tokens, and took 11.411 seconds between database admission and completion. The follow-up (`7f70483f-bac4-4d8a-9d50-66727def9b33`) called `search_cases` twice and `read_case` once, used 5,867 tokens, and took 9.819 seconds. Both cited the saved approach and outcome sections. These are two individual local observations, not a latency comparison or a guarantee. The ignored evidence file is `.superpowers/verification/agent-engine-simplification/live-runs.json`; the follow-up UI capture is beside it. The original end-to-end script was interrupted after reaching the first answer because it used an outdated follow-up field label. A separate UI session completed and reloaded the follow-up.
-
-The runs reported 513 and 491 output tokens, below the current per-call cap. Neither approached the deadline or exercised the final 60-second synthesis reserve. These observations do not establish that the model-step, tool-call, context, or output caps are sufficient for more complex cases.
-
-[`evals/text/scenarios.json`](../../evals/text/scenarios.json) defines eight synthetic scenarios over the challenge corpus and four over the demo corpus and documents. They cover a direct precedent, complementary and conflicting cases, a failure, changed conditions, no precedent, ambiguity, and a referential follow-up. The expected source slugs and review points are proposed fixtures. They have not been reviewed by the user and are not calibrated scores. Source expectations assume that the 24-case challenge corpus is published and indexed.
-
-The runner executes one named scenario per invocation against a local running app. It needs the demo credentials in ignored `.env.local`, a configured real model, and indexed synthetic cases. Seeding the challenge corpus uses the real embedding provider. Each run creates a conversation in the demo workspace and does not delete it.
+The runner executes one named scenario per invocation against a local running app. It needs the demo credentials in `.env.local`, a configured model, and an indexed corpus.
 
 ```sh
 node --env-file-if-exists=.env.local evals/text/runner.mjs --live --scenario direct-precedent
 ```
 
-Set `MEMOBA_EVAL_URL` only to a local HTTP origin when the app uses a different port. The runner writes a mode-600 JSON artifact under `.superpowers/evals/text/`. It records the question, observed tool-start events, final text and cited source identities, reported usage, client elapsed time, and terminal status. A failed or incomplete scenario produces a nonzero exit. Follow-up scenarios stop when the first turn does not complete.
+Use `--trace-live` instead of `--live` for an in-process trace that records tool inputs, sources, and validation events. A trace saves no run. Artifacts go to the ignored `.superpowers/evals/text/` directory. Set `MEMOBA_EVAL_URL` only to a local HTTP origin.
 
-The HTTP API does not expose tool arguments, all source IDs delivered to the model, or individual correction attempts. The HTTP artifact sets those fields to null. It records `INVALID_CITATION` when that is the saved terminal error, but cannot reconstruct an earlier corrected citation failure. A source ID in a saved answer is a cited source, not a complete list of sources read.
+The runner does not score semantic support or advice quality. Read each answer against its review points and its sources. Record incomplete runs instead of excluding them.
 
-For an optional local, non-persistent trace, use `--trace-live --scenario <id>` instead of `--live`. It uses the agent and knowledge adapters with an authenticated local Supabase client and records tool inputs, source IDs submitted to model steps, and validation events in a private artifact. It does not save a run or brief. A submitted source ID does not prove provider receipt if the model step fails. The runner does not score semantic support or advice quality.
+`npx vitest run src/modules/analysis/text-agent.test.ts src/modules/analysis/budget.test.ts` exercises tool errors, citation failures, and deadlines with no paid model call.
 
-Inspect each answer against the fixture review points and its authorized sources. Check the decision, user restrictions, adaptations, contradictory evidence, and any asserted historical outcome. Record incomplete runs rather than excluding them. Compare duration and resource use only after identifying what the recorded measurement includes.
+## Results
 
-## MVP demo observations on 2026-10-30
+Unless stated otherwise, these runs used `gpt-6-luna` and `text-embedding-3-small` locally on 2026-10-30 and 2026-10-31.
 
-These are individual local observations with `gpt-6-luna` and `text-embedding-3-small` against the 20-case demo corpus ([`evals/demo/corpus.ts`](../../evals/demo/corpus.ts)). They are not quality scores, and no hosted run has happened yet.
+### Suggested prompts on two corpora
 
-| Prompt | Run | Time | Tokens | Observation |
-|---|---|---|---|---|
-| Launch to all customers | `aea8a6a3-a00a-4374-bce6-9c5db723f9a0` | 22 s | 10,016 | Three sections. Cited the staged-rollout case. It named the all-at-once launch from a search preview but said it could not retrieve that case's text, so it did not cite it. |
-| Price increase with notice | `9cfc35aa-0eb8-43fc-8753-9ebf841de9a6` | 13 s | 9,767 | Three sections. Cited the failed Pro increase and the Starter increase, and named the changed condition (90 days notice, one-year price protection). |
-| Singapore data center | `d43f5218-a4f5-4753-9153-a5fb93ff24cc` | 6 s | 1,507 | No sections. Said no relevant recorded case was found. |
+The same three prompts ran before and after the corpus was rewritten as detailed retrospectives of about 3,000 characters per case.
 
-Import: unaccented Vietnamese-style notes produced an English draft with an `unknown` outcome and an empty observed outcome in about 9.6 seconds. English notes that described a result produced a draft with an `achieved` outcome. After Save, the case reached index state ready and a chat run (`e2641e38-fa84-4227-81ce-f4650a3a3427`, 9 s, 6,165 tokens) found and cited it. One other save attempt did not navigate; the cause was not investigated and is likely a missing required field in the draft, which the form marks.
+| Prompt | Thin corpus | Detailed corpus |
+|---|---|---|
+| Launch to all customers | 22 s, 10,016 tokens. Cited the staged rollout. Named the all-at-once launch from a preview, said it could not retrieve that text, and did not cite it | 16 s, 8,585 tokens. Read and cited both cases |
+| Price increase with notice | 13 s, 9,767 tokens. Cited the failed Pro increase and the Starter increase, and named the changed condition | 16 s, 11,285 tokens. Same sources, and also named the contract-notice condition from the failed case |
+| Singapore data center | 6 s, 1,507 tokens. Said no relevant case was found | 6 s, 1,619 tokens. Same |
 
-After the corpus was rewritten with detailed retrospectives (3,000 characters per case on average, 2,200 to 3,900, about 760 tokens), the same three prompts were rerun locally. They completed in 16, 16 and 6 seconds (runs `3c18f7f1-a4d2-42df-9420-cf9bbb5bd826`, `789da253-7f55-4828-b0e7-d5b5d418e922`, `40eb0bc8-9333-4828-b860-ab11ed490f12`; 8,585, 11,285 and 1,619 tokens). The first prompt now read and cited both the all-at-once launch and the staged rollout, where the thinner corpus produced only one cited case. The second still cited the failed Pro increase and the Starter increase, and now named the contract-notice condition from the failed case. The third still said no relevant case was found. No answer reported omitted content. `contextSections` (24) binds before `contextTokens` (8,000) because a full case is under 1,000 tokens, so an answer that reads more than about three cases in full would hit the section cap; this was not observed and no limit was changed.
+### Context stress run
 
-### Context stress run on 2026-10-30
+Seven questions ran after `read_case` was reworked, search was capped per case, and limits were raised. The first three are the suggested prompts, and the rest need many cases. "Previewed" counts distinct cases in search previews, and "read" counts distinct cases passed to `read_case`.
 
-After `read_case` was reworked (outcome headers, priority order, up to three cases per call), search was capped at two sections per case, and the limits in [`limits.ts`](../../src/lib/contracts/limits.ts) were raised, seven questions ran in process against the local 20-case corpus, with `gpt-6-luna`. The three suggested prompts come first; the other four need many cases. Each row is one run. "Previewed" counts distinct cases in search previews, "read" counts distinct cases passed to `read_case`, and "peak input" is the largest `inputTokens` reported for any single model step.
+| Question | Previewed | Read | Peak input | Total tokens | Seconds |
+|---|---|---|---|---|---|
+| Launch to all customers | 20 | 3 | 8,348 | 14,471 | 13 |
+| Price increase with notice | 4 | 2 | 4,583 | 7,642 | 10 |
+| Singapore data center | 0 | 0 | 842 | 1,706 | 3 |
+| All pricing changes | 8 | 3 | 5,154 | 11,291 | 12 |
+| All launches, rollouts and migrations | 18 | 6 | 10,077 | 27,435 | 23 |
+| Customer-facing incidents and outages | 10 | 3 | 5,711 | 10,178 | 14 |
+| Keeping customers who threaten to cancel | 7 | 4 | 6,737 | 13,362 | 16 |
 
-| Question | Previewed | Read | Read-side `CONTEXT_LIMIT` | Peak input | Total tokens | Seconds | Coverage statement |
-|---|---|---|---|---|---|---|---|
-| Launch to all customers | 20 | 3 | 0 | 8,348 | 14,471 | 13 | "Reviewed 3 of 18" |
-| Price increase with notice | 4 | 2 | 0 | 4,583 | 7,642 | 10 | none |
-| Singapore data center | 0 | 0 | 0 | 842 | 1,706 | 3 | none (no relevant case) |
-| All pricing changes | 8 | 3 | 0 | 5,154 | 11,291 | 12 | none |
-| All launches, rollouts and migrations | 18 | 6 | 0 | 10,077 | 27,435 | 23 | none |
-| Customer-facing incidents and outages | 10 | 3 | 0 | 5,711 | 10,178 | 14 | "Reviewed 3 of 9" |
-| Keeping customers who threaten to cancel | 7 | 4 | 0 | 6,737 | 13,362 | 16 | "Reviewed 4 of 7" |
+No run hit a read-side `CONTEXT_LIMIT`. A first pass with `previewTokens` at half its value hit the search-side limit in two runs, which saw only 13 or 14 cases, so that value was doubled. The other values were kept. The agent read two to six cases even on broad questions, so the practical ceiling in this run was model behavior, not budget.
 
-No run hit a read-side `CONTEXT_LIMIT`, and no run came close to the model input ceiling (peak 10,077 of 64,000). The widest question read six cases and used 27,435 tokens in total across five steps, so total usage grew faster than peak input because each step re-sends the transcript.
+### Restructured instructions
 
-One value was adjusted on this evidence. A first pass of the same seven questions with `previewTokens` at 4,000 hit the search-side `CONTEXT_LIMIT` in two runs, which then previewed only 13 or 14 cases, so a broad question could not list every matching case. At 8,000 no run hit it and the first prompt previewed 20 cases. The other starting values were kept.
+The instructions were rewritten with an exact answer template and a coverage line, and the same seven questions ran again.
 
-Two observations are not limit problems. The agent read two to six cases even for broad questions, never approaching the "about 8" in the instruction, so the practical ceiling today is model behavior, not budget. And the coverage statement did not always use the "Reviewed N of M" form; some answers said "Reviewed 3 matching cases" or listed unread cases in prose. These are individual runs, not a quality score.
+| Question | Previewed | Read | Model's coverage line | Total tokens | Seconds |
+|---|---|---|---|---|---|
+| Launch to all customers | 20 | 3 | "Reviewed 3 of 3 matching cases." | 31,120 | 21 |
+| Price increase with notice | 15 | 2 | "Reviewed 2 of 2 matching cases." | 14,832 | 14 |
+| Singapore data center | 3 | 0 | "No recorded case matched this request." | 5,852 | 11 |
+| All pricing changes | 12 | 2 | "Reviewed 2 of 2 matching cases." | 14,755 | 10 |
+| All launches, rollouts and migrations | 15 | 9 | "Reviewed 9 of 11 matching cases." | 38,087 | 21 |
+| Customer-facing incidents | 10 | 3 | "Reviewed 3 of 3 matching cases." | 16,935 | 9 |
+| Keeping customers who threaten to cancel | 18 | 2 | "Reviewed 2 of 2 matching cases." | 19,248 | 12 |
 
-### Restructured instructions on 2026-10-30
+The coverage line matched the exact format in 7 of 7 answers, up from 3 of 7. Six answers used the template, and in five of them "What's different this time" named a concrete condition the cases lacked. An example is 90 days' notice and a one-year price hold, against a Pro case with 10 days and neither.
 
-`textInstructions` was rewritten following OpenAI's GPT-6 prompting guide: Identity, Instructions and Context sections, an exact answer template with a coverage line, an instruction to keep investigating and read up to 8 relevant cases, and the request wrapped in `<request>` after the static text. The same seven questions ran again in process against the local corpus. "Matching" and "Read" below are the numbers the model states in its coverage line; "Previewed" is the distinct cases the search returned.
+"Matching" was the model's own count. It said "2 of 2" after previewing 12 to 18 cases. The broadest question read nine cases and hit the read-side limit three times.
 
-Role check: for `gpt-6-luna`, `@ai-sdk/openai` treats the model as a reasoning model, so `systemMessageMode` defaults to `developer`. A request captured at the HTTP boundary showed the instructions sent as a `developer` message, so `models.ts` needed no change.
+**Reasoning effort.** The same seven questions at `medium` read 23 cases in total against 21 at `low`, kept 7 of 7 compliance, used 139,314 tokens against 140,829, and took 19 seconds on average against 14. `low` stayed the default.
 
-| Question | Previewed | Read | Coverage line | Peak input | Total tokens | Seconds |
-|---|---|---|---|---|---|---|
-| Launch to all customers | 20 | 3 | "Reviewed 3 of 3 matching cases." | 9,562 | 31,120 | 21 |
-| Price increase with notice | 15 | 2 | "Reviewed 2 of 2 matching cases." | 6,622 | 14,832 | 14 |
-| Singapore data center | 3 | 0 | "No recorded case matched this request." | 1,715 | 5,852 | 11 |
-| All pricing changes | 12 | 2 | "Reviewed 2 of 2 matching cases." | 6,038 | 14,755 | 10 |
-| All launches, rollouts and migrations | 15 | 9 | "Reviewed 9 of 11 matching cases." plus unread titles | 14,091 | 38,087 | 21 |
-| Customer-facing incidents | 10 | 3 | "Reviewed 3 of 3 matching cases." | 8,646 | 16,935 | 9 |
-| Keeping customers who threaten to cancel | 18 | 2 | "Reviewed 2 of 2 matching cases." | 8,479 | 19,248 | 12 |
+### Coverage computed by the application
 
-The coverage line matched the exact format in 7 of 7 answers, up from 3 of 7 before the rewrite. Six answers used the template. In five of them "What's different this time" named a concrete condition that the recorded cases lacked, for example 90 days' notice and a one-year price hold against a Pro case with 10 days and none, or the monthly-billed Starter segment against contracted Pro customers. The sixth, the broad launches question, gave a cross-case pattern rather than a condition specific to a request. The answer to the Singapore question gave only a suggested next step, as instructed.
+The application then derived coverage from tool results. For all seven questions, the saved coverage agreed with the trace on cases previewed and read.
 
-Two caveats. "Matching" is the model's own count of relevant cases, not the preview count: it said "2 of 2" after previewing 12 to 18 cases, so the line shows how many it judged relevant and read, not how many the search surfaced. And the broadest question read nine cases and hit the read-side `CONTEXT_LIMIT` three times, the first time that limit bound; the answer listed the two cases it did not read. Peak input there was 14,091 of 64,000.
+| Question | Model-written | Computed |
+|---|---|---|
+| Launch to all customers | "Reviewed 3 of 3" | Read 3 of 20 |
+| Price increase with notice | "Reviewed 2 of 2" | Read 2 of 14 |
+| Singapore data center | "No recorded case matched" | Found 2 cases, none read |
+| All pricing changes | "Reviewed 2 of 2" | Read 3 of 13 |
+| All launches, rollouts and migrations | "Reviewed 9 of 11" | Read 5 of 15 |
+| Customer-facing incidents | "Reviewed 3 of 3" | Read 4 of 11 |
+| Keeping customers who threaten to cancel | "Reviewed 2 of 2" | Read 2 of 15 |
 
-Reasoning effort: the same seven questions with `reasoningEffort: "medium"` (set around the model in the evaluation script only) read 23 cases in total against 21 at low, kept 7 of 7 compliance, used 139,314 tokens against 140,829, and took 19 seconds on average against 14. Medium read slightly more, with the same compliance and token use, for about 35% more latency. `low` stays the default.
+The two columns come from separate runs, so the cases read differ as well as the counts. The computed denominators are preview counts, and the model's count understated them in six of seven questions. A "found" count is not a relevance judgment: the Singapore question previews two nearest neighbors that the model judged irrelevant.
 
-### Computed coverage on 2026-10-30
+The answer view no longer shows a coverage line. The run still saves the count, and the activity view reports per-source results from tool events.
 
-The coverage line is now derived by the app from tool results and saved with the answer, and the prompt no longer asks the model to write it. The same seven questions ran again in process. For each run the saved coverage was compared with the cases that appear in the trace's `search_cases` and `read_case` results: all seven agreed on cases previewed and cases read. A browser run of the price-change prompt showed "Read 2 of 14 cases found by search" with the unread titles in a collapsible list, both when the answer finished streaming and after a refresh.
+### Process documents
 
-| Question | Before: model-written | After: computed from tool events | Unread titles shown |
-|---|---|---|---|
-| Launch to all customers | "Reviewed 3 of 3" | Read 3 of 20 | 10 of 17 |
-| Price increase with notice | "Reviewed 2 of 2" | Read 2 of 14 | 10 of 12 |
-| Singapore data center | "No recorded case matched" | Found 2 cases, none read | 2 of 2 |
-| All pricing changes | "Reviewed 2 of 2" | Read 3 of 13 | 10 of 10 |
-| All launches, rollouts and migrations | "Reviewed 9 of 11" | Read 5 of 15 | 10 of 10 |
-| Customer-facing incidents | "Reviewed 3 of 3" | Read 4 of 11 | 7 of 7 |
-| Keeping customers who threaten to cancel | "Reviewed 2 of 2" | Read 2 of 15 | 10 of 13 |
+Five scenarios ran against the 20 cases and five documents of 7,100 to 10,300 characters each.
 
-The "before" column is the previous restructured-instructions run and the "after" column is a new run, so cases read differ between runs as well as the counts. The computed denominators are the real preview counts, which the model's own "matching" count understated in six of seven questions. Two things to know: the list is capped at 10 titles, so it can be shorter than the unread count; and the Singapore question previews two nearest-neighbour cases that the model judged irrelevant, so the line says "Found 2 cases, none read" next to prose saying no recorded case matched. Search returns the nearest cases under a similarity threshold, so a "found" count is not a relevance judgment.
+| Measurement | Result | Decision |
+|---|---|---|
+| Five search cards | About 2,400 tokens | `documentPreviewTokens` kept |
+| Reading one document in full | 11 to 18 sections, 5,000 to 7,200 tokens | Document read pool raised, because at the old size the conflict scenario lost one block of the release procedure |
+| Output of a five-section answer | 695 to 1,947 tokens | `outputTokens` raised, because a run at 97% of the cap is one longer answer from failing |
+| Search recall at the distance cutoff | On-topic queries returned the expected document, and the unrelated query returned none | Cutoff kept |
 
-Not yet checked: hosted runs on Vercel, run durations against the hosted deadline, and reviewer-level judgment of whether the advice fits.
+After the change, no scenario hit `CONTEXT_LIMIT`. Runs used 15,100 to 26,800 total tokens and took 14 to 28 seconds.
 
-## Process documents on 2026-10-31
+The conflict answer reported a 60-day Starter case against the 90-day policy without calling it a violation. The process-only answer said no case matched and followed the deletion steps in order. A full walk-through listed every prerequisite, step, hold, and stop condition, and named version 3 and its effective date. In that answer "Where practice and process differ" was filled with a weak difference. The prompt asks for that heading only for a real difference, so this is a model-compliance issue to watch.
 
-These are individual local observations with `gpt-6-luna` and `text-embedding-3-small` against the 20-case demo corpus and the five full-length seed documents in [`evals/demo/documents.ts`](../../evals/demo/documents.ts): 7,100 to 10,300 characters each in their current version, 11 to 18 blocks, with version histories (release procedure 3 versions, price policy 2, incident communication 2, refunds guideline 2, data deletion 1). They are not quality scores, and no hosted run has happened. The scenarios in [`evals/text/scenarios.json`](../../evals/text/scenarios.json) with `corpus: "demo"` run through `--trace-live`: process plus case, process only, process against case, a predating case, and procedure completeness. Each run was a single in-process trace.
+In the running app, a saved answer that cited version 1 kept showing version 1 text after version 2 was published, with a notice that a newer version exists.
 
-An earlier pass against five short documents (about 2,000 characters each) is superseded; the numbers below are for the full-length documents.
+### Reviewed system prompt
 
-| Measurement | Result | Limit | Decision |
-|---|---|---|---|
-| Document search cards with outlines | 390 to 550 tokens each; five cards about 2,400 | `documentPreviewTokens` 3,000 | Kept. All five fit, with about 20% headroom, so a workspace with many more documents would need a larger pool |
-| Reading one document in full | 11 to 18 body sections and 5,000 to 7,200 tokens (price policy 15 sections, 6,500 tokens) | `documentContextSections` and `documentContextTokens` | **Raised from 24 sections and 12,000 tokens to 48 and 20,000.** At 24, the conflict scenario read the price policy in full and then lost one block of the release procedure with `CONTEXT_LIMIT`; two full documents need about 33 sections and 12,500 tokens |
-| Output of a five-section answer | 695 to 1,947 tokens across the five scenarios; the two procedure answers reached 1,926 and 1,947 | `outputTokens` | **Raised from 2,000 to 3,000.** A run at 97% of the cap is one longer answer away from a `length` finish, which fails the run. This limit is shared with cases |
-| Search recall at `cosine<0.65` | Every on-topic query returned the expected document, and the unrelated query returned none. Broad queries also return up to four other documents, because long documents match many topics through some block | 0.65 | Kept. Precision is the model's job, and cards name the matched headings |
+Ten traces ran on the final prompt. None needed correction, hit `CONTEXT_LIMIT`, or ended incomplete. Three were read in full, and the other seven were checked for tool results and size only.
 
-After the change, no scenario hit `CONTEXT_LIMIT`; runs used 15,100 to 26,800 total tokens and took 14 to 28 seconds. Input per run was at most 25,100 tokens, against a model ceiling of 64,000.
+| Scenario | Read in full | Behavior |
+|---|---|---|
+| No difference (duplicate-charge approvals) | Yes | The differences heading was absent, and the opening answered the question |
+| Cannot meet a requirement (30 days' notice) | Yes | Said "No" first, named the 90-day requirement, and gave the exception route |
+| Process silent (app store review) | Yes | Said the procedure does not cover it, inferred no rule, and named the owner to ask |
+| Case only (helpdesk migration) | No | Still read a process document that does not apply |
 
-Completeness. Asked for a full walk-through, the answer listed all six prerequisites and the named roles, the four rollout steps in order with their holds (1 hour, 3 business days, 3 business days, 5 business days of watching), every stop condition with its action, the escalation times, and the extra checks for tax and totals, and it named version 3 and the effective date. It did not mention hotfixes, which the question did not ask about. The answer to a narrower question read only the blocks named in the card outline (for example blocks 3 to 10) and left the rest. When the read pool was too small the answer said it could not read the missing block, which is the intended behavior.
+The largest run used 38,438 input tokens, up from about 25,100, because the prompt tells the model to read whole documents unless only parts matter.
 
-What the answers showed, each a review point for a person and not a score. Process plus case put the release procedure under the process heading with its version, cited four cases under the cases heading, and started its next step from the process. Process only said no recorded case matched, followed the deletion steps in order, and cited the process in the next step. The conflict answer reported the 60-day Starter case against the 90-day policy without calling it a violation. The predating answer treated the policy as today's requirement and did not say that the Starter case predates it, which the prompt permits only where the case text gives a date. In the completeness run, "Where practice and process differ" was filled with a weak difference (the tax-engine shadow period against the procedure's wording); the prompt asks for that heading only when a case and a document actually differ, so this is a model-compliance issue to watch. No correction was needed, so `MISPLACED_CITATION` was exercised only by unit tests.
+## Not established
 
-In the running app: a new document published at version 1; an edit without a note was refused with a 400 and one with a note became version 2; an answer cited version 1; after version 2 the same saved answer's evidence panel read `Version 1 · Effective 1 Oct 2026`, "A newer version exists (version 2). The cited text below is from version 1.", and still showed the version 1 text; `?version=1` showed the earlier text under a read-only banner, with the version history listing both versions with date, author and note. A model wrapped some citations in private-use characters that no font draws, and they showed as empty boxes; the harness now removes them.
-
-### Reviewed system prompt on 2026-10-31
-
-The prompt was replaced with a reviewed text (direct opening sentence, candidate-not-match search rule, silence, conflict and exception rules, a stricter "Where practice and process differ"). Ten single in-process traces ran against the seeded local stack. The owner asked that three of them be read in full; the others were checked for tool results and size only. These are observations, not scores. No run was corrected, none hit `CONTEXT_LIMIT`, and every run finished complete.
-
-| Scenario | Output tokens | Input tokens | Behavior |
-|---|---|---|---|
-| Process plus case | 2,149 | 38,438 | Not read in full; five sections |
-| Process only | 613 | 16,001 | Not read in full |
-| Conflict (60-day case, 90-day policy) | 1,251 | 23,992 | Not read in full |
-| Predating case | 1,448 | 22,909 | Not read in full |
-| Full procedure walk-through | 1,960 | 22,174 | Not read in full |
-| No difference (duplicate-charge approvals) | 465 | 17,939 | Read: the heading "Where practice and process differ" was absent, and the opening sentence answered the question |
-| Cannot meet a requirement (30 days' notice) | 1,460 | 21,767 | Read: said "No" first, named the 90-day requirement, and gave the exception route (written VP Finance and CEO approval with Legal's confirmation, not for convenience) |
-| Process silent (app store review) | 831 | 25,195 | Read: said the procedure does not describe app-store review, did not infer a rule, and named Platform Engineering as the owner to ask |
-| Neither source (Singapore data center) | 299 | 10,705 | Not read in full |
-| Case only (helpdesk migration) | 1,237 | 18,128 | Not read in full; it still read a process document that does not apply, so "ignore cards that do not apply" held only partly |
-
-Notes from the three read answers. The cannot-meet answer filled the differences heading with the 10-day Pro case against the 90-day requirement, which is a specific difference, and it said the case predates the policy version; the case text gives no year, so the year is the model's inference. The process-silent answer also cited a case that does not address app-store review and said so. Input cost rose: the process-plus-case run used 38,400 input tokens against 25,100 before the change, because the prompt tells the model to read whole documents unless only parts matter, and the longest answer reached 2,149 output tokens, above the previous 2,000 cap, which the raised 3,000 cap covers. No wording was changed from the reviewed text.
-
-## Deterministic checks and remaining work
-
-`npx vitest run src/modules/analysis/text-agent.test.ts src/modules/analysis/budget.test.ts` exercises scripted tool errors, citation failures, and deadline behavior without a paid model call. `npx vitest run evals/text/runner.test.ts` checks stream parsing and fixture structure. To exercise the runner against a temporary scripted local server, run `MEMOBA_EVAL_RUNNER_SMOKE=1 npx vitest run evals/text/runner.test.ts` with permission to bind a local port. That test does not establish live model quality.
-
-An initial exploratory pass completed eight scenarios with the synthetic corpus. It exposed a context limit in five scenarios; in one comparison, the answer repeated a pilot claim from the question without reading that case. The disclosed-section cap was subsequently increased while the token budget remained bounded. Deterministic tests cover three short cases and explicit omissions, but the model scenarios have not been repeated after that change. Further evaluation and observation are deferred. A Vercel preview smoke test remains separate from local verification. Neither a completed run nor a valid citation ID proves that its source supports the claim.
+- Whether a person finds the advice fits a real decision. No real team has used the product.
+- Whether cited sections support the claims beside them across many answers. In one early pass, an answer repeated a pilot claim from the question without reading that case.
+- Behavior on a large corpus.
+- Hosted behavior. The app is deployed at [memoba.vercel.app](https://memoba.vercel.app), and the landing page responded on 2026-11-01. The acceptance checks in [Deploy the demo](../how-to/deploy-demo.md#4-deploy-and-verify) are not recorded here yet.

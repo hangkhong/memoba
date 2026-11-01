@@ -6,7 +6,7 @@ const wideSize = { width: 2880, height: 1800 };
 const phoneSize = { width: 1170, height: 2340 };
 const src = (name: string) => `/landing/${name}.png`;
 
-/** Section index and name, as listed in the landing spec. */
+/** Section index and reader-facing section name. */
 function SectionTag({ n, name }: { n: number; name: string }) {
   return <p className="tag"><span>{String(n).padStart(2, "0")} / 07</span><span>{name}</span></p>;
 }
