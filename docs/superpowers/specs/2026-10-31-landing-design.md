@@ -4,7 +4,7 @@ The prototype is [`docs/superpowers/prototypes/landing.html`](../prototypes/land
 
 ## Idea
 
-Cases are circles and documents are squares. This is the product's separation of what happened from what is required, turned into the page's one motif: citation chips, the Two memories fields, the Engine lanes, and the wordmark all use it. Teal `--chart-1` (`#1b6c80`) marks cases, and primary `#20282c` marks documents. Red appears only for a failed source. The page uses the workspace tokens and Manrope, so it reads as the same product at a larger scale.
+Cases are circles and documents are squares. This is the product's separation of what happened from what is required, turned into the page's one motif: citation chips, the Two memories fields, the Engine lanes, and the wordmark all use it. Teal `--chart-1` (`#1b6c80`) marks cases, and primary `#20282c` marks documents. Red appears only for a failed source. The page uses the workspace tokens and the system font, so it reads as the same product at a larger scale. [Visual style](#visual-style) sets its shape, type, frame, and colour.
 
 ## Sections and final copy
 
@@ -15,15 +15,29 @@ Take every string from the prototype. The structure is:
 | Header | none | Wordmark, three anchor links, "Open the demo". Links hide below 900px. The button never hides |
 | Hero | Your team already solved this. Nobody remembers where. | Lede, button, framed chat answer with the evidence panel floating over it. The phone uses a phone capture and drops the float |
 | Problem | The ticket survives. The reasoning doesn't. | Framed capture of the real recurring invoices case with a small illustrative "Done" ticket floating over it, then a four-column list of what the ticket lost. The caption says the ticket is an illustration |
-| Two memories | Cases say what happened. / Documents say what is required. | Two tinted panels, each with a cropped case or document page, stacked on phones |
+| Two memories | Cases say what happened. / Documents say what is required. | Two ruled cells, each with a cropped case or document page, stacked on phones |
 | Engine | Follow one question through the engine. | Interactive diagram below |
 | Workspace | See what the team knows, and where it's thin. | Knowledge Hub and Dashboard frames. The Dashboard keeps its Sample data label |
 | Honesty | When they differ, you get both sides. | Real answer crop and four rules |
 | Close | Ask the demo workspace a real question. | States that Northwind Ledger is fictional. Button, full-width wordmark |
 
+## Visual style
+
+The first restyle was too round and too loose for a product made of square tables and documents. This system replaces it. Copy and section order do not change. The only additions are a mono index (`01 / 07`) and a short eyebrow taken from the section names above.
+
+| Area | Rule |
+|---|---|
+| Corners | 0 for buttons, stages, cells, and captures. 8px only for floating overlays. A circle appears only as the case motif, so round is a case and square is a document |
+| Type | The system font for text. IBM Plex Mono (400, 500) loads through `next/font/google` in `src/app/page.tsx`, so the workspace never loads it. Mono is 12px uppercase with 0.06em tracking for eyebrows, buttons, nav, the section index, and Engine controls. H1 is at most 56px and H2 at most 48px, weight 500, tracking -0.03em, line-height 1.1. Body is 16px |
+| Frame | One column of at most 1360px between 1px rails. Sections end in a 1px line instead of a filled block. Adjacent cells have no gap and meet on a line. The Problem list is a four-cell table and the Honesty rules are a ruled list |
+| Spacing | A section heading takes at most 64px above and 56px below it. A stage sits on the line under its heading. No padding passes 64px |
+| Colour | `--case` teal and `--doc` ink are unchanged. `--gradient-cool-warm` in `globals.css` runs `--chart-1`, `--chart-2`, `--chart-3` in oklch, so the blue-to-amber leg passes through magenta and red instead of a grey midpoint. It paints only the hero staircase, the line at the top of the page, and the Close band, never text or a product capture |
+| Hero | Left aligned. A square staircase block with the gradient sits behind the capture. It is `aria-hidden`, decorative, and does not animate |
+| Engine | `.engine` CSS only loses its radii and tinted fill. The diagram's own geometry is unchanged |
+
 ## Product screens
 
-Captures live in `public/landing/`, taken at 2x from the local demo workspace (3x for the phone). The answer is a real saved run of the `process-plus-case` question from `evals/text/scenarios.json`, which returned `19 cases found · 5 documents found` and cited three cases and the release procedure. Frames follow a tinted panel, 12px radius, and a soft shadow, cropped at the bottom edge.
+Captures live in `public/landing/`, taken at 2x from the local demo workspace (3x for the phone). The answer is a real saved run of the `process-plus-case` question from `evals/text/scenarios.json`, which returned `19 cases found · 5 documents found` and cited three cases and the release procedure. Each capture sits in a square stage on the line below its heading, cropped at the bottom edge, with a 1px outline and no shadow. Only floating overlays (the evidence panel and the ticket) take 8px and a shadow.
 
 | File | Used in |
 |---|---|
@@ -77,7 +91,7 @@ Mapping to the product: `search`, `rc`, and `rd` are the `search_knowledge`, `re
 | Dependencies | None. SVG, CSS, one client component | `getPointAtLength` covers the token |
 | Header action | Always `/login`, labelled "Open the demo" | Signed-in users never see this page |
 | Colour on scroll | None. Fields are fixed per section | The Engine is the one moving thing on the page |
-| Pictures | Real product captures only | The owner asked for real product imagery, framed in the style of reorc.com without copying it |
+| Pictures | Real product captures only | The owner asked for real product imagery, framed as flat stages on lines in the manner of llamaindex.ai without copying its identity |
 
 ## Signed-in redirect
 

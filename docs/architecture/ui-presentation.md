@@ -45,3 +45,7 @@ A conversation's author sees a trash action on its sidebar row (shown on hover, 
 The page frame is `PageFrame` and `PageBar` without `PageBody`, and the layout follows the width of the content area (`@container`, with `@max-[1000px]` and `@max-[640px]`), not the viewport, because the sidebar changes the space. Sample titles resolve to real case and document IDs at render time; a row that does not resolve prints no action. Metric help is a `Popover` opened by an info button, so it works by touch and keyboard. The sidebar lists New chat, Dashboard, and Knowledge Hub, and puts a disabled Roadmap item with a "Soon" label above Sign out.
 
 Domain, access, and persistence rules remain in [system contracts](../reference/system-contracts.md). The [Eve integration record](eve-chat-integration.md) describes the earlier viewport implementation, replaced by Message Scroller.
+
+## Landing page
+
+The landing page is the one place that departs from the workspace's quiet controls. It is square and ruled: radius 0 except for floating overlays (8px) and the circle that marks a case, a 1360px column between 1px rails, and 1px lines between sections and cells. IBM Plex Mono loads only on the landing route, from `src/app/page.tsx`, and carries eyebrows, buttons, nav, and the section index. `--gradient-cool-warm` in `src/app/globals.css` is reserved for the hero staircase, the top line, and the Close band. The rules and their reasons are in the [Landing page design](../superpowers/specs/2026-10-31-landing-design.md#visual-style).
