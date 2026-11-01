@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createSlugger, extractHeadings } from "./headings";
-import { resolveDocLink, repositoryUrl, rewriteDocLinks } from "./links";
+import { resolveDocLink, rewriteDocLinks } from "./links";
 import { docPages, neighbours } from "./registry";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement } from "react";
@@ -62,9 +62,10 @@ describe("links", () => {
     expect(resolveDocLink("how-an-answer-stays-checkable.md#sources-are-frozen", "engine/how-the-agent-answers.md", "/workspace/docs")).toMatchObject({ kind: "page", href: "/workspace/docs/how-an-answer-stays-checkable#sources-are-frozen" });
     expect(resolveDocLink("../engine/how-knowledge-gets-in.md", "product/what-memoba-believes.md", "/docs").href).toBe("/docs/how-knowledge-gets-in");
   });
-  it("sends everything else in the repository to GitHub", () => {
-    expect(resolveDocLink("../reference/evaluation.md#not-established", "product/what-memoba-leaves-out.md", "/docs").href).toBe(`${repositoryUrl}/blob/main/docs/reference/evaluation.md#not-established`);
-    expect(resolveDocLink("../../src/lib/contracts/limits.ts", "engine/how-the-agent-answers.md", "/docs").href).toBe(`${repositoryUrl}/blob/main/src/lib/contracts/limits.ts`);
+  it("refuses a relative link to anything that is not a registered page, so a reader is never sent into the repository", () => {
+    expect(() => resolveDocLink("../reference/evaluation.md#not-established", "product/what-memoba-leaves-out.md", "/docs")).toThrow(/not a registered docs page/);
+    expect(() => resolveDocLink("../../src/lib/contracts/limits.ts", "engine/how-the-agent-answers.md", "/docs")).toThrow(/not a registered docs page/);
+    expect(() => rewriteDocLinks("See [x](../reference/evaluation.md).", "product/what-memoba-leaves-out.md", "/docs")).toThrow();
   });
   it("leaves in-page anchors and absolute URLs alone", () => {
     expect(resolveDocLink("#top", "engine/x.md", "/docs")).toEqual({ kind: "anchor", href: "#top" });
@@ -82,14 +83,34 @@ describe("links", () => {
         if (link.kind === "page") {
           const target = docPages.find((candidate) => candidate.slug === link.page.slug);
           if (link.hash) expect(extractHeadings(read(target?.file ?? "")).map((heading) => `#${heading.id}`), `${page.file} -> ${href}`).toContain(link.hash);
-        } else if (link.kind === "github") {
-          expect(existsSync(join(process.cwd(), link.repoPath)), `${page.file} -> ${href}`).toBe(true);
-          if (link.hash && link.repoPath.endsWith(".md")) expect(extractHeadings(readFileSync(join(process.cwd(), link.repoPath), "utf8")).map((heading) => `#${heading.id}`), `${page.file} -> ${href}`).toContain(link.hash);
         } else if (link.kind === "anchor") {
           expect(extractHeadings(read(page.file)).map((heading) => `#${heading.id}`), `${page.file} -> ${href}`).toContain(link.href);
         }
       }
     }
+  });
+});
+
+describe("reader pages", () => {
+  it("link only to registered pages, to their own anchors, and to external sites that are not the repository", () => {
+    for (const page of docPages) {
+      for (const [, href = ""] of withoutFences(read(page.file)).matchAll(linkPattern)) {
+        expect(() => resolveDocLink(href, page.file, "/docs"), `${page.file} -> ${href}`).not.toThrow();
+        expect(href, `${page.file} -> ${href}`).not.toMatch(/github\.com\/hangkhong/i);
+      }
+    }
+  });
+  it("name no file, function, tool, or SQL object in code formatting", () => {
+    const readerCode = /^(\.[a-z0-9]+|[A-Za-z]+\/[A-Za-z]+)$/;
+    for (const page of docPages) {
+      const spans = [...withoutFences(read(page.file)).matchAll(/`([^`\n]+)`/g)].map((match) => match[1] ?? "");
+      for (const span of spans) expect(span, `${page.file}: \`${span}\``).toMatch(readerCode);
+    }
+  });
+  it("show no internal identifier in their text or in the diagram text", () => {
+    const internal = /\b(read_case|read_document|search_knowledge(_documents)?|publish_document|ts_rank_cd|validateTextAnswer|caseInputSchema|splitDocument)\b|\[S:[a-z0-9-]+:\d+\]|\.(ts|tsx|sql)\b/;
+    for (const page of docPages) expect(read(page.file), page.file).not.toMatch(internal);
+    for (const [name, Diagram] of Object.entries(docDiagrams)) expect(renderToStaticMarkup(createElement(Diagram)), name).not.toMatch(internal);
   });
 });
 

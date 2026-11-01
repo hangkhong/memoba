@@ -14,7 +14,7 @@ One agent chooses what to do next: search, read a case, read a document, ask a c
 | How to word the answer | Every citation resolves to text it actually read, and your access is rechecked |
 | What it judges relevant | The state of each source comes from real tool results, not from the model's claim |
 
-The model has no SQL, no workspace selector, and no write tool, so it cannot widen its own access or budget. Anything a person has to trust stays in code. Asked how many matching cases it had reviewed, the model once wrote "2 of 2" after search had shown it 12 to 18 ([evaluation record](../reference/evaluation.md#restructured-instructions)), so the application does its own counting.
+The model has no SQL, no workspace selector, and no write tool, so it cannot widen its own access or budget. Anything a person has to trust stays in code. In the demo workspace, asked how many matching cases it had reviewed, the model wrote "2 of 2" after search had shown it 12 to 18, so the application does its own counting.
 
 ## One run, step by step
 
@@ -24,11 +24,11 @@ A run goes from question to saved answer in seven steps. The model chooses what 
 
 **Admission.** The server derives you and your workspace from the session, checks membership, enforces the concurrent run limit, and writes a deadline to the database. Model calls, embeddings, tools, and correction all share that one deadline, so a retry can't buy fresh time.
 
-**Search.** `search_knowledge` returns case previews and document cards, each source with its own state. [How Memoba finds past work](how-memoba-finds-past-work.md) covers this.
+**Search.** The search tool returns case previews and document cards, each source with its own state. [How Memoba finds past work](how-memoba-finds-past-work.md) covers this.
 
-**Read.** `read_case` opens up to three cases per call. Each starts with a header holding the title, template, outcome state, and observed outcome. Sections follow in priority order: approach, outcome, problem, context, constraints, lessons. When the budget runs out, the least useful sections drop first, so a case never loses its outcome while keeping its background.
+**Read.** Reading cases opens up to three per call. Each starts with a header holding the title, template, outcome state, and observed outcome. Sections follow in priority order: approach, outcome, problem, context, constraints, lessons. When the budget runs out, the least useful sections drop first, so a case never loses its outcome while keeping its background.
 
-`read_document` opens one document. A block arrives whole or is listed as omitted, so a requirement is never cut in half. Documents have their own budget, so a long policy can't push out case evidence.
+Reading a document opens one document. A block arrives whole or is listed as omitted, so a requirement is never cut in half. Documents have their own budget, so a long policy can't push out case evidence.
 
 **Stop.** Before each step, the application checks the deadline, the tool count, the step count, and how large the model's input has become. It keeps time in reserve for writing. Near any limit it removes the tools, so the next step has to answer from what was read. The agent always gets the chance to finish.
 
@@ -40,7 +40,7 @@ A run goes from question to saved answer in seven steps. The model chooses what 
 
 ## What the instructions ask for
 
-The instructions in [`agent.ts`](../../src/modules/analysis/agent.ts) tell the model how a careful colleague would work:
+The agent's instructions tell the model how a careful colleague would work:
 
 - Ask a clarifying question only when the answer would change the advice.
 - Search again with different wording, and look for failures and counterexamples.
@@ -72,4 +72,13 @@ These instructions shape behavior, and they can fail. An answer once filled "Whe
 
 ## What one run can't do
 
-One run reads a handful of sources well. It does not compare every case in a large workspace. In the measured runs, the agent's practical ceiling was its own behavior: it stopped reading before the budget did. [The next engine step](../architecture/overview.md#the-next-engine-step) addresses this. Every value mentioned above lives in [`limits.ts`](../../src/lib/contracts/limits.ts).
+One run reads a handful of sources well. It does not compare every case in a large workspace. In the demo workspace, the agent's practical ceiling was its own behavior: it stopped reading before the budget did. The next section covers what comes after.
+
+## The next engine step
+
+One run reads a handful of cases in full. That suits the demo corpus and not a question that has to compare many cases. Two options are planned for when real questions need them:
+
+- **Batch reading.** Read groups of cases into short cited notes, then write one answer across the groups.
+- **Case cards.** Precompute a short summary per case, so that search covers more cases in less context.
+
+Both add model calls and cost. They wait until usage shows that the partial view is the real limit. Each run already records how many sources it found and how many it read, which is the signal to watch.

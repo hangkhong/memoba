@@ -11,7 +11,7 @@ A product is defined as much by what it refuses as by what it does. Memoba's fir
 | Parsing PDF, Word, and slide files | Parsing is its own quality problem. Process documents accept pasted Markdown and `.md` or `.txt` files |
 | Web research | The point is your team's own work. General advice is not team experience |
 | Several cooperating agents | One agent with three tools covers the questions this version is for |
-| Comparing every case on a broad question | One run reads a handful of cases well, and that matters more than skimming all of them. The [next engine step](../architecture/overview.md#the-next-engine-step) addresses this |
+| Comparing every case on a broad question | One run reads a handful of cases well, and that matters more than skimming all of them. The [next engine step](../engine/how-the-agent-answers.md#the-next-engine-step) addresses this |
 | Runs that continue after you leave | A run is tied to its request. A refresh shows saved state and never restarts the model |
 | Approval workflows, roles, per-tool permissions | Workspace membership is the access boundary |
 | Scheduled document versions | Publishing replaces the current version at once |
@@ -34,4 +34,4 @@ One run reads a handful of sources, so a question like "everything we learned ab
 
 The quality of an answer depends on the quality of what the team recorded. A thin case gives a thin answer.
 
-Current measurements are in the [evaluation record](../reference/evaluation.md).
+Memoba has so far answered questions only about fictional records, and no real team has used it yet.

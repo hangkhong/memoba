@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { z } from "zod";
+import { docPages } from "../../src/modules/docs/registry";
 const credentials = z.object({ DEMO_EMAIL: z.email(), DEMO_PASSWORD: z.string().min(12) });
 
 async function signIn(page: Page) {
@@ -33,9 +34,23 @@ test("a link between two pages opens the in-app page and scrolls to its anchor",
   await expect(page.getByRole("navigation", { name: "Docs contents" }).getByRole("link", { name: "How knowledge gets in" })).toHaveAttribute("aria-current", "page");
 });
 
-test("a link to a reference page opens GitHub, and next and previous follow the reading order", async ({ page }) => {
+test("no docs page sends a reader to GitHub or into the repository", async ({ page }) => {
+  for (const { slug } of docPages) {
+    await page.goto(`/docs/${slug}`);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator("main a[href*='github.com']"), slug).toHaveCount(0);
+    const hrefs = await page.locator("main article a, main .docs-article a").evaluateAll((links) => links.map((link) => link.getAttribute("href") ?? ""));
+    for (const href of hrefs) expect(href, slug).toMatch(/^(\/docs\/|#|https?:\/\/(?!github\.com))/);
+  }
+});
+
+test("the next engine step is explained on the page the other page links to, and next and previous follow the reading order", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/docs/what-memoba-leaves-out");
-  await expect(page.getByRole("link", { name: "evaluation record" }).first()).toHaveAttribute("href", /^https:\/\/github\.com\/hangkhong\/memoba\/blob\/main\/docs\/reference\/evaluation\.md/);
+  await page.getByRole("link", { name: "next engine step" }).click();
+  await expect(page).toHaveURL(/\/docs\/how-the-agent-answers#the-next-engine-step$/);
+  await expect(page.getByRole("heading", { level: 2, name: "The next engine step" })).toBeInViewport();
+  await page.goto("/docs/what-memoba-leaves-out");
   await page.getByRole("navigation", { name: "Previous and next page" }).getByRole("link", { name: /Why search alone is not enough/ }).click();
   await expect(page).toHaveURL(/\/docs\/why-search-alone-is-not-enough$/);
   await page.getByRole("navigation", { name: "Previous and next page" }).getByRole("link", { name: /What Memoba leaves out/ }).click();

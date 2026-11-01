@@ -6,9 +6,9 @@ People describe the same past work in different words. The person who ran a proj
 
 Keyword search matches the words themselves. It is the right tool for "NetSuite" or "SOC 2". A name like that has one meaning, and a close match is no use. It also ranks a passage that mentions the term often and close together above one that mentions it once.
 
-Its weakness is that it only sees spelling. Memoba uses the Postgres `simple` text configuration, which does not reduce words to a root and has no list of synonyms. "Launch" does not match "launches", and "cancel" does not match "churn".
+Its weakness is that it only sees spelling. Memoba's keyword search does not reduce words to a root and has no list of synonyms. "Launch" does not match "launches", and "cancel" does not match "churn".
 
-If you know BM25, the standard ranking method for keyword search, the idea is the same family. Memoba does not implement BM25. It ranks with `ts_rank_cd`, which comes with Postgres, because that was enough for this corpus and needed no extra search service.
+If you know BM25, the standard ranking method for keyword search, the idea is the same family. Memoba does not implement BM25. It uses the ranking that comes with its Postgres database, because that was enough for this corpus and needed no extra search service.
 
 ## Search by meaning finds the similar thing
 
@@ -24,7 +24,7 @@ The two searches produce scores on different scales, so the scores can't be adde
 
 This has a useful effect. An exact match that search by meaning misses still gets in, and a paraphrase that keyword search misses still gets in. Neither method needs tuning against the other.
 
-The ranking lives in SQL: [`search_knowledge`](../../supabase/migrations/202610300002_search_diversity.sql) for cases and [`search_knowledge_documents`](../../supabase/migrations/20261031010000_process_documents.sql) for documents. Both search only active, published sources in your workspace, indexed with the current embedding model.
+The ranking runs inside the database, once for cases and once for documents. Both search only active, published sources in your workspace, indexed with the current embedding model.
 
 ## Keeping results from crowding each other out
 

@@ -39,7 +39,7 @@ The core of the design is a division of work. The model handles judgment: what t
 
 An agent is not free, and we don't think it is always the better choice.
 
-It makes several model calls where RAG makes one, so it is slower and uses more tokens. The measured runs took roughly 3 to 28 seconds, and the longest used tens of thousands of tokens ([evaluation record](../reference/evaluation.md)). A plain pipeline would be faster.
+It makes several model calls where RAG makes one, so it is slower and uses more tokens. In the demo workspace an answer took roughly 3 to 28 seconds, and the longest used tens of thousands of tokens. A plain pipeline would be faster.
 
 It also reads less. The agent opened two to nine cases per question, where a pipeline could paste in dozens of chunks. We accept this because a case read in full, with its outcome and conditions, is worth more than many fragments. It does mean a question like "everything we learned about pricing" gets a partial view today.
 

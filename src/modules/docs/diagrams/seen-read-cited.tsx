@@ -27,7 +27,7 @@ export type Verdict = { allowed: boolean; why: string };
 export function verdict(source: Source, heading: Heading): Verdict {
   if (source.stage === "seen") return { allowed: false, why: "This was only seen in a search result. No citation marker exists for it, because one is issued only when a section is read." };
   if (source.kind !== heading) return { allowed: false, why: source.kind === "case" ? "A case says what happened, so it can't stand behind a requirement." : "A document says what is required, so it can't stand in for what happened." };
-  return { allowed: true, why: "It was opened during this run, so the application issued it a marker such as [S:run:12]. Your access to it is checked next." };
+  return { allowed: true, why: "It was opened during this run, so the application issued it a marker. Your access to it is checked next." };
 }
 
 const stageName: Record<Stage, string> = { seen: "seen only", read: "read", cited: "read and cited" };

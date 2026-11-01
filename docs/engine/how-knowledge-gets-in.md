@@ -1,6 +1,6 @@
 # How knowledge gets in
 
-The engine can only be as good as what it reads. [The same questions run on two corpora](../reference/evaluation.md#suggested-prompts-on-two-corpora) show this plainly: richer cases gave better answers with no change to the agent. So capture has two jobs that pull against each other. It has to record enough reasoning to be reusable, and it has to stay cheap enough that somebody does it.
+The engine can only be as good as what it reads. Rewriting the demo cases as detailed retrospectives shows this plainly. With no change to the agent, the launch question read and cited both cases, and the price question named one more condition. So capture has two jobs that pull against each other. It has to record enough reasoning to be reusable, and it has to stay cheap enough that somebody does it.
 
 ## A case records reasoning
 
@@ -8,7 +8,7 @@ A case uses one of two fixed templates, Product/Delivery or CS/Operations. Both 
 
 The required fields are the ones a later reader can't reconstruct. Why it was needed, what was true at the time, what was tried. The form insists on one more thing: a known outcome must be described. "Achieved" with no detail teaches nothing, and "unknown" is an honest alternative.
 
-[`caseInputSchema`](../../src/modules/cases/schema.ts) owns these rules. The templates shape what a person records and do not limit retrieval, so a CS question can find a delivery case.
+The case form and the server check these rules from one shared definition. The templates shape what a person records and do not limit retrieval, so a CS question can find a delivery case.
 
 ## A case is not searchable until it is ready
 
@@ -36,13 +36,13 @@ Every edit publishes a new version, and it needs a note saying what changed and 
 
 ## Documents split along their own structure
 
-Long documents can't be read all at once, and cutting by character count would slice a requirement in half. [`splitDocument`](../../src/modules/documents/split.ts) splits along the headings instead. A block is the content under the shallowest heading level that repeats. Inside a block, whole paragraphs, tables, and list items are packed into sections. The form previews the blocks before you publish, using the same function the server runs.
+Long documents can't be read all at once, and cutting by character count would slice a requirement in half. Memoba splits along the headings instead. A block is the content under the shallowest heading level that repeats. Inside a block, whole paragraphs, tables, and list items are packed into sections. The form previews the blocks before you publish, using the same splitting the server runs.
 
 The agent reads whole blocks, and each document also gets a searchable summary built from its title, description, and details. The summary is never read or cited, because it says what the document is about. It does not say what the document requires.
 
 ## Publishing is one step
 
-A document has no pending state. `publish_document` embeds first, then stores the version, its sections, and the published pointer in one transaction. A document is either searchable or absent, and without an embedding model the save fails with nothing stored.
+A document has no pending state. Publishing embeds first, then stores the version, its sections, and which version is published, all in one transaction. A document is either searchable or absent, and without an embedding model the save fails with nothing stored.
 
 Cases and documents take different paths here because their edits differ. A case is a record that someone may save with a retry later. A document is a rule, and a half-published rule is worse than none.
 
@@ -51,5 +51,3 @@ Cases and documents take different paths here because their edits differ. A case
 ## Archiving keeps history
 
 Archiving removes a case or document from new retrieval. Citations in saved answers stay, subject to access, so the reasoning behind an old decision doesn't disappear when its source retires.
-
-The exact rules are in [system contracts](../reference/system-contracts.md).
