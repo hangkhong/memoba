@@ -18,23 +18,9 @@ The model has no SQL, no workspace selector, and no write tool, so it cannot wid
 
 ## One run, step by step
 
-```mermaid
-flowchart TD
-    Q[Question and bounded history] --> AD[Admission: membership, quota, deadline]
-    AD --> AG[Agent step]
-    AG -->|search_knowledge| S[One embedding, two searches]
-    S -->|previews and cards, not evidence| AG
-    AG -->|read_case, up to 3 cases| R[Outcome header, then sections by priority]
-    AG -->|read_document| RD[Whole blocks, or omitted blocks listed]
-    R -->|citation markers| AG
-    RD -->|citation markers| AG
-    AG -->|limit reached: tools removed| SY[Write the answer]
-    AG --> SY
-    SY --> V[Validate citations and access]
-    V -->|invalid| RP[One correction]
-    RP --> V
-    V -->|valid| SV[Save answer, source snapshots, coverage]
-```
+A run goes from question to saved answer in seven steps. The model chooses what to search for and read, and writes the answer. The application handles every other step.
+
+<!-- diagram: agent-run -->
 
 **Admission.** The server derives you and your workspace from the session, checks membership, enforces the concurrent run limit, and writes a deadline to the database. Model calls, embeddings, tools, and correction all share that one deadline, so a retry can't buy fresh time.
 
@@ -45,6 +31,8 @@ flowchart TD
 `read_document` opens one document. A block arrives whole or is listed as omitted, so a requirement is never cut in half. Documents have their own budget, so a long policy can't push out case evidence.
 
 **Stop.** Before each step, the application checks the deadline, the tool count, the step count, and how large the model's input has become. It keeps time in reserve for writing. Near any limit it removes the tools, so the next step has to answer from what was read. The agent always gets the chance to finish.
+
+**Write.** The model words the answer from what it read, with a citation marker beside each claim it supports.
 
 **Validate.** The application checks every citation in the draft. One correction attempt is allowed, within the same deadline. [How an answer stays checkable](how-an-answer-stays-checkable.md) covers this.
 

@@ -10,6 +10,8 @@ The agent sees a lot and reads little. Search previews are short excerpts, and a
 
 A section earns a citation only when `read_case` or `read_document` delivers it during the run. At that moment the application creates a marker for it, such as `[S:run:12]`, tied to that run and that section. The model copies the marker next to the statement it supports. It can't make a valid marker up, because a marker exists only if the application issued it. Markers from an earlier run don't resolve, so old answers can't be recycled as evidence. Earlier assistant text in a conversation is context, and the agent must read a source again to rely on it.
 
+<!-- diagram: seen-read-cited -->
+
 ## What gets checked after writing
 
 When the draft is finished, [`validateTextAnswer`](../../src/modules/briefs/validation.ts) checks it:
@@ -30,6 +32,8 @@ Later you may open an old answer after the policy has moved on. The evidence pan
 ## "None" and "failed" are different answers
 
 Each source reports its own state from the tool result: found, none, partial, failed, or repeat. The activity line under an answer is worded from those events, so it can say "3 cases found · no documents matched" without taking the model's word for it.
+
+<!-- diagram: none-or-failed -->
 
 | State | What the answer does |
 |---|---|

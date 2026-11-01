@@ -19,16 +19,18 @@ function DocLink({ href, children, ...props }: Anchor) {
   return <a href={href} {...rest} target="_blank" rel="noopener noreferrer">{children}</a>;
 }
 
-function DiagramSlot({ name }: Record<string, unknown>) {
-  const Diagram = typeof name === "string" ? docDiagrams[name] : undefined;
+function DiagramSlot({ diagram }: Record<string, unknown>) {
+  const Diagram = typeof diagram === "string" ? docDiagrams[diagram] : undefined;
   return Diagram ? <figure className="my-6"><Diagram/></figure> : null;
 }
 
 const remarkPlugin = docsRemarkPlugin();
 const components = { a: DocLink, "docs-diagram": DiagramSlot };
+// The sanitizer drops elements it does not know, so the diagram element and its one attribute are allowed by name. The attribute is not `name`, which the sanitizer rewrites with a prefix.
+const allowedTags = { "docs-diagram": ["diagram"] };
 
 // Client-side because the remark plugin and component overrides are functions, which cannot cross from a server component.
 export function DocsArticle({ markdown, file, base }: { markdown: string; file: string; base: string }) {
   const source = useMemo(() => rewriteDocLinks(markdown, file, base), [markdown, file, base]);
-  return <SafeMarkdown mode="static" className="answer-markdown docs-article" extraRemarkPlugins={[remarkPlugin]} components={components} linkSafety={{ enabled: false }}>{source}</SafeMarkdown>;
+  return <SafeMarkdown mode="static" className="answer-markdown docs-article" extraRemarkPlugins={[remarkPlugin]} components={components} allowedTags={allowedTags} linkSafety={{ enabled: false }}>{source}</SafeMarkdown>;
 }

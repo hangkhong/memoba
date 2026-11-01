@@ -4,6 +4,12 @@ import { describe, expect, it } from "vitest";
 import { createSlugger, extractHeadings } from "./headings";
 import { resolveDocLink, repositoryUrl, rewriteDocLinks } from "./links";
 import { docPages, neighbours } from "./registry";
+import { renderToStaticMarkup } from "react-dom/server";
+import { createElement } from "react";
+import { docDiagrams } from "./diagrams";
+import { combine, examples } from "./diagrams/two-searches";
+import { moments, summary } from "./diagrams/edit-goes-live";
+import { sources, verdict } from "./diagrams/seen-read-cited";
 import { diagramName, docsRemarkPlugin } from "./remark-docs";
 
 const read = (file: string) => readFileSync(join(process.cwd(), "docs", file), "utf8");
@@ -95,6 +101,51 @@ describe("diagram markers", () => {
   it("turns a marker into a docs-diagram element", () => {
     const tree = { type: "root", children: [{ type: "html", value: "<!-- diagram: agent-run -->" }] };
     docsRemarkPlugin()()(tree);
-    expect(tree.children[0]).toMatchObject({ type: "docsDiagram", data: { hName: "docs-diagram", hProperties: { name: "agent-run" } } });
+    expect(tree.children[0]).toMatchObject({ type: "docsDiagram", data: { hName: "docs-diagram", hProperties: { diagram: "agent-run" } } });
+  });
+});
+
+const markersIn = (markdown: string) => withoutFences(markdown).split("\n").map(diagramName).filter((name): name is string => name !== null);
+
+describe("engine diagrams", () => {
+  it("resolves every marker in every page to a registered component", () => {
+    const used = docPages.flatMap((page) => markersIn(read(page.file)).map((name) => ({ name, file: page.file })));
+    expect(used.length).toBeGreaterThan(0);
+    for (const { name, file } of used) expect(docDiagrams[name], `${file}: ${name}`).toBeTypeOf("function");
+  });
+  it("registers no diagram that no page uses", () => {
+    const used = new Set(docPages.flatMap((page) => markersIn(read(page.file))));
+    for (const name of Object.keys(docDiagrams)) expect(used.has(name), name).toBe(true);
+  });
+  it("leaves no Mermaid block in the engine pages", () => {
+    for (const page of docPages) expect(read(page.file), page.file).not.toMatch(/^```mermaid/m);
+  });
+  it("renders each diagram with a text alternative and no empty output", () => {
+    for (const [name, Diagram] of Object.entries(docDiagrams)) {
+      const html = renderToStaticMarkup(createElement(Diagram));
+      expect(html, name).toMatch(/role="group" aria-label="[^"]{40,}"/);
+    }
+  });
+  it("combines two ranked lists so a section in both comes first", () => {
+    const [name] = examples;
+    const merged = combine(name?.keyword ?? [], name?.meaning ?? []);
+    expect(merged[0]?.in).toEqual(["keyword", "meaning"]);
+    expect(merged.map(({ hit }) => hit.id)).toEqual(["sync", "billing", "cutover", "close"]);
+    expect(combine([], examples[1]?.meaning ?? []).every((entry) => entry.in.join() === "meaning")).toBe(true);
+  });
+  it("allows a citation only for a source that was read, under the heading that fits it", () => {
+    const find = (id: string) => sources.find((source) => source.id === id)!;
+    expect(verdict(find("s1"), "case").allowed).toBe(false);
+    expect(verdict(find("r1"), "case").allowed).toBe(true);
+    expect(verdict(find("r1"), "doc").allowed).toBe(false);
+    expect(verdict(find("c2"), "doc").allowed).toBe(true);
+    expect(verdict(find("c2"), "case").allowed).toBe(false);
+  });
+  it("keeps answers on the old version until a case is ready, and stores nothing when a document fails", () => {
+    expect(moments("case", "failed")[1].using).toBe("v1");
+    expect(moments("case", "failed")[2].using).toBe("v1");
+    expect(moments("case", "ready")[2].using).toBe("v2");
+    expect(moments("doc", "failed")[2].stored.map((version) => version.label)).toEqual(["v1"]);
+    expect(summary("doc", "failed")).toMatch(/no half-published rule/);
   });
 });
