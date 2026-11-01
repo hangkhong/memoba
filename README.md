@@ -1,40 +1,36 @@
 # The Memoba
 
-Teams repeat work they have already done, and the lessons sit in documents nobody reads. Memoba keeps past cases in one place and answers a new request with how similar cases went, what is different this time, and a suggested next step, with citations to the recorded cases.
+Teams keep solving problems they have already solved. The past work exists, but finding it costs more than starting over, and what survives is usually the deliverable, not the reasoning.
 
-Two things to try:
+Memoba makes asking cheaper than redoing. You ask in plain words, and an agent searches your team's recorded cases and process documents, reads what is relevant, and answers: what the process requires, how similar cases went, what is different this time, and a suggested next step. Each statement drawn from a source cites the section it came from. When nothing relevant is recorded, Memoba says so.
 
-- **Capture.** Record a past case in Knowledge Hub with one of two fixed templates (Product/Delivery, CS/Operations), or use **Import from notes** to draft a case from pasted text. The draft is never saved until you review it and press Save.
-- **Reuse.** Ask a new request in chat. The agent searches the recorded cases, reads the relevant ones, and answers. When nothing relevant is recorded, it says so instead of inventing precedent.
+## Try it
 
-## Try the demo
+Open [memoba.vercel.app](https://memoba.vercel.app) and sign in with the provided account. The workspace holds 20 cases and five process documents from Northwind Ledger, a fictional invoicing company. Three suggested prompts show the main behaviors:
 
-Live demo: _link added after the first deployment_. Sign in with the account provided with the submission. The workspace holds 20 cases from one invented SaaS company. Three suggested prompts on the new-chat screen show the main behaviors:
+1. **Launch to all customers.** Strong precedents that went in opposite directions.
+2. **Price increase with notice.** A failed case under a changed condition.
+3. **Singapore data center.** Nothing recorded, and the answer says so.
 
-1. A launch with a strong precedent.
-2. A price change that resembles a failed case under a changed condition.
-3. A request with no recorded precedent.
+Open any citation to read the section behind it. A citation shows what the agent read. It does not prove that the advice fits your situation, so judge for yourself.
 
-Answers are model output grounded in the recorded cases. A valid citation shows which section was read, not that the advice fits your situation.
+## Read why and how
 
-## What is real, what is a preview
+Start with the [documentation map](docs/README.md).
 
-- Real: case capture and revisions, search and citations, chat with follow-ups, saved answers that survive refresh, and drafting a case from pasted notes with one model call.
-- Preview: choosing document files in Import only lists their names. Document parsing is coming soon; files stay in your browser.
-- Deferred: connectors, document upload, multiple agents, per-visitor workspaces, and in-app rate limits. Hosted cost is bounded by a provider spending limit.
+- **Why:** [the problem](docs/product/why-teams-start-from-scratch.md), [what Memoba believes](docs/product/what-memoba-believes.md), and [what it leaves out](docs/product/what-memoba-leaves-out.md).
+- **How:** [why search alone is not enough](docs/engine/why-search-alone-is-not-enough.md), [how it finds past work](docs/engine/how-memoba-finds-past-work.md), [how the agent answers](docs/engine/how-the-agent-answers.md), [how answers stay checkable](docs/engine/how-an-answer-stays-checkable.md), and [how knowledge gets in](docs/engine/how-knowledge-gets-in.md).
 
-## Known limit and next step
+## What is real, and what is a preview
 
-An answer is built from the few most relevant cases one run can read, and it states how many matching cases it reviewed. Questions that need many cases at once ("everything we learned about pricing") get a partial view. The next step is batch reading with cited per-group notes and a cross-group synthesis, or precomputed case cards; it is deferred for this demo.
+- **Real:** case capture and versions, process documents, search and citations, chat with follow-ups, saved answers that survive a refresh, and drafting a case from pasted notes.
+- **Preview:** the Dashboard runs on labelled sample data, and files chosen in Import only show their names.
+- **Not built:** connectors and the rest of the list in [What Memoba leaves out](docs/product/what-memoba-leaves-out.md).
 
-## Run it and read more
+One run reads a handful of sources well, so a question that needs many cases at once gets a partial view. The [evaluation record](docs/reference/evaluation.md) lists what was measured and what is still unproven.
 
-Use Node.js 24 and npm. [Run locally](docs/how-to/run-locally.md) starts the pinned native Supabase stack and prints the App, Studio and API URLs. [Deploy the demo](docs/how-to/deploy-demo.md) covers Supabase Cloud and Vercel.
+## Run it
 
-- [Product design](docs/superpowers/specs/2026-10-29-text-agent-design.md)
-- [How the agent engine steers the model](docs/architecture/agent-engine.md)
-- [Architecture foundation](docs/architecture/FOUNDATION.md)
-- [System contracts](docs/reference/system-contracts.md)
-- [Evaluation status](docs/reference/evaluation.md)
+Use Node.js 24 and npm. [Run locally](docs/how-to/run-locally.md) starts the pinned native Supabase stack and prints the App, Studio, and API URLs. [Deploy the demo](docs/how-to/deploy-demo.md) covers Supabase Cloud and Vercel.
 
-GitHub PRs run installation, lint, typecheck, unit tests, build, native SQL checks, and browser checks without AI credentials.
+GitHub PRs run installation, lint, typecheck, unit tests, the build, native SQL checks, and browser checks without AI credentials.

@@ -1,6 +1,6 @@
 # Deploy the hosted demo
 
-Steps 1 to 3 and the deploy were run on 2026-10-30 against Supabase project `memoba` and Vercel project `nguyen-khang/memoba`. Record the step 4 results in [evaluation status](../reference/evaluation.md).
+Steps 1 to 3 and the deploy were run on 2026-10-30 against Supabase project `memoba` and Vercel project `nguyen-khang/memoba`. Record the step 4 results in the [evaluation record](../reference/evaluation.md).
 
 You need a Supabase Cloud project, a Vercel Hobby project connected to this repository, and a dedicated OpenAI project with a hard spending limit. The spending limit and `concurrentRuns` in [`limits.ts`](../../src/lib/contracts/limits.ts) bound cost; the app has no rate limit.
 

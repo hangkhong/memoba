@@ -1,6 +1,6 @@
 # System contracts
 
-This reference describes the implemented data and runtime contracts. [Evaluation status](evaluation.md) separates the prior OpenAI runtime check from semantic evaluation. The text agent and Vercel deployment still need live acceptance evidence.
+This reference describes the implemented data and runtime contracts. For why they exist, read [How the agent answers a question](../engine/how-the-agent-answers.md). The [evaluation record](evaluation.md) holds measured results.
 
 ## Runtime
 
@@ -103,6 +103,8 @@ Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A c
 
 | Endpoint | Result |
 |---|---|
+| `POST /api/auth/login`, `POST /api/auth/logout` | Start or end the session |
+| `GET /api/workspace` | The verified workspace context |
 | `GET /api/conversations` | Recent conversations in the verified workspace |
 | `POST /api/conversations` | Idempotent conversation creation |
 | `GET /api/conversations/:id` | Authorized turns, attempts, and permitted answers |
@@ -119,7 +121,7 @@ Runs end as `complete`, `gap_report`, `failed`, `cancelled`, or `timed_out`. A c
 | `POST /api/documents/:id/archive` | Archived document |
 | `GET /api/documents/:id` | Authorized document detail with every revision |
 | `GET /api/cases/:id` | Authorized case detail |
-| `POST /api/cases/:id/links` | Same-workspace typed link |
+| `POST`, `PATCH`, `DELETE /api/cases/:id/links` | Create, edit, or remove a same-workspace typed link |
 | `POST /api/analyses` | AI SDK UI stream with run ID |
 | `GET /api/analyses/:id` | Authorized run state, events, and result |
 | `GET /api/briefs/:id` | Saved answer or legacy brief and permitted evidence |

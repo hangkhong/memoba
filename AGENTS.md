@@ -2,10 +2,12 @@
 
 ## Read the project contracts
 
-Read `docs/superpowers/specs/2026-10-29-text-agent-design.md` for product scope.
-Read `docs/architecture/FOUNDATION.md` for architecture decisions.
-Read `docs/reference/system-contracts.md` for limits, states, tools, and data rules.
-Use `docs/superpowers/plans/2026-10-30-mvp-demo.md` for the current implementation.
+The code is the source of truth. If a document and the code disagree, fix the document.
+
+Read `docs/README.md` for the map of the documentation.
+Read `docs/product` for why the product is built this way and what is out of scope.
+Read `docs/engine` for how the engine works, and `docs/architecture/overview.md` for modules and decisions.
+Read `docs/reference/system-contracts.md` for states, tools, and data rules.
 
 Build for one PM, one demo workspace, and a seven-day challenge. Keep the two fixed case templates. Accept natural-language requests.
 
@@ -64,14 +66,14 @@ Read the relevant skill before applying it. Preserve the user's approved scope a
 
 ## Verify the actual deliverable
 
-After bootstrap, use the scripts defined in `package.json`. The plan defines the initial scripts and their owners.
+Use the scripts defined in `package.json`.
 Run focused tests while editing. Before closing a local release, run lint, typecheck, tests, the production build, and the required local database checks.
 Open the running app and verify the case-to-answer flow. A passing build does not prove the flow works.
 Report which checks ran and which checks remain blocked. Do not call planned checks passing.
 
 ## Keep the documents short
 
-Keep setup steps in `docs/how-to`, contracts in `docs/reference`, and decisions in `docs/architecture`.
+Keep the why in `docs/product`, the how in `docs/engine`, setup steps in `docs/how-to`, contracts in `docs/reference`, and decisions in `docs/architecture`.
 Update a document when its command or contract changes. Use real paths, symbols, and scripts.
 Do not add a second source for a limit or schema. Link to the owning document or code definition.
 Keep secrets in ignored local environment files. Do not commit credentials, `.superpowers`, build output, or dependency directories.

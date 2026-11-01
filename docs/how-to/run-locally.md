@@ -26,9 +26,9 @@ Run plain `npx supabase` commands with `--stack-id` or `--db-url`. Without them 
 
 To load the demo company's 20 cases and five process documents, run `npm run db:seed -- --demo`. It calls the embedding provider only for cases and documents that are not already indexed, and fails when no embedding model is configured. To remove visitor cases, documents, and conversations and restore the seed corpus, run `npm run demo:reset`; it publishes the demo documents again.
 
-After sign-in, Chat opens by default. Enter a question and add context in **Request details**. Conversations persist even without model access. Follow-up turns retain the confirmed request state, and reload does not restart analysis.
+After sign-in, Chat opens by default. Type a question or pick a suggested prompt. Conversations persist even without model access. Follow-up turns keep bounded history, and a reload does not restart a run.
 
-Press Enter to send a question or Shift+Enter to add a line. During an active analysis, choose **Stop analysis** in the composer. Scroll upward to read earlier turns, then choose **Scroll to latest message** to follow new content again. Expand **Activity** to inspect actual stage and tool events.
+Press Enter to send a question or Shift+Enter to add a line. While a run is active, the stop button in the composer ends it. Scroll upward to read earlier turns, then choose **Scroll to latest message** to follow new content again. Expand **Activity** to inspect actual stage and tool events.
 
 Open **Knowledge Hub** in the sidebar and select **Record a case** to open a dialog and enter a case through either fixed template, or choose **Import from notes** to draft one from pasted text in its own dialog. Review every field before saving; document files in Import are a preview and are not read. **Edit case** and **Archive** on a case page also open dialogs. Without model access, the content remains saved with failed indexing and can be retried. A pending or failed edit preserves the previous published revision. Archive removes a case from new retrieval while preserving authorized history.
 
@@ -49,9 +49,9 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-The browser suite uses its own Next.js server on port 3100 with model credentials disabled. It covers the landing page, Auth, structured chat, saved follow-ups, unavailable analysis, reload, mobile navigation, case save, immutable revisions, indexing retry, and archive. Unit tests use the official AI SDK test providers. No runtime mock supplies evidence or model output.
+The browser suite uses its own Next.js server on port 3100 with model credentials disabled. It covers the landing page, Auth, chat, saved follow-ups, an unavailable model, reload, mobile navigation, case save, immutable revisions, indexing retry, and archive. Unit tests use the official AI SDK test providers. No runtime mock supplies evidence or model output.
 
-The CI workflow runs the same foundation checks against a fresh native database. Production build checks can run without AI or Supabase environment values. Regenerate `src/lib/supabase/database.types.ts` after migrations. If a case or request schema changes, create a new migration with `npx supabase migration new input_contracts`, then generate its checks with `npm run db:contracts -- <new-migration.sql>` before applying it.
+The CI workflow runs the same foundation checks against a fresh native database. Production build checks can run without AI or Supabase environment values. Regenerate `src/lib/supabase/database.types.ts` after migrations. If a case or input schema changes, create a new migration with `npx supabase migration new input_contracts`, then generate its checks with `npm run db:contracts -- <new-migration.sql>` before applying it.
 
 ## Verify model integration when quota is available
 
@@ -59,13 +59,13 @@ The CI workflow runs the same foundation checks against a fresh native database.
 2. Run `npm run ai:probe` once to check the embedding dimension and provider access.
 3. If existing cases use another profile, stop Next.js and run `npx supabase migration up --local`, `npm run db:types`, and `npm run ai:migrate-embeddings` before starting the app. This indexes same-content replacement revisions and verifies every active case has a ready published revision under the selected profile. It preserves old revisions and citations. A second run reuses ready revisions without another embedding call. Resolve any reported pending-edit or stale-source conflict before normal use. An active case with no published revision uses its latest saved content as the migration source.
 4. If a synthetic corpus is needed, run `npm run db:seed -- --cases`. Use `--challenge` only for the authored 24-case evaluation corpus. Both flags call the real embedding provider. Seed keeps existing case IDs, reuses matching ready revisions, and preserves archived history.
-5. Start the app and send one structured request. Inspect the brief, citations, and saved result after refresh. For the automated opt-in journey, run `RUN_LIVE_MODEL_TESTS=1 npm run test:e2e -- tests/e2e/local-flow.spec.ts` after stopping other Next.js servers. Run `npm run ai:probe -- --tool` only when the analysis did not exercise tool calling and a capability check is needed.
+5. Start the app and ask one question. Inspect the answer, citations, and saved result after refresh. For the automated opt-in journey, run `RUN_LIVE_MODEL_TESTS=1 npm run test:e2e -- tests/e2e/local-flow.spec.ts` after stopping other Next.js servers. Run `npm run ai:probe -- --tool` only when the analysis did not exercise tool calling and a capability check is needed.
 
 To keep Google available, use `google:<model-id>` and `GOOGLE_GENERATIVE_AI_API_KEY`. The supported Google embedding profile remains `google:gemini-embedding-2` at 1536 dimensions. Changing the embedding provider requires the migration above. Do not change only the env model and search old vectors with the new model.
 
 The probe embeds two synthetic Vietnamese and English inputs and writes an ignored report under `.superpowers/probes`. Missing configuration exits with code 2. Missing token usage is stored as unknown.
 
-The live checks need working provider quota and model access for the configured account. A runtime smoke check does not establish semantic quality. Use [Evaluation status](../reference/evaluation.md) for the remaining acceptance work.
+The live checks need working provider quota and model access for the configured account. A runtime smoke check does not establish semantic quality. The [evaluation record](../reference/evaluation.md) lists what remains open.
 
 ## Stop the services
 
