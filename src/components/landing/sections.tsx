@@ -1,13 +1,12 @@
 import Image, { getImageProps } from "next/image";
 import Link from "next/link";
 import { Engine } from "./engine";
-import { runs, noteFor } from "./engine-timeline";
 
 const wideSize = { width: 2880, height: 1800 };
 const phoneSize = { width: 1170, height: 2340 };
 const src = (name: string) => `/landing/${name}.png`;
 
-/** Section index and name. The names are the ones the spec already uses. */
+/** Section index and name, as listed in the landing spec. */
 function SectionTag({ n, name }: { n: number; name: string }) {
   return <p className="tag"><span>{String(n).padStart(2, "0")} / 07</span><span>{name}</span></p>;
 }
@@ -34,7 +33,7 @@ export function Hero() {
   return (
     <section className="hero"><div className="wrap">
       <div className="head">
-        <SectionTag n={1} name="Hero" />
+        <SectionTag n={1} name="Overview" />
         <h1>Your team already solved this. Nobody remembers where.</h1>
         <div className="side">
           <p className="lede">Memoba answers questions from your team&apos;s recorded cases and process documents, and cites the sources it read.</p>
@@ -61,7 +60,7 @@ const lostItems = [
 export function Problem() {
   return (
     <section className="lost"><div className="wrap">
-      <div className="head"><SectionTag n={2} name="Problem" /><h2>The ticket survives. The reasoning doesn&apos;t.</h2></div>
+      <div className="head"><SectionTag n={2} name="The problem" /><h2>The ticket survives. The reasoning doesn&apos;t.</h2></div>
       <figure className="stage lost-stage">
         <ResponsiveShot name="recurring-case" phone="recurring-case-phone" alt="The Memoba case page for the all-at-once launch of recurring invoices, showing outcome Not achieved, the observed outcome, and lessons." />
         <div className="tick" role="img" aria-label="An illustrative ticket reading Recurring invoices, status Done"><i /><div><b>Recurring invoices</b><span>Done</span></div></div>
@@ -91,26 +90,10 @@ export function TwoMemories() {
   );
 }
 
-/** The three outcomes as lists. The no-JavaScript and reduced-motion view of the diagram. */
-function EngineOutcomes() {
-  return (
-    <div className="all">
-      {runs.map((run) => (
-        <div key={run.id}>
-          <h3>{run.label}</h3>
-          <ol>{run.path.map((id) => <li key={id}>{noteFor(run, id).title}</li>)}</ol>
-          <p>{run.answerProcessText}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function EngineSection() {
   return (
     <Engine
-      intro={<div className="intro"><div><SectionTag n={4} name="Engine" /><h2>Follow one question through the engine.</h2></div><p>The model chooses what to search and read. The application holds the limits, and records what each source really returned.</p></div>}
-      outcomes={<EngineOutcomes />}
+      intro={<div className="intro"><div><SectionTag n={4} name="How it answers" /><h2>A chatbot answers from what it&apos;s given. Memoba goes and reads.</h2></div><p>The model chooses what to search and read. The application holds the limits and checks every citation.</p></div>}
     />
   );
 }
@@ -138,7 +121,7 @@ const rules = [
 export function Honesty() {
   return (
     <section className="honest" id="honest"><div className="wrap">
-      <div className="head"><SectionTag n={6} name="Honesty" /><h2>When they differ, you get both sides.</h2></div>
+      <div className="head"><SectionTag n={6} name="What it won't say" /><h2>When they differ, you get both sides.</h2></div>
       <div className="hon">
         <div className="stage crop tall"><Shot name="answer-differ" sizes="(max-width: 900px) 100vw, 760px" alt="The answer section Where practice and process differ, followed by what is different this time and a suggested next step." /></div>
         <ul className="rules">{rules.map(([title, body]) => <li key={title}><h3>{title}</h3><p>{body}</p></li>)}</ul>
@@ -151,7 +134,7 @@ export function Close() {
   return (
     <footer className="end"><div className="wrap">
       <div className="head">
-        <SectionTag n={7} name="Close" />
+        <SectionTag n={7} name="Try it" />
         <h2>Ask the demo workspace a real question.</h2>
         <p>It holds 20 cases and five process documents from Northwind Ledger, a fictional invoicing company.</p>
         <Link className="btn" href="/login">Open the demo</Link>
