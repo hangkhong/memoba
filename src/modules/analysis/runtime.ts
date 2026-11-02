@@ -10,6 +10,8 @@ import type { AnalysisEvent } from "./events";
 import type { OnDraft } from "./draft";
 import type { StoredRunInput } from "./schema";
 import { executionLimits } from "@/lib/contracts/limits";
+import { loadHeldEvidence } from "@/modules/conversations/held";
+import { citableHeld } from "./held";
 export async function prepareAnalysis(context: WorkspaceContext, request: StoredRunInput, requestKey: string, turnId?: string, handlerStartedAt = Date.now(), setupSignal?: AbortSignal) {
   setupSignal?.throwIfAborted();
   const models = configuredModels(); const client = await createServerSupabase();
@@ -28,10 +30,13 @@ export async function prepareAnalysis(context: WorkspaceContext, request: Stored
     const repository = knowledgeRepository(client, context, models.embed, models.embeddingModel, signal);
     const deadlineAt = new Date(admitted.deadlineAt).getTime();
     const knowledge = createRunKnowledge(repository, admitted.runId);
-    const agent = textReasoningAdapter(models.reasoning, knowledge, emit);
-    const result = await runTextAnalysis(admitted.input, { ...agent, draft: onDraft, disclosed: knowledge.disclosed, coverage: () => answerCoverage(knowledge.coverage()), emit, canRead: store.canRead, finish: (...args) => store.finish(admitted.runId, ...args), signal: externalSignal, deadlineAt });
+    // A conversation's held evidence is read from saved answers. If it cannot be read the run goes on without it, and a marker from an earlier answer then fails validation instead of being trusted.
+    let heldFailed = false;
+    const held = turnId ? await loadHeldEvidence(client, context, turnId, repository).catch(() => { heldFailed = true; return []; }) : [];
+    const agent = textReasoningAdapter(models.reasoning, knowledge, emit, undefined, held);
+    const result = await runTextAnalysis(admitted.input, { ...agent, held: () => citableHeld(held), draft: onDraft, disclosed: knowledge.disclosed, coverage: () => answerCoverage(knowledge.coverage()), emit, canRead: store.canRead, finish: (...args) => store.finish(admitted.runId, ...args), signal: externalSignal, deadlineAt });
     const candidates = knowledge.disclosed().length;
-    process.stdout.write(JSON.stringify({ requestId: admitted.runId, status: result.status, code: result.code, candidates, durationMs: Date.now() - started }) + "\n");
+    process.stdout.write(JSON.stringify({ requestId: admitted.runId, status: result.status, code: result.code, candidates, held: held.length, heldFailed, durationMs: Date.now() - started }) + "\n");
     return result;
   } };
 }

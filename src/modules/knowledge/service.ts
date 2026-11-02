@@ -1,7 +1,7 @@
 import { executionLimits } from "@/lib/contracts/limits";
 import type { NormalizedRequest } from "@/modules/analysis/schema";
 import type { SectionKey } from "@/modules/cases/schema";
-import { isCaseEvidence, isDocumentEvidence, type CaseEvidence, type CaseHeader, type CasePreview, type DisclosedSource, type DocumentCard, type DocumentEvidence, type DocumentReadBlock, type DocumentReadResult, type DocumentSearchResult, type KnowledgeSearchResult, type ReadResult, type ReadSection, type RunToolResult, type ToolResult } from "./contracts";
+import { isCaseEvidence, isDocumentEvidence, type CaseEvidence, type CaseHeader, type CasePreview, type DisclosedSource, type DocumentCard, type DocumentEvidence, type DocumentReadBlock, type DocumentReadResult, type DocumentSearchResult, type EvidenceItem, type HeldSource, type KnowledgeSearchResult, type SourceStanding, type ReadResult, type ReadSection, type RunToolResult, type ToolResult } from "./contracts";
 import { estimateEvidenceTokens } from "./context";
 import type { AnswerCoverage } from "@/modules/briefs/schema";
 export type SearchInput = { query: string; purpose: "method" | "conditions" | "exceptions"; conceptIds: NormalizedRequest["conceptIds"] };
@@ -16,6 +16,8 @@ export type KnowledgeStore = {
   readDocument: (input: ReadDocumentInput) => Promise<DocumentReadStoreResult>;
   expand: (input: ExpandInput) => Promise<ToolResult>;
   template?: (revisionId: string) => Promise<CaseHeader["template"]>;
+  // Where each cited source stands now, by evidence ID. A source the store cannot find is left out.
+  standing?: (items: EvidenceItem[]) => Promise<Map<string, SourceStanding>>;
 };
 
 type SearchState = "none" | "succeeded" | "failed_or_partial";
@@ -33,6 +35,19 @@ export function answerCoverage(coverage: RunCoverage): AnswerCoverage {
     unreadTitles: coverage.previewed.filter((item) => !read.has(item.caseId)).map((item) => item.title).slice(0, 10),
     documents: { searched: coverage.documents.searchState !== "none", previewed: new Set([...coverage.documents.previewedIds, ...coverage.documents.readIds]).size, read: new Set(coverage.documents.readIds).size, searchFailed: coverage.documents.searchState === "failed_or_partial" },
   };
+}
+
+// Code, not the model, decides which cited sources are still the current version. A failed check holds a source as `changed`, so it is read again instead of trusted.
+export async function holdSources(store: KnowledgeStore, sources: DisclosedSource[]): Promise<HeldSource[]> {
+  if (!sources.length) return [];
+  let standing: Map<string, SourceStanding> | undefined;
+  try { standing = await store.standing?.(sources.map((source) => source.evidence)); } catch { standing = undefined; }
+  if (!store.standing) return [];
+  return sources.flatMap((source) => {
+    if (!standing) return [{ ...source, standing: "changed" as const }];
+    const found = standing.get(source.evidence.evidenceId);
+    return found ? [{ ...source, standing: found }] : [];
+  });
 }
 
 // Candidate previews and disclosed sources have different citation privileges.

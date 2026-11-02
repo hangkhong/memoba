@@ -26,6 +26,8 @@ node --env-file-if-exists=.env.local evals/text/runner.mjs --live --scenario dir
 
 Use `--trace-live` instead of `--live` for an in-process trace that records tool inputs, sources, and validation events. A trace saves no run. Artifacts go to the ignored `.artifacts/evals/text/` directory. Set `MEMOBA_EVAL_URL` only to a local HTTP origin.
 
+Follow-up scenarios add per-turn `checks` in [`checks.mjs`](../../evals/text/checks.mjs): the number of tool calls, whether markers survive, the answer language and headings, whether the run read only what the conversation did not hold, and whether it read a changed case again. The runner exits non-zero when a check fails. `--live` cannot observe tool inputs and says so; `followup-changed-revision` edits a throwaway case between turns, so it runs only with `--trace-live`, and the eval archives that case afterwards. A trace run signs the demo user out everywhere when it ends, which also ends a browser session.
+
 The runner does not score semantic support or advice quality. Read each answer against its review points and its sources. Record incomplete runs instead of excluding them.
 
 `npx vitest run src/modules/analysis/text-agent.test.ts src/modules/analysis/budget.test.ts` exercises tool errors, citation failures, and deadlines with no paid model call.
@@ -114,6 +116,24 @@ After the change, no scenario hit `CONTEXT_LIMIT`. Runs used 15,100 to 26,800 to
 The conflict answer reported a 60-day Starter case against the 90-day policy without calling it a violation. The process-only answer said no case matched and followed the deletion steps in order. A full walk-through listed every prerequisite, step, hold, and stop condition, and named version 3 and its effective date. In that answer "Where practice and process differ" was filled with a weak difference. The prompt asks for that heading only for a real difference, so this is a model-compliance issue to watch.
 
 In the running app, a saved answer that cited version 1 kept showing version 1 text after version 2 was published, with a notice that a newer version exists.
+
+### Follow-ups
+
+Seven scenarios (`followup-*`) ask a second question that depends on the first answer: translate, shorten, re-explain, new facts, a mix of held and new, a changed case, and a Vietnamese question. They ran with `--trace-live` on `gpt-6-luna` and `text-embedding-3-small` on 2026-11-02 against the seeded demo corpus. The baseline ran the code before this change on the same corpus, one run per scenario and five runs of the Vietnamese question.
+
+| Scenario, turn checked | Baseline | After |
+|---|---|---|
+| Translate (`followup-translate`) | Failed: the run ended incomplete because the first answer was over 4,000 characters, so history could not be built | Passed: 0 tool calls, markers kept, Vietnamese headings |
+| Shorten (`followup-shorten`) | Failed: 3 tool calls (search, read, read) | Passed: 0 tool calls, markers kept |
+| Re-explain (`followup-reexplain`) | Failed: ended incomplete on the same limit | Passed: 0 tool calls, markers kept |
+| New facts (`followup-new-facts`) | Passed | Passed: searched and read only what was missing |
+| Held and new (`followup-mixed`) | Failed: ended incomplete | Passed twice: Vietnamese, read only the helpdesk case |
+| Changed case (`followup-changed-revision`) | Passed: the old agent re-read everything | Passed: one tool call, a re-read of the changed case |
+| Vietnamese question (`followup-vietnamese`), 5 and 8 runs | 0 of 5: English headings and an English answer | 8 of 8: Vietnamese answer and headings, both section tags present, markers kept |
+
+Two defects showed up in this evaluation and are fixed: one run answered a "put that in Vietnamese" request in Mongolian, so the instruction now says to use exactly the language a message names; and one Vietnamese answer wrapped its markers in 【】, which validation read as plain text and saved with no citations, so validation now restores that bracket form and rejects any other marker-shaped text. A run in the app then showed that the database refused to save an answer citing an earlier run's marker. It now accepts a marker that an earlier completed answer of the same conversation saved.
+
+The scenarios measure behavior that code can observe. They do not show that the translated or shortened text is faithful to the evidence; read the artifacts for that. Each scenario ran once, except where stated, so a rate from this table is not a stable estimate.
 
 ### Reviewed system prompt
 

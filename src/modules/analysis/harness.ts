@@ -13,6 +13,8 @@ type TextDependencies = {
   generate: (request: TextRunInput, budget: RunBudget, onDraft?: OnDraft) => Promise<{ text: string; usage: ModelUsage }>;
   repair: (request: TextRunInput, draft: string, code: string, budget: RunBudget, onDraft?: OnDraft) => Promise<{ text: string; usage: ModelUsage }>;
   disclosed: () => DisclosedSource[];
+  // Sources earlier answers in the conversation cited and that may still be cited.
+  held?: () => DisclosedSource[];
   coverage?: () => AnswerCoverage;
   canRead: (item: EvidenceItem) => Promise<boolean>;
   emit: (event: AnalysisEvent) => Promise<void>;
@@ -22,28 +24,36 @@ type TextDependencies = {
   trace?: EvaluationTrace;
 };
 
+const marked = /\[S(?::|\d)/;
 export async function runTextAnalysis(request: TextRunInput, deps: TextDependencies) {
   const budget = createRunBudget(deps.signal, deps.deadlineAt);
   const event = (stage: AnalysisEvent["stage"], state: AnalysisEvent["state"]) => budget.run(() => deps.emit({ stage, state, at: new Date().toISOString() }));
   let usage: ModelUsage | null = null;
+  const held = () => deps.held?.() ?? [];
+  const validate = (text: string) => budget.run(() => validateTextAnswer({ text, disclosed: deps.disclosed(), held: held(), canRead: deps.canRead }));
   try {
     await event("intake", "completed");
     await event("reasoning", "started");
     // Some models wrap citations in private-use characters that no font draws; they carry no meaning, so they never reach a saved answer.
-    const clean = (value: { text: string; usage: ModelUsage }) => ({ ...value, text: value.text.replace(/[\uE000-\uF8FF]/g, "") });
+    // Some also swap the brackets for look-alikes such as 【】; the marker inside is the same marker.
+    const clean = (value: { text: string; usage: ModelUsage }) => ({ ...value, text: value.text.replace(/[\uE000-\uF8FF]/g, "").replace(/[【［]\s*(S:[^\]】］\n]*?)\s*[】］]/g, "[$1]") });
     let output = clean(await budget.run(() => deps.generate(request, budget, deps.draft)));
     usage = output.usage;
     await event("reasoning", "completed");
     await event("validation", "started");
-    let checked = await budget.run(() => validateTextAnswer({ text: output.text, disclosed: deps.disclosed(), canRead: deps.canRead }));
-    deps.trace?.({ kind: "validation", result: checked.kind, code: checked.kind === "invalid" ? checked.code : null });
-    if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA" || checked.code === "MISPLACED_CITATION")) {
+    let checked = await validate(output.text);
+    deps.trace?.({ kind: "validation", result: checked.kind, code: checked.kind === "invalid" ? checked.code : null, sectionTags: output.text.match(/\{#(?:process|cases)\}/g)?.length ?? 0 });
+    // With no source to correct against, a repair can only invent or refuse, so the run fails with the validation code.
+    if (checked.kind === "invalid" && (checked.code === "INVALID_CITATION" || checked.code === "INVALID_SCHEMA" || checked.code === "MISPLACED_CITATION") && deps.disclosed().length + held().length > 0) {
       const validationCode = checked.code;
+      const cited = marked.test(output.text);
       deps.trace?.({ kind: "correction", state: "started" });
       output = await budget.run(() => { deps.draft?.({ kind: "reset" }); return deps.repair(request, output.text, validationCode, budget, deps.draft).then(clean); });
       deps.trace?.({ kind: "correction", state: "completed" });
       usage = { inputTokens: usage.inputTokens === null || output.usage.inputTokens === null ? null : usage.inputTokens + output.usage.inputTokens, outputTokens: usage.outputTokens === null || output.usage.outputTokens === null ? null : usage.outputTokens + output.usage.outputTokens, totalTokens: usage.totalTokens === null || output.usage.totalTokens === null ? null : usage.totalTokens + output.usage.totalTokens };
-      checked = await budget.run(() => validateTextAnswer({ text: output.text, disclosed: deps.disclosed(), canRead: deps.canRead }));
+      // A correction that drops every marker the draft carried is not a correction; it must not be saved as a complete answer.
+      if (cited && !marked.test(output.text)) throw new Error("INVALID_CITATION");
+      checked = await validate(output.text);
       deps.trace?.({ kind: "validation", result: checked.kind, code: checked.kind === "invalid" ? checked.code : null });
     }
     if (checked.kind === "invalid") throw new Error(checked.code);

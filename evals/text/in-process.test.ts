@@ -7,6 +7,8 @@ import * as harness from "@/modules/analysis/harness";
 import * as schema from "@/modules/analysis/schema";
 import * as knowledgeService from "@/modules/knowledge/service";
 import * as limits from "@/lib/contracts/limits";
+import * as analysisHeld from "@/modules/analysis/held";
+import * as conversationService from "@/modules/conversations/service";
 import { runLocalTrace, runObservedScenario } from "./in-process.mjs";
 
 it("refuses to send evaluation credentials to a non-local database", async () => {
@@ -31,7 +33,7 @@ it("records actual tool calls and submitted source identity without recording so
     return { content: [{ type: "text", text: `The pilot was proposed ${marker}.` }], finishReason: { unified: "stop", raw: undefined }, usage, warnings: [] };
   } });
   const store = { search: async () => ({ cases: { kind: "success" as const, items: [source] }, documents: { kind: "empty" as const, items: [] as [] } }), readDocument: async () => ({ kind: "empty" as const, items: [] as [] }), read: async () => ({ kind: "success" as const, items: [source] }), expand: async () => ({ kind: "empty" as const, items: [] as [] }) };
-  const report = await runObservedScenario({ scenario: { id: "synthetic", messages: ["What happened?"], expectedSources: [], reviewFor: ["support"] }, models: { reasoning: model, embed: async () => ({ kind: "error", code: "unused", retryable: false }), embeddingModel: "test" }, client: {}, context: {}, modules: { agent, harness, schema, knowledgeService, limits, knowledgeRepository: { knowledgeRepository: () => store }, analysisRepository: { analysisRepository: () => ({ canRead: async () => true }) } } });
+  const report = await runObservedScenario({ scenario: { id: "synthetic", messages: ["What happened?"], expectedSources: [], reviewFor: ["support"] }, models: { reasoning: model, embed: async () => ({ kind: "error", code: "unused", retryable: false }), embeddingModel: "test" }, client: {}, context: {}, modules: { agent, harness, schema, knowledgeService, limits, knowledgeRepository: { knowledgeRepository: () => store }, analysisHeld, conversationService, analysisRepository: { analysisRepository: () => ({ canRead: async () => true }) } } });
   const parsed = z.object({ turns: z.array(z.object({ termination: z.object({ status: z.string() }), trace: z.array(z.object({ kind: z.string() }).passthrough()), citedSources: z.array(z.unknown()) })) }).parse(report);
   const turn = parsed.turns[0];
   if (!turn) throw new Error("No recorded turn");

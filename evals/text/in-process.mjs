@@ -26,6 +26,8 @@ export async function runObservedScenario({ scenario, models, client, context, m
   const { executionLimits } = modules.limits;
   const report = { version: 2, mode: "in-process-nonpersistent", scenario: scenario.id, fixtureReview: "pending", expectations: { expectedSources: scenario.expectedSources, expectedDocuments: scenario.expectedDocuments ?? [], reviewFor: scenario.reviewFor }, turns: [], note: "Source IDs are recorded when submitted to a model step. The observer does not prove provider receipt if that step fails. No analysis or brief is persisted." };
   const history = [];
+  // The conversation's ledger: sources earlier answers cited, newest first, as production builds it from saved briefs.
+  let cited = [];
   const fixture = scenario.fixtureCase ? await fixtureCase(scenario.fixtureCase, { models, client, context, modules }) : null;
   try {
   for (const [index, question] of scenario.messages.entries()) {
@@ -40,14 +42,20 @@ export async function runObservedScenario({ scenario, models, client, context, m
       const abort = AbortSignal.timeout(executionLimits.deadlineMs);
       const repository = modules.knowledgeRepository.knowledgeRepository(client, context, models.embed, models.embeddingModel, abort);
       const knowledge = modules.knowledgeService.createRunKnowledge(repository, runId);
+      const held = await modules.knowledgeService.holdSources(repository, cited.slice(0, executionLimits.ledgerSources));
       const trace = (event) => { turn.trace.push(event); if (event.kind === "tool_call") turn.toolCalls.push({ name: event.name, input: event.input }); onUpdate(report); };
-      const agent = modules.agent.textReasoningAdapter(models.reasoning, knowledge, async () => {}, trace);
+      const agent = modules.agent.textReasoningAdapter(models.reasoning, knowledge, async () => {}, trace, held);
       const store = modules.analysisRepository.analysisRepository(client, context);
-      const request = modules.schema.textRunInputSchema.parse({ version: 2, message: question, history });
+      const request = modules.schema.textRunInputSchema.parse({ version: 2, message: question, history: modules.conversationService.boundHistory(history) });
       const result = await modules.harness.runTextAnalysis(request, {
-        ...agent, trace, disclosed: knowledge.disclosed, canRead: store.canRead, emit: async () => {}, deadlineAt: deadline,
+        ...agent, trace, disclosed: knowledge.disclosed, held: () => modules.analysisHeld.citableHeld(held), canRead: store.canRead, emit: async () => {}, deadlineAt: deadline,
         finish: async (status, answer, snapshots, code, usage) => {
           turn.answer = answer?.text ?? null;
+          if (status === "complete" && answer) {
+            const byId = new Map(snapshots.map((item) => [item.evidenceId, item]));
+            const fresh = answer.citations.flatMap(({ marker, evidenceId }) => { const evidence = byId.get(evidenceId); return evidence ? [{ marker, evidence }] : []; });
+            cited = [...fresh, ...cited.filter((old) => !fresh.some((item) => item.marker === old.marker))];
+          }
           const sources = new Map(snapshots.map((item) => [item.evidenceId, item]));
           turn.citedSources = answer?.citations.map((citation) => {
             const source = sources.get(citation.evidenceId);
@@ -91,7 +99,7 @@ export async function runLocalTrace(scenario) {
   if (workspace.error) throw new Error("Workspace unavailable.");
   const vite = await createServer({ configFile: resolve("vitest.config.ts"), server: { middlewareMode: true }, appType: "custom", logLevel: "silent" });
   try {
-    const paths = { models: "/src/lib/ai/models.ts", limits: "/src/lib/contracts/limits.ts", auth: "/src/lib/auth/schema.ts", schema: "/src/modules/analysis/schema.ts", caseSchema: "/src/modules/cases/schema.ts", caseService: "/src/modules/cases/service.ts", caseRepository: "/src/modules/cases/repository.ts", agent: "/src/modules/analysis/agent.ts", harness: "/src/modules/analysis/harness.ts", analysisRepository: "/src/modules/analysis/repository.ts", knowledgeRepository: "/src/modules/knowledge/repository.ts", knowledgeService: "/src/modules/knowledge/service.ts" };
+    const paths = { models: "/src/lib/ai/models.ts", limits: "/src/lib/contracts/limits.ts", auth: "/src/lib/auth/schema.ts", schema: "/src/modules/analysis/schema.ts", analysisHeld: "/src/modules/analysis/held.ts", conversationService: "/src/modules/conversations/service.ts", caseSchema: "/src/modules/cases/schema.ts", caseService: "/src/modules/cases/service.ts", caseRepository: "/src/modules/cases/repository.ts", agent: "/src/modules/analysis/agent.ts", harness: "/src/modules/analysis/harness.ts", analysisRepository: "/src/modules/analysis/repository.ts", knowledgeRepository: "/src/modules/knowledge/repository.ts", knowledgeService: "/src/modules/knowledge/service.ts" };
     const entries = await Promise.all(Object.entries(paths).map(async ([key, path]) => [key, await vite.ssrLoadModule(path)]));
     const modules = Object.fromEntries(entries);
     const context = modules.auth.workspaceContextSchema.parse({ userId: identity.data.user.id, workspaceId: workspace.data.id, workspaceName: workspace.data.name, knowledgeVersion: workspace.data.knowledge_version });

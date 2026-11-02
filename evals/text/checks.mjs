@@ -31,7 +31,12 @@ export function heldIds(turns) {
   return new Set(turns.flatMap((turn) => (turn.citedSources ?? []).flatMap((cited) => [cited.source?.caseId, cited.source?.documentId].filter(Boolean))));
 }
 
-// turns: observed turns so far in order. inputs=false marks a stream without tool inputs (--live), where input checks cannot be observed.
+/**
+ * inputs=false marks a stream without tool inputs (--live), where input checks cannot be observed.
+ * @param {any} turn
+ * @param {any} check
+ * @param {{ priorTurns?: any[], fixtureCaseId?: string | null, inputs?: boolean }} [options]
+ */
 export function evaluateTurn(turn, check, { priorTurns = [], fixtureCaseId = null, inputs = true } = {}) {
   const failures = [];
   const text = turn.answer ?? "";
@@ -63,6 +68,7 @@ export function evaluateTurn(turn, check, { priorTurns = [], fixtureCaseId = nul
   return { turn: check.turn, passed: failures.length === 0, failures };
 }
 
+/** @param {any} scenario @param {any[]} turns @param {{ fixtureCaseId?: string | null, inputs?: boolean }} [options] */
 export function evaluateScenario(scenario, turns, options = {}) {
   return (scenario.checks ?? []).map((check) => {
     const turn = turns[check.turn - 1];

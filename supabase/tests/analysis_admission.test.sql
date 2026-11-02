@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(20);
 insert into auth.users(id,email) values ('10000000-0000-4000-8000-000000000005','run@test.invalid');
 insert into public.workspaces(id,name) values ('20000000-0000-4000-8000-000000000005','Run test');
 insert into public.workspace_members values ('20000000-0000-4000-8000-000000000005','10000000-0000-4000-8000-000000000005','owner',now());
@@ -28,5 +28,8 @@ update public.analysis_runs set deadline_at=now()-interval '1 second' where stat
 set local role authenticated;
 select public.reconcile_analysis(id) from public.analysis_runs where status='running';
 select is((select count(*) from public.analysis_runs where status='running'),0::bigint,'expired runs become timed out on read');
+select throws_ok($$select public.admit_analysis('20000000-0000-4000-8000-000000000005',jsonb_build_object('version',2,'message','Question','history',jsonb_build_array(jsonb_build_object('role','assistant','text',repeat('a',20001)))),gen_random_uuid(),2,90000)$$,'23514','Invalid analysis input','an answer in history is capped at the answer limit');
+select is(public.admit_analysis('20000000-0000-4000-8000-000000000005',jsonb_build_object('version',2,'message','Shorter please','history',jsonb_build_array(jsonb_build_object('role','user','text','Question'),jsonb_build_object('role','assistant','text',repeat('a',9000)))),'50000000-0000-4000-8000-000000000009',2,90000)->>'kind','admitted','an answer above 4000 characters does not block the next question');
+select is((select count(*) from public.analysis_runs r cross join lateral jsonb_array_elements(r.request->'history') item where r.request_key='50000000-0000-4000-8000-000000000009' and item->>'role'='assistant' and length(item->>'text')=9000),1::bigint,'the long answer is stored whole');
 select * from finish();
 rollback;

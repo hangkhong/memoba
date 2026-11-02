@@ -82,6 +82,10 @@ export type CasePreview = {
   sections: { sectionKey: CaseEvidence["sectionKey"]; excerpt: string; truncated: boolean }[];
 };
 export type DisclosedSource = { marker: string; evidence: EvidenceItem };
+// Evidence the conversation already holds: a source an earlier answer cited, under the marker that answer used.
+// `current` is the published version; `changed` has a newer version or could not be checked; `archived` is a historical citation, not new evidence.
+export type SourceStanding = "current" | "changed" | "archived";
+export type HeldSource = DisclosedSource & { standing: SourceStanding };
 export type ReadSection = { marker: string; caseId: CaseEvidence["caseId"]; revisionId: CaseEvidence["revisionId"]; title: string; outcome: CaseEvidence["outcome"]; sectionKey: CaseEvidence["sectionKey"]; text: string };
 export type CaseHeader = {
   caseId: CaseEvidence["caseId"];
