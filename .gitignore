@@ -17,3 +17,4 @@ supabase/.cache/
 supabase/.local/
 supabase/.supabase.lock.lease
 .vercel
+next-env.d.ts
