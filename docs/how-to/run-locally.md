@@ -63,7 +63,7 @@ The CI workflow runs the same foundation checks against a fresh native database.
 
 To keep Google available, use `google:<model-id>` and `GOOGLE_GENERATIVE_AI_API_KEY`. The supported Google embedding profile remains `google:gemini-embedding-2` at 1536 dimensions. Changing the embedding provider requires the migration above. Do not change only the env model and search old vectors with the new model.
 
-The probe embeds two synthetic Vietnamese and English inputs and writes an ignored report under `.superpowers/probes`. Missing configuration exits with code 2. Missing token usage is stored as unknown.
+The probe embeds two synthetic Vietnamese and English inputs and writes an ignored report under `.artifacts/probes`. Missing configuration exits with code 2. Missing token usage is stored as unknown.
 
 The live checks need working provider quota and model access for the configured account. A runtime smoke check does not establish semantic quality. The [evaluation record](../reference/evaluation.md) lists what remains open.
 

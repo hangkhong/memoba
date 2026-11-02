@@ -60,7 +60,7 @@ it.skipIf(process.env.MEMOBA_EVAL_RUNNER_SMOKE !== "1")("records only observed a
     const address = server.address();
     if (!address || typeof address === "string") throw new Error("No test address");
     await promisify(execFile)(process.execPath, [resolve("evals/text/runner.mjs"), "--live", "--scenario", "direct-precedent"], { cwd: dir, env: { ...process.env, MEMOBA_EVAL_URL: `http://127.0.0.1:${address.port}`, DEMO_EMAIL: "test@example.invalid", DEMO_PASSWORD: "test-password-123" }, timeout: 7000 });
-    const directory = join(dir, ".superpowers/evals/text");
+    const directory = join(dir, ".artifacts/evals/text");
     const [file] = await readdir(directory);
     if (!file) throw new Error("No evaluation artifact");
     const report = JSON.parse(await readFile(join(directory, file), "utf8"));

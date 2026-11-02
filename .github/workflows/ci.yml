@@ -2,7 +2,7 @@ name: Memoba CI
 on:
   pull_request:
   push:
-    branches: [main, codex/local-v0]
+    branches: [main]
 permissions:
   contents: read
 jobs:

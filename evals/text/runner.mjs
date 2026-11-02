@@ -53,7 +53,7 @@ async function main() {
   if (base.protocol !== "http:" || !["localhost", "127.0.0.1"].includes(base.hostname) || base.pathname !== "/" || base.search || base.hash || base.username || base.password) throw new Error("Evaluation is restricted to a local HTTP server.");
   const env = z.object({ DEMO_EMAIL: z.string().min(1), DEMO_PASSWORD: z.string().min(12) }).parse(process.env);
   const api = await playwrightRequest.newContext({ baseURL: base.origin, extraHTTPHeaders: { origin: base.origin } });
-  const directory = resolve(".superpowers/evals/text");
+  const directory = resolve(".artifacts/evals/text");
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const file = resolve(directory, `${new Date().toISOString().replaceAll(":", "-")}-${randomUUID()}.json`);
   const report = { version: 1, scenario: scenario.id, fixtureReview: "pending", expectations: { expectedSources: scenario.expectedSources, expectedDocuments: scenario.expectedDocuments, reviewFor: scenario.reviewFor }, conversationId: null, turns: [], note: "Tool inputs, all delivered source IDs, and correction attempts are not exposed by the current API. Citation validity does not establish semantic support." };

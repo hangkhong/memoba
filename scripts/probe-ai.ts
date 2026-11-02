@@ -27,8 +27,8 @@ async function probe() {
   const result = await models.embed({ texts: ["A controlled release with a rollback plan.", "Triển khai có kiểm soát với phương án quay lui."], signal: AbortSignal.timeout(30000) });
   if (result.kind === "error") { process.stdout.write(JSON.stringify({ kind: result.kind, code: result.code }) + "\n"); process.exitCode = 1; return; }
   const report = { model: models.embeddingModel, dimensions: models.dimensions, vectors: result.vectors.length, tokens: result.tokens, verifiedAt: new Date().toISOString() };
-  mkdirSync(".superpowers/probes", { recursive: true });
-  writeFileSync(".superpowers/probes/embedding.json", JSON.stringify(report, null, 2) + "\n");
+  mkdirSync(".artifacts/probes", { recursive: true });
+  writeFileSync(".artifacts/probes/embedding.json", JSON.stringify(report, null, 2) + "\n");
   process.stdout.write(JSON.stringify(report, null, 2) + "\nEmbedding capability verified. Use one real analysis to verify reasoning and the app flow.\n");
 }
 probe().catch(() => { process.stderr.write("AI_CAPABILITY_PROBE_FAILED\n"); process.exitCode = 1; });

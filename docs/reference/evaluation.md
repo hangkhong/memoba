@@ -10,9 +10,8 @@ Model quality is tested apart from the deterministic checks. `npm test`, `npm ru
 |---|---|
 | [`evals/demo/corpus.ts`](../../evals/demo/corpus.ts) | The 20 demo cases of Northwind Ledger, a fictional company |
 | [`evals/demo/documents.ts`](../../evals/demo/documents.ts) | The five demo process documents with version histories |
-| [`evals/demo/prompts.ts`](../../evals/demo/prompts.ts) | The three suggested prompts and the three seeded conversations |
+| [`evals/demo/prompts.ts`](../../evals/demo/prompts.ts) | The five suggested prompts and the three seeded conversations |
 | [`evals/local-v0/corpus.ts`](../../evals/local-v0/corpus.ts) | Six local cases and the 24-case challenge corpus |
-| [`evals/challenge/requests.ts`](../../evals/challenge/requests.ts) | 12 requests with expected sources and gaps |
 | [`evals/text/scenarios.json`](../../evals/text/scenarios.json) | Named scenarios over the challenge and demo corpora |
 
 The expected sources are authored fixtures. They have not been calibrated as ground truth.
@@ -25,7 +24,7 @@ The runner executes one named scenario per invocation against a local running ap
 node --env-file-if-exists=.env.local evals/text/runner.mjs --live --scenario direct-precedent
 ```
 
-Use `--trace-live` instead of `--live` for an in-process trace that records tool inputs, sources, and validation events. A trace saves no run. Artifacts go to the ignored `.superpowers/evals/text/` directory. Set `MEMOBA_EVAL_URL` only to a local HTTP origin.
+Use `--trace-live` instead of `--live` for an in-process trace that records tool inputs, sources, and validation events. A trace saves no run. Artifacts go to the ignored `.artifacts/evals/text/` directory. Set `MEMOBA_EVAL_URL` only to a local HTTP origin.
 
 The runner does not score semantic support or advice quality. Read each answer against its review points and its sources. Record incomplete runs instead of excluding them.
 

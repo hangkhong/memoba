@@ -11,6 +11,14 @@ export const demoPrompts: readonly { label: string; message: string }[] = [
     label: "Singapore data center",
     message: "We are considering a Singapore data center to meet local data residency rules for two prospects. Have we done anything like this before?",
   },
+  {
+    label: "Customer data deletion",
+    message: "A customer has asked us to delete all of their personal data. What do we have to do, and by when?",
+  },
+  {
+    label: "Duplicate-charge refund",
+    message: "Who has to approve a duplicate-charge refund above 500 dollars, and how fast must Finance decide?",
+  },
 ];
 
 // Conversations created by scripts/seed-conversations.ts. They differ from the suggested prompts so the sidebar looks like earlier use.

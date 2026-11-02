@@ -9,7 +9,7 @@ Read `docs/product` for why the product is built this way and what is out of sco
 Read `docs/engine` for how the engine works, and `docs/architecture/overview.md` for modules and decisions.
 Read `docs/reference/system-contracts.md` for states, tools, and data rules.
 
-Build for one PM, one demo workspace, and a seven-day challenge. Keep the two fixed case templates. Accept natural-language requests.
+Build for one PM and one demo workspace. Keep the two fixed case templates. Accept natural-language requests.
 
 ## Use the existing frameworks
 
@@ -25,7 +25,7 @@ The Supabase native stack is an explicit experimental exception. Pin CLI `2.122.
 
 ## Keep the module boundaries
 
-Put product modules in `src/modules/cases`, `src/modules/documents`, `src/modules/knowledge`, `src/modules/analysis`, `src/modules/briefs`, and `src/modules/dashboard`. Put UI pieces that cases and documents share in `src/components`.
+Put product modules in `src/modules/cases`, `src/modules/documents`, `src/modules/knowledge`, `src/modules/analysis`, `src/modules/briefs`, `src/modules/dashboard`, `src/modules/conversations`, and `src/modules/docs`. Put UI pieces that cases and documents share in `src/components`.
 Keep route handlers and UI components thin. Put business rules in typed functions and services.
 Make agent tools call the knowledge service.
 Keep SDK and database types behind adapters. Use domain contracts between modules.
@@ -52,18 +52,6 @@ Distinguish a successful empty search from a failed search. Do not replace missi
 Use actual tool events for progress. Do not invent a reasoning narrative.
 Log request IDs, counts, timings, error codes, and usage. Keep case text and secrets out of logs.
 
-## Apply pstack skills to the task
-
-Use these installed skills when they match the work:
-
-- `pstack:technical-writing` and `pstack:unslop` for repository documents and commit messages.
-- `pstack:principle-boundary-discipline` for configuration, route, database, and tool adapters.
-- `pstack:principle-type-system-discipline` and `pstack:typescript-best-practices` for domain contracts and TypeScript.
-- `pstack:principle-sequence-verifiable-units` for the implementation order.
-- `pstack:principle-prove-it-works` before reporting completion.
-
-Read the relevant skill before applying it. Preserve the user's approved scope and execution method. Do not launch subagents unless the user or an applicable skill explicitly authorizes them.
-
 ## Verify the actual deliverable
 
 Use the scripts defined in `package.json`.
@@ -77,4 +65,4 @@ Keep the why in `docs/product`, the how in `docs/engine`, setup steps in `docs/h
 `docs/product` and `docs/engine` are reader pages shown in the app. They do not link to repository files or name code symbols, and the docs tests fail if they do. Put a file pointer for an engine rule in `docs/architecture/overview.md`.
 Update a document when its command or contract changes. In `docs/architecture`, `docs/reference`, and `docs/how-to`, use real paths, symbols, and scripts.
 Do not add a second source for a limit or schema. Link to the owning document or code definition.
-Keep secrets in ignored local environment files. Do not commit credentials, `.superpowers`, build output, or dependency directories.
+Keep secrets in ignored local environment files. Do not commit credentials, build output, or dependency directories.

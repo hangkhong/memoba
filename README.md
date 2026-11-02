@@ -6,11 +6,13 @@ Memoba makes asking cheaper than redoing. You ask in plain words, and an agent s
 
 ## Try it
 
-Open [memoba.vercel.app](https://memoba.vercel.app) and sign in with the provided account. The workspace holds 20 cases and five process documents from Northwind Ledger, a fictional invoicing company. Three suggested prompts show the main behaviors:
+Open [memoba.vercel.app](https://memoba.vercel.app) and sign in with the provided account. The workspace holds 20 cases and five process documents from Northwind Ledger, a fictional invoicing company. Five suggested prompts show the main behaviors:
 
 1. **Launch to all customers.** Strong precedents that went in opposite directions.
 2. **Price increase with notice.** A failed case under a changed condition.
 3. **Singapore data center.** Nothing recorded, and the answer says so.
+4. **Customer data deletion.** No case matches, so the answer rests on the deletion procedure alone.
+5. **Duplicate-charge refund.** A question about who approves and how fast, answered from the refunds guideline.
 
 Open any citation to read the section behind it. A citation shows what the agent read. It does not prove that the advice fits your situation, so judge for yourself.
 
