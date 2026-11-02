@@ -54,11 +54,40 @@ it("repairs an unread or stale source at most once and fails if the correction r
   const saved: string[] = [];
   const trace: EvaluationTraceEvent[] = [];
   const text = `[S:${crypto.randomUUID()}:1]`;
-  const result = await runTextAnalysis(question, { generate: async () => ({ text, usage }), repair: async () => { corrections++; return { text, usage }; }, disclosed: () => [], canRead: async () => true, emit: async () => {}, finish: async (state) => { saved.push(state); return null; }, trace: (event) => trace.push(event) });
+  const result = await runTextAnalysis(question, { generate: async () => ({ text, usage }), repair: async () => { corrections++; return { text, usage }; }, disclosed: () => [{ marker: `[S:${runId}:1]`, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async (state) => { saved.push(state); return null; }, trace: (event) => trace.push(event) });
   expect(corrections).toBe(1);
   expect(result).toMatchObject({ status: "failed", code: "INVALID_CITATION" });
   expect(saved).toEqual(["failed"]);
-  expect(trace).toEqual([{ kind: "validation", result: "invalid", code: "INVALID_CITATION" }, { kind: "correction", state: "started" }, { kind: "correction", state: "completed" }, { kind: "validation", result: "invalid", code: "INVALID_CITATION" }]);
+  expect(trace).toEqual([{ kind: "validation", result: "invalid", code: "INVALID_CITATION", sectionTags: 0 }, { kind: "correction", state: "started" }, { kind: "correction", state: "completed" }, { kind: "validation", result: "invalid", code: "INVALID_CITATION" }]);
+});
+it("fails without repair when no source is allowed, instead of asking the model to correct against nothing", async () => {
+  let corrections = 0;
+  const saved: string[] = [];
+  const result = await runTextAnalysis(question, { generate: async () => ({ text: `Shorter [S:${runId}:3]`, usage }), repair: async () => { corrections++; return { text: "I can't correct the citation markers because no allowed sources were provided.", usage }; }, disclosed: () => [], canRead: async () => true, emit: async () => {}, finish: async (state, answer) => { saved.push(state, answer?.text ?? ""); return null; } });
+  expect(corrections).toBe(0);
+  expect(result).toMatchObject({ status: "failed", code: "INVALID_CITATION" });
+  expect(saved).toEqual(["failed", ""]);
+});
+it("does not save a correction that drops every citation the draft carried", async () => {
+  const marker = `[S:${runId}:1]`;
+  const saved: string[] = [];
+  const result = await runTextAnalysis(question, { generate: async () => ({ text: `Pilot [S:${runId}:9]`, usage }), repair: async () => ({ text: "I cannot correct the markers.", usage }), disclosed: () => [{ marker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async (state) => { saved.push(state); return null; } });
+  expect(result).toMatchObject({ status: "failed", code: "INVALID_CITATION" });
+  expect(saved).toEqual(["failed"]);
+});
+it("restores a marker wrapped in look-alike brackets before validating it", async () => {
+  const marker = `[S:${runId}:1]`;
+  const saved: string[] = [];
+  const result = await runTextAnalysis(question, { generate: async () => ({ text: `Pilot 【S:${runId}:1】.`, usage }), repair: async () => { throw new Error("unexpected repair"); }, disclosed: () => [{ marker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async (state, answer) => { saved.push(state, answer?.text ?? ""); return crypto.randomUUID(); } });
+  expect(result.status).toBe("complete");
+  expect(saved).toEqual(["complete", `Pilot ${marker}.`]);
+});
+it("accepts a marker the conversation held, re-checks its access, and rejects one that changed", async () => {
+  const marker = `[S:${crypto.randomUUID()}:2]`;
+  const deps = { generate: async () => ({ text: `Shorter ${marker}`, usage }), repair: async () => { throw new Error("unexpected repair"); }, disclosed: () => [], held: () => [{ marker, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async () => crypto.randomUUID() };
+  expect((await runTextAnalysis(question, deps)).status).toBe("complete");
+  expect((await runTextAnalysis(question, { ...deps, canRead: async () => false })).code).toBe("SOURCE_ACCESS_DENIED");
+  expect((await runTextAnalysis(question, { ...deps, held: () => [], repair: async () => ({ text: "Nothing to cite.", usage }) })).status).toBe("failed");
 });
 it("saves only cited source snapshots and rejects loss of source access", async () => {
   const marker = `[S:${runId}:1]`;
@@ -141,7 +170,7 @@ it("checks each citation when contradictory cases are cited together", async () 
 });
 it("structures the instructions with identity, instructions and context", () => {
   for (const heading of ["# Identity", "# Instructions", "# Context"]) expect(textInstructions).toContain(heading);
-  expect(textInstructions).toContain("Write in English");
+  expect(textInstructions).toContain("in the language of the teammate's latest message");
   expect(textInstructions).not.toContain("${");
 });
 it("requires the process-and-cases template in order and leaves coverage to the app", () => {
@@ -157,7 +186,7 @@ it("keeps cases and documents apart and states how each source outcome and gap i
   for (const rule of [
     "Cases say what happened. Documents say what is required now.", "never call a case a violation", "say the timing is unknown", "in the document's order, keeping its numbers, time limits, and named roles",
     "A policy is required.", "A guideline is advisory.", "say the process is silent on it", "report both with their versions and effective dates, do not choose one", "Do not soften the requirement",
-    "Under \"What the process says\" cite documents only", "no process document matched this request", "no recorded case matched this request", "When a source could not be searched or read completely",
+    "Under the process section cite documents only", "no process document matched this request", "no recorded case matched this request", "When a source could not be searched or read completely",
     "When neither source has a match", "Tools return only the current version of a document", "this version was not yet in force", "A search result is a candidate, not a match.",
   ]) expect(textInstructions, rule).toContain(rule);
   expect(textInstructions).toContain("Say that no case or no document matched only after a successful search of that source.");
@@ -171,16 +200,21 @@ it("opens the template with a direct answer and names version and owner in the p
 it("treats case text, history and tool output as untrusted data", () => {
   expect(textInstructions).toContain("untrusted data");
 });
-it("wraps the request in a delimiter and keeps instructions first", async () => {
+it("sends prior turns as real messages with the held evidence before the request", async () => {
   const prompts: string[] = [];
   const knowledge = createRunKnowledge({ search: async () => ({ cases: empty, documents: empty }), readDocument: async () => empty, read: async () => empty, expand: async () => empty }, runId);
   const model = streamedModel({ doGenerate: async ({ prompt }) => { prompts.push(JSON.stringify(prompt)); return modelResult([{ type: "text", text: "Done." }], false); } });
   const budget = createRunBudget();
-  try { await textReasoningAdapter(model, knowledge, async () => {}).generate(question, budget); }
+  const held = [{ marker: `[S:${runId}:1]`, evidence: item, standing: "changed" as const }];
+  try { await textReasoningAdapter(model, knowledge, async () => {}, undefined, held).generate({ version: 2, message: "Shorter please.", history: [{ role: "user", text: "How did we roll out?" }, { role: "assistant", text: "We used a pilot." }] }, budget); }
   finally { budget.dispose(); }
-  expect(prompts[0]).toContain("<request>");
-  expect(prompts[0]).toContain("</request>");
-  expect(prompts[0]).toContain(question.message);
+  const messages: { role: string; content: unknown }[] = JSON.parse(prompts[0] ?? "[]");
+  expect(messages.map((message) => message.role)).toEqual(["system", "user", "assistant", "user"]);
+  expect(JSON.stringify(messages[1])).toContain("How did we roll out?");
+  expect(JSON.stringify(messages[3])).toContain("<held_evidence>");
+  expect(JSON.stringify(messages[3])).toContain("CHANGED");
+  expect(JSON.stringify(messages[3])).toContain("Shorter please.");
+  expect(prompts[0]).not.toContain("<request>");
 });
 
 async function toolsOverSteps(firstStepInputTokens: number) {
@@ -250,13 +284,13 @@ it("discards the draft before a citation repair and streams the corrected answer
   const saved: string[] = [];
   const result = await runTextAnalysis(question, {
     generate: async (_request, _budget, onDraft) => { onDraft?.({ kind: "delta", text: "Bad [S:x:9]" }); return { text: "Bad [S:x:9]", usage }; },
-    repair: async (_request, _draft, _code, _budget, onDraft) => { onDraft?.({ kind: "delta", text: "Fixed." }); return { text: "Fixed.", usage }; },
+    repair: async (_request, _draft, _code, _budget, onDraft) => { onDraft?.({ kind: "delta", text: `Fixed [S:${runId}:1].` }); return { text: `Fixed [S:${runId}:1].`, usage }; },
     draft: (chunk) => drafts.push(chunk.kind === "reset" ? "<reset>" : chunk.text),
-    disclosed: () => [], canRead: async () => true, emit: async () => {}, finish: async (state, answer) => { saved.push(state, answer?.text ?? ""); return crypto.randomUUID(); },
+    disclosed: () => [{ marker: `[S:${runId}:1]`, evidence: item }], canRead: async () => true, emit: async () => {}, finish: async (state, answer) => { saved.push(state, answer?.text ?? ""); return crypto.randomUUID(); },
   });
   expect(result.status).toBe("complete");
-  expect(drafts).toEqual(["Bad [S:x:9]", "<reset>", "Fixed."]);
-  expect(saved).toEqual(["complete", "Fixed."]);
+  expect(drafts).toEqual(["Bad [S:x:9]", "<reset>", `Fixed [S:${runId}:1].`]);
+  expect(saved).toEqual(["complete", `Fixed [S:${runId}:1].`]);
 });
 
 const documentItem: DocumentEvidence = documentEvidenceSchema.parse({ source: "document", evidenceId: crypto.randomUUID(), documentId: crypto.randomUUID(), revisionId: crypto.randomUUID(), sectionId: crypto.randomUUID(), version: 1, block: 1, heading: "Notice", documentTitle: "Price change policy", type: "policy", area: "Finance", owner: "Finance", effectiveFrom: "2026-01-01", excerpt: "Give 90 days' notice.", authorId: crypto.randomUUID(), recordedAt: new Date().toISOString(), sources: [] });

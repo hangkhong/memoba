@@ -33,6 +33,8 @@ The reader pages in `docs/engine` describe the rules in plain words and name no 
 | Every runtime and input limit | [`limits.ts`](../../src/lib/contracts/limits.ts) |
 | The three agent tools: `search_knowledge`, `read_case`, `read_document` | [`tools.ts`](../../src/modules/analysis/tools.ts), calling the knowledge service |
 | The citation marker, such as `[S:run:12]`, issued when a read delivers a section | [`service.ts`](../../src/modules/knowledge/service.ts) in `src/modules/knowledge` |
+| Prior turns as messages, and the bound on history | `boundHistory` in [`service.ts`](../../src/modules/conversations/service.ts) in `src/modules/conversations` |
+| The conversation's held evidence | `earlierSources` in [`ledger.ts`](../../src/modules/conversations/ledger.ts), `holdSources` in [`service.ts`](../../src/modules/knowledge/service.ts), and the prompt block in [`held.ts`](../../src/modules/analysis/held.ts) |
 | The check on a finished draft | `validateTextAnswer` in [`validation.ts`](../../src/modules/briefs/validation.ts) |
 | Case fields and template rules | `caseInputSchema` in [`schema.ts`](../../src/modules/cases/schema.ts), shared by the form and the route handlers |
 | Document splitting along headings | `splitDocument` in [`split.ts`](../../src/modules/documents/split.ts) |

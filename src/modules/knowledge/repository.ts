@@ -3,7 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/database.types";
 import type { WorkspaceContext } from "@/lib/auth/schema";
 import { executionLimits } from "@/lib/contracts/limits";
-import { caseEvidenceSchema, documentCardSchema, documentEvidenceSchema, type DocumentSearchResult, type ToolResult } from "./contracts";
+import { caseEvidenceSchema, documentCardSchema, documentEvidenceSchema, isCaseEvidence, isDocumentEvidence, type DocumentSearchResult, type SourceStanding, type ToolResult } from "./contracts";
 import type { KnowledgeStore } from "./service";
 
 type Embed = (args: { texts: string[]; signal: AbortSignal }) => Promise<{ kind: "success"; vectors: number[][]; tokens: number | null } | { kind: "error"; code: string; retryable: boolean }>;
@@ -57,6 +57,25 @@ export function knowledgeRepository(client: SupabaseClient<Database>, context: W
       const result = await client.from("case_revisions").select("template:content->>template").eq("workspace_id", context.workspaceId).eq("id", revisionId).abortSignal(signal).maybeSingle();
       const parsed = z.object({ template: z.enum(["product_delivery", "cs_operations"]) }).safeParse(result.data);
       return parsed.success ? parsed.data.template : undefined;
+    },
+    async standing(items) {
+      const standing = new Map<string, SourceStanding>();
+      const rows = z.array(z.object({ id: z.uuid(), lifecycle: z.enum(["active", "archived"]), published_revision_id: z.uuid().nullable() }));
+      const judge = (row: { lifecycle: string; published_revision_id: string | null }, revisionId: string): SourceStanding => row.lifecycle === "archived" ? "archived" : row.published_revision_id === revisionId ? "current" : "changed";
+      const cases = items.filter(isCaseEvidence); const documents = items.filter(isDocumentEvidence);
+      if (cases.length) {
+        const result = await client.from("cases").select("id,lifecycle,published_revision_id").eq("workspace_id", context.workspaceId).in("id", [...new Set(cases.map((item) => item.caseId))]).abortSignal(signal);
+        if (result.error) throw new Error("STANDING_UNAVAILABLE");
+        const byId = new Map(rows.parse(result.data).map((row) => [row.id, row]));
+        for (const item of cases) { const row = byId.get(item.caseId); if (row) standing.set(item.evidenceId, judge(row, item.revisionId)); }
+      }
+      if (documents.length) {
+        const result = await client.from("documents").select("id,lifecycle,published_revision_id").eq("workspace_id", context.workspaceId).in("id", [...new Set(documents.map((item) => item.documentId))]).abortSignal(signal);
+        if (result.error) throw new Error("STANDING_UNAVAILABLE");
+        const byId = new Map(rows.parse(result.data).map((row) => [row.id, row]));
+        for (const item of documents) { const row = byId.get(item.documentId); if (row) standing.set(item.evidenceId, judge(row, item.revisionId)); }
+      }
+      return standing;
     },
     async expand(input) { return parse(await client.rpc("expand_knowledge", { w: context.workspaceId, seeds: input.seedIds, relations: input.relationTypes, max_results: executionLimits.candidateSections }).abortSignal(signal)); },
   };

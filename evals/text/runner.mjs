@@ -4,8 +4,9 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { request as playwrightRequest } from "@playwright/test";
 import { z } from "zod";
+import { checkSchema, evaluateScenario } from "./checks.mjs";
 
-const scenarioSchema = z.object({ id: z.string().min(1), corpus: z.enum(["challenge", "demo"]).default("challenge"), messages: z.array(z.string().min(1)).min(1), expectedSources: z.array(z.string()), expectedDocuments: z.array(z.string()).default([]), reviewFor: z.array(z.string()).min(1) }).strict();
+const scenarioSchema = z.object({ id: z.string().min(1), corpus: z.enum(["challenge", "demo"]).default("challenge"), messages: z.array(z.string().min(1)).min(1), expectedSources: z.array(z.string()), expectedDocuments: z.array(z.string()).default([]), reviewFor: z.array(z.string()).min(1), checks: z.array(checkSchema).default([]), fixtureCase: z.object({ title: z.string(), problem: z.string(), context: z.string(), approach: z.string(), outcome: z.enum(["achieved", "not_achieved"]), observedOutcome: z.string(), reviseAfterTurn: z.number().int().positive(), revisedApproach: z.string() }).strict().optional() }).strict();
 const idSchema = z.uuid();
 const runSchema = z.object({ status: z.string(), error_code: z.string().nullable(), usage: z.unknown().nullable(), briefId: z.uuid().nullable() });
 const answerSchema = z.object({ generated: z.object({ version: z.literal(2), text: z.string(), citations: z.array(z.object({ marker: z.string(), evidenceId: z.uuid() })) }), evidence: z.array(z.object({ evidenceId: z.uuid(), revisionId: z.uuid() }).passthrough()) });
@@ -49,6 +50,7 @@ async function main() {
     await runLocalTrace(scenario);
     return;
   }
+  if (scenario.fixtureCase) throw new Error("This scenario edits a case between turns. Run it with --trace-live.");
   const base = new URL(process.env.MEMOBA_EVAL_URL ?? "http://localhost:3100");
   if (base.protocol !== "http:" || !["localhost", "127.0.0.1"].includes(base.hostname) || base.pathname !== "/" || base.search || base.hash || base.username || base.password) throw new Error("Evaluation is restricted to a local HTTP server.");
   const env = z.object({ DEMO_EMAIL: z.string().min(1), DEMO_PASSWORD: z.string().min(12) }).parse(process.env);
@@ -118,8 +120,9 @@ async function main() {
       if (turn.termination.status !== "complete") break;
       parentTurnId = savedTurnId(turn);
     }
-    process.stdout.write(`Evaluation artifact: ${file}\n`);
-    if (report.turns.length !== scenario.messages.length || report.turns.some((turn) => turn.termination.status !== "complete")) process.exitCode = 1;
+    report.checks = evaluateScenario(scenario, report.turns, { inputs: false });
+    process.stdout.write(`Evaluation artifact: ${file}\n${report.checks.map((check) => `turn ${check.turn}: ${check.passed ? "pass" : `FAIL ${check.failures.join("; ")}`}`).join("\n")}\n`);
+    if (report.turns.length !== scenario.messages.length || report.turns.some((turn) => turn.termination.status !== "complete") || report.checks.some((check) => !check.passed)) process.exitCode = 1;
   } finally { await save(); await api.dispose(); }
 }
 

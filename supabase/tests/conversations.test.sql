@@ -1,6 +1,6 @@
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(48);
+select plan(47);
 insert into auth.users(id,email) values ('10000000-0000-4000-8000-000000000080','chat-owner@test.invalid'),('10000000-0000-4000-8000-000000000081','chat-reader@test.invalid'),('10000000-0000-4000-8000-000000000082','chat-outsider@test.invalid');
 insert into public.workspaces(id,name) values ('20000000-0000-4000-8000-000000000080','Chat test'),('20000000-0000-4000-8000-000000000081','Other chat workspace');
 insert into public.workspace_members(workspace_id,user_id,role) values ('20000000-0000-4000-8000-000000000080','10000000-0000-4000-8000-000000000080','owner'),('20000000-0000-4000-8000-000000000080','10000000-0000-4000-8000-000000000081','member');
@@ -29,7 +29,6 @@ select is(public.admit_conversation_analysis(current_setting('test.turn')::uuid,
 select is((select request from public.analysis_runs where request_key='50000000-0000-4000-8000-000000000081'),(select request from public.analysis_runs where request_key='50000000-0000-4000-8000-000000000080'),'retry preserves the exact converted input');
 select public.finish_analysis((select id from public.analysis_runs where request_key='50000000-0000-4000-8000-000000000081'),'complete','{"version":2,"text":"A general answer.","citations":[]}','[]',null,null);
 select is((select generated->>'text' from public.briefs where run_id=(select id from public.analysis_runs where request_key='50000000-0000-4000-8000-000000000081')),'A general answer.','legacy retry can save a versioned text answer');
-select throws_ok($$select public.admit_analysis('20000000-0000-4000-8000-000000000080',jsonb_build_object('version',1,'template','product_delivery','objective','Release','context','Team','hardConstraints',(select jsonb_agg(jsonb_build_object('kind','requirement','text',repeat('x',4000))) from generate_series(1,7)),'conceptIds','[]'::jsonb,'unknowns',''),gen_random_uuid(),2,90000)$$,'22023','Conversation context exceeds the limit','oversized legacy snapshot is rejected instead of truncated');
 select throws_ok($$select public.admit_conversation_analysis(current_setting('test.turn')::uuid,gen_random_uuid(),2,90000)$$,'23505',null,'answered turn cannot be rerun');
 select set_config('test.next',public.save_conversation_turn('30000000-0000-4000-8000-000000000080','40000000-0000-4000-8000-000000000081','What if only one operator?',jsonb_set(current_setting('test.request')::jsonb,'{context}',to_jsonb(E'Small team\n\nFollow-up from user: What if only one operator?'::text)),current_setting('test.turn')::uuid)::text,true);
 select is((select position from public.conversation_turns where id=current_setting('test.next')::uuid),2,'follow-up keeps ordered history');

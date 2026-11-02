@@ -15,10 +15,12 @@ export const requestSchema = z.object({
   unknowns: z.string().trim().max(inputLimits.text),
 }).strict();
 export type NormalizedRequest = z.infer<typeof requestSchema>;
-export const conversationMessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  text: rawMessageSchema,
-}).strict();
+// An answer is longer than a question, so history keeps a message of each role under its own cap.
+export const conversationMessageSchema = z.discriminatedUnion("role", [
+  z.object({ role: z.literal("user"), text: rawMessageSchema }).strict(),
+  z.object({ role: z.literal("assistant"), text: z.string().regex(/\S/, "Enter non-empty text.").max(inputLimits.historyAnswer) }).strict(),
+]);
+export type ConversationMessage = z.infer<typeof conversationMessageSchema>;
 export const textRunInputSchema = z.object({
   version: z.literal(2),
   message: rawMessageSchema,

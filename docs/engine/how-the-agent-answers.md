@@ -34,7 +34,7 @@ Reading a document opens one document. A block arrives whole or is listed as omi
 
 **Write.** The model words the answer from what it read, with a citation marker beside each claim it supports.
 
-**Validate.** The application checks every citation in the draft. One correction attempt is allowed, within the same deadline. [How an answer stays checkable](how-an-answer-stays-checkable.md) covers this.
+**Validate.** The application checks every citation in the draft. One correction attempt is allowed, within the same deadline, and only when there is a source to correct against. [How an answer stays checkable](how-an-answer-stays-checkable.md) covers this.
 
 **Save.** The answer, the cited source snapshots, usage, and the coverage record are saved together. A refresh reads the saved result and never restarts the model. Sending a message starts a run, and opening a conversation never does.
 
@@ -49,7 +49,11 @@ The agent's instructions tell the model how a careful colleague would work:
 - Keep requirements and recorded outcomes apart, and report both when they differ.
 - Say when the process is silent, report conflicting documents without choosing, and give a document's exception route instead of softening the requirement.
 
-The static instructions come first and the request comes last, in its own block, so the provider can cache the static part.
+## Follow-ups use what the conversation already holds
+
+The sources an answer cited stay with the conversation. When you ask for a translation, a shorter version, or a plainer explanation, the agent already holds the evidence and answers without searching again. When the question needs something new, it searches for only that. If a case or document changed since the answer cited it, the application tells the agent, and the agent reads it again before relying on it. The agent answers in the language you write in.
+
+The static instructions come first and the conversation comes last, so the provider can cache the static part.
 
 These instructions shape behavior, and they can fail. An answer once filled "Where practice and process differ" with a weak difference, and another read a document that did not apply. Anything that must not depend on the model following instructions is a control in code.
 
