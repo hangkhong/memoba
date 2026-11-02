@@ -5,15 +5,15 @@ import { demoCases } from "../evals/demo/corpus.ts";
 import { resolveTarget } from "./target.ts";
 import type { Database } from "../src/lib/supabase/database.types.ts";
 
-// Same identity as scripts/seed-demo.ts. The reset refuses any other workspace.
-const demoWorkspace = { id: "20000000-0000-4000-8000-000000000010", name: "Memory Bank Demo" };
+// Same ID as scripts/seed-demo.ts. The reset refuses any other workspace. The ID is the identity, so a database that still holds an older workspace name is accepted and the seed renames it.
+const demoWorkspace = { id: "20000000-0000-4000-8000-000000000010" };
 const countsSchema = z.record(z.string(), z.number());
 
 async function reset() {
   const target = resolveTarget(process.argv, process.env);
   const client = createClient<Database>(target.url, target.secretKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const workspace = await client.from("workspaces").select("id,name").eq("id", demoWorkspace.id).maybeSingle();
-  if (workspace.error || workspace.data?.name !== demoWorkspace.name) throw new Error("Refusing to reset: the target has no demo workspace with the expected ID and name.");
+  const workspace = await client.from("workspaces").select("id").eq("id", demoWorkspace.id).maybeSingle();
+  if (workspace.error || !workspace.data) throw new Error("Refusing to reset: the target has no demo workspace with the expected ID.");
   const cases = await client.from("cases").select("id,latest_revision_id").eq("workspace_id", demoWorkspace.id);
   if (cases.error) throw new Error("Cannot list cases.");
   const latestIds = cases.data.flatMap((row) => row.latest_revision_id ? [row.latest_revision_id] : []);

@@ -47,7 +47,7 @@ async function seed() {
   const userId = await ensureUser(values.DEMO_EMAIL);
   if (local.kind === "local") await ensureUser("outsider@memoba.local");
   const workspaceId = "20000000-0000-4000-8000-000000000010";
-  const workspace = await client.from("workspaces").upsert({ id: workspaceId, name: "Memory Bank Demo" }, { onConflict: "id" });
+  const workspace = await client.from("workspaces").upsert({ id: workspaceId, name: "Northwind Ledger" }, { onConflict: "id" });
   if (workspace.error) throw new Error("Cannot seed workspace.");
   const membership = await client.from("workspace_members").upsert({ user_id: userId, workspace_id: workspaceId, role: "owner" }, { onConflict: "workspace_id,user_id" });
   if (membership.error) throw new Error("Cannot seed membership.");
@@ -132,7 +132,7 @@ async function seed() {
       documentIds.push(documentId);
     }
   }
-  mkdirSync(".superpowers/evals",{recursive:true});writeFileSync(".superpowers/evals/seed.json",JSON.stringify(manifest,null,2)+"\n");
+  mkdirSync(".artifacts/evals",{recursive:true});writeFileSync(".artifacts/evals/seed.json",JSON.stringify(manifest,null,2)+"\n");
   process.stdout.write(`Seeded ${manifest.length} cases${demo ? ` and ${documentIds.length} process documents` : ""} with index state ready on the configured embedding profile. Archived history was preserved and the demo user password now matches DEMO_PASSWORD.\n`);
 }
 seed().catch((error: unknown) => { process.stderr.write(error instanceof Error ? error.message + "\n" : "Seed failed.\n"); process.exitCode = 1; });

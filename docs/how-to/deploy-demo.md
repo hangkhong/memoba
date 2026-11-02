@@ -1,7 +1,5 @@
 # Deploy the hosted demo
 
-Steps 1 to 3 and the deploy were run on 2026-10-30 against Supabase project `memoba` and Vercel project `nguyen-khang/memoba`. Record the step 4 results in the [evaluation record](../reference/evaluation.md).
-
 You need a Supabase Cloud project, a Vercel Hobby project connected to this repository, and a dedicated OpenAI project with a hard spending limit. The spending limit and `concurrentRuns` in [`limits.ts`](../../src/lib/contracts/limits.ts) bound cost; the app has no rate limit.
 
 ## 1. Prepare variables
@@ -79,7 +77,7 @@ Then on the deployed URL check that:
 
 ## 5. Release a fixture change
 
-A merge to `main` applies migrations and deploys the app, but it does not seed. When a release adds or changes files under `evals/demo`, the hosted workspace keeps its old content until you seed it. The first release with process documents shows an empty Documents tab until then.
+A merge to `main` applies migrations and deploys the app, but it does not seed. When a release adds or changes files under `evals/demo`, the hosted workspace keeps its old content until you seed it.
 
 Confirm that the merge reached the database, then seed:
 
@@ -101,4 +99,4 @@ npm run demo:reset -- --remote --app-url https://<your-app>.vercel.app
 
 With `--app-url` (or `APP_URL`) the reset then signs in as the demo user and re-creates the three seeded conversations (separate from the suggested prompts), each with a real completed answer. This calls the model three times. Without it the conversations are left empty; run `npm run demo:conversations -- --app-url <url>` later.
 
-This removes visitor cases, every document, conversations, runs and briefs from the workspace `Memory Bank Demo` and refuses any other target. Seed cases stay, and the seed step publishes the demo documents again (about 30 embeddings). The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.
+This removes visitor cases, every document, conversations, runs and briefs from the demo workspace, identified by its fixed ID, and refuses any other target. The seed step names that workspace `Northwind Ledger`. Seed cases stay, and the seed step publishes the demo documents again (about 30 embeddings). The seed step restores any seed case a visitor edited by saving the fixture content as a new revision.

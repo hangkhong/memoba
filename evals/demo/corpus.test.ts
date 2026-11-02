@@ -26,8 +26,8 @@ describe("demo corpus", () => {
       for (const source of input.sources) expect(source.url).toMatch(/^https:\/\/[a-z.-]+\.example\//);
     }
   });
-  it("offers three English prompts under 400 characters", () => {
-    expect(demoPrompts).toHaveLength(3);
+  it("offers five English prompts under 400 characters", () => {
+    expect(demoPrompts).toHaveLength(5);
     for (const prompt of demoPrompts) expect(prompt.message.length).toBeLessThan(400);
   });
   it("seeds three conversations that repeat no suggested prompt", () => {

@@ -74,7 +74,7 @@ export async function runLocalTrace(scenario) {
     const entries = await Promise.all(Object.entries(paths).map(async ([key, path]) => [key, await vite.ssrLoadModule(path)]));
     const modules = Object.fromEntries(entries);
     const context = modules.auth.workspaceContextSchema.parse({ userId: identity.data.user.id, workspaceId: workspace.data.id, workspaceName: workspace.data.name, knowledgeVersion: workspace.data.knowledge_version });
-    const directory = resolve(".superpowers/evals/text");
+    const directory = resolve(".artifacts/evals/text");
     mkdirSync(directory, { recursive: true, mode: 0o700 });
     const file = resolve(directory, `${new Date().toISOString().replaceAll(":", "-")}-${randomUUID()}-trace.json`);
     const onUpdate = (report) => writeFileSync(file, JSON.stringify(report, null, 2) + "\n", { mode: 0o600 });
