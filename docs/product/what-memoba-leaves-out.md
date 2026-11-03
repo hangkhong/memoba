@@ -24,7 +24,7 @@ Three things in the product preview where it could go. Each one is labelled.
 
 **Files in Import only show their names.** File contents stay in your browser and are not read. Pasted notes are real.
 
-**Roadmap is marked Soon.** It does nothing yet.
+**Roadmap describes what comes next.** It opens three planned features: connecting the AI you already use, a knowledge graph, and a case canvas. None of them is built.
 
 ## What Memoba cannot promise
 
