@@ -141,3 +141,26 @@ test("the interactive diagrams work from the keyboard", async ({ page }) => {
   await page.keyboard.press("Enter");
   await expect(searches.getByText("No section contains all of these words.")).toBeVisible();
 });
+
+test("a member opens the roadmap from the sidebar and reads each planned feature", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signIn(page);
+  await page.getByRole("button", { name: "Roadmap", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Roadmap" });
+  await expect(dialog.getByRole("tab", { name: "Your AI" })).toHaveAttribute("aria-selected", "true");
+  await expect(dialog.getByText(/An MCP server lets the assistant/)).toBeVisible();
+  await dialog.getByRole("tab", { name: "Case canvas" }).click();
+  await expect(dialog.getByText(/turns a recorded case into a challenge/)).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+});
+
+test("on a phone a member opens the roadmap from the sidebar drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signIn(page);
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+  await page.getByRole("button", { name: "Roadmap", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Roadmap" });
+  await expect(dialog.getByText(/An MCP server lets the assistant/)).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
