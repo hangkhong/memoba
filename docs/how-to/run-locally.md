@@ -2,6 +2,20 @@
 
 Use Node.js 24 and npm. Supabase CLI `2.122.0` is pinned in the project. The native runtime is experimental and runs one local project without Docker.
 
+The native runtime supports Linux and Apple Silicon macOS. `npm run doctor` reports the platform, stack, and AI configuration. On other platforms, use the hosted demo.
+
+## Set up from a clean clone
+
+You need an OpenAI API key for embeddings and answers.
+
+1. Run `npm ci`, then `cp .env.example .env.local`.
+2. In `.env.local`, set `OPENAI_API_KEY` and `DEMO_PASSWORD` (12+ characters). Keep the `AI_*` defaults. Leave the Supabase values empty, because `npm run dev` fills in the local ones.
+3. Run `npm run dev` and wait for the printed URLs. The Knowledge Hub is empty at this point.
+4. In a second terminal, run `npm run ai:probe` to check the key, then `npm run db:seed -- --demo` to load the 20 cases and five process documents.
+5. Open http://localhost:3000, sign in with `DEMO_EMAIL` and `DEMO_PASSWORD`, and pick a suggested prompt.
+
+The rest of this page explains each step and the other workflows.
+
 ## Start the workspace
 
 For the first setup, run `npm ci` and set `DEMO_EMAIL` and `DEMO_PASSWORD` in `.env.local`. The password must have at least 12 characters. Copy `.env.example` if the file does not exist.
